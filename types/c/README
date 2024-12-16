@@ -1,22 +1,26 @@
 c: support for C types and ABI interoperation
 
 types::c provides type aliases that are compatible with standard C builtin types
-and typedefs, as specified ISO/IEC 9899 and POSIX, as well as convenience
-functions for working with C types. This module is useful for C interop, for
-instance if an external function returns a [[long]] or a [[ssize]], or if you
-need to convert between a C string and a Hare string. The types provided here
-shouldn't be used for most Hare code.
+and typedefs, as specified ISO/IEC 9899:2024 and POSIX.1-2024, as well as
+convenience functions for working with C types. This module is useful for C
+interop, for instance if an external function returns a [[long]] or an
+[[ssize]], or if you need to convert between a C string and a Hare string. The
+types provided here shouldn't be used by most Hare code.
 
 Some C types aren't provided by this module, since they are provided by the Hare
 language itself:
 
-- _Bool, bool  -> bool
-- nullptr_t    -> null
-- (signed) int -> int
-- size_t       -> size
-- unsigned int -> uint
-- uintptr_t    -> uintptr
-- va_list      -> valist
+- bool (or _Bool)        -> bool
+- double, _Float64       -> f64
+- float, _Float32        -> f32
+- intN_t (<stdint.h>)    -> iN (where N is a power of two from 8 to 64)
+- nullptr_t (<stddef.h>) -> null
+- (signed) int           -> int
+- size_t (<stddef.h>)    -> size
+- uintN_t (<stdint.h>)   -> uN (where N is a power of two from 8 to 64)
+- unsigned int           -> uint
+- uintptr_t (<stdint.h>) -> uintptr
+- va_list (<stdarg.h>)   -> valist
 
 Some C types are mostly compatible with Hare types, with minor differences:
 
@@ -28,10 +32,29 @@ Some C types are mostly compatible with Hare types, with minor differences:
   [[math::complex::]]. Hare doesn't allow casting between real and complex types
   like C does.
 
-Hare doesn't support bit-precise integer types (_BitInt) or decimal floating
-point types (_Decimal32, _Decimal64, _Decimal128). Hare also doesn't provide any
-floating point type larger than 8 bytes, implicating `long double` on some
-platforms.
+The following C types are *not* supported by Hare:
+
+- 128-bit integer types (__int128) (will be supported in a future release)
+- Bit-precise integer types (_BitInt)
+- Decimal floating point types: _Decimal32, _Decimal64, _Decimal128
+- long double
+- Extended floating point types: _Float128 (__float128), _Float16 (__fp16), etc.
+- Packed types: __m64, __m128, __m256, __m512
+- Integer types with any width other than 8, 16, 32, or 64
+- max_align_t
+- float_t and double_t (see below)
+
+Equivalents for float_t and double_t (as defined in <math.h>) aren't provided by
+this module, because they're dependent on the value of FLT_EVAL_METHOD, which is
+unknown.
+
+Note that Hare's fixed-width integer types are NOT guaranteed to be
+ABI-compatible with C's bit-precise integer types.
+
+When doing interop with C, be aware that Hare doesn't convert array parameters
+to pointers like C does; function prototypes will need to be adjusted
+accordingly. There's one exception: valist is passed by reference on targets
+which define it as an array type in C (such as x86_64).
 
 Additional low-level or implementation-specific types may be defined in
 [[rt::]].
