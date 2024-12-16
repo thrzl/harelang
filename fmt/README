@@ -17,9 +17,9 @@ You can use a colon to add format modifiers; for example, "{:x}" will format an
 argument in hexadecimal, and "{3:-10}" will left-align the 4th argument (zero
 indexed) to at least 10 characters.
 
-Format modifiers can be written in any order, and can also be repeated. If a
-modifier is repeated (or two conflicting modifiers are given, such as both "x"
-and "X") the one furthest to the right will be used.
+Format modifiers can be written in any order, and can also be repeated. If
+multiple conflicting modifiers are given (such as both "x" and "X"), the one
+furthest to the right will be used.
 
 A format modifier can be any of the following:
 - a number N: Sets the width to N. If the value would otherwise be shorter than
