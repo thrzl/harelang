@@ -1,5 +1,6 @@
 test: test runtime and testing tools
 
-The [[test]] module provides runtime support for tests run via @test. The build
-driver automatically links test executables to the test module, and user tests
-may include the test module to access additional runtime features for testing.
+The test module provides runtime support for tests run via @test (see
+hare-test(1)). The build driver automatically links test executables to the test
+module, and user tests may include the test module to access additional runtime
+features for testing.
