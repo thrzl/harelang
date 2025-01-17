@@ -61,7 +61,8 @@ export fn xor(dest: []u8, a: []u8, b: []u8) void = {
 	};
 };
 
-// Compare two byte slices in constant time.
+// Compare two byte slices in constant time. The slices must have the same
+// length.
 //
 // Returns 1 if the two slices have the same contents, 0 otherwise.
 export fn eqslice(x: []u8, y: []u8) int = {
