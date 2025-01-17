@@ -145,9 +145,9 @@ export fn move(fs: *fs, oldpath: str, newpath: str) (void | error) = {
 	remove(fs, oldpath)?;
 };
 
-// Returns an iterator for a path, which yields the contents of a directory.
-// Pass empty string to yield from the root. The order in which entries are
-// returned is undefined. The return value must be finished with [[finish]].
+// Creates an [[iterator]] for a given directory to read its contents. The order
+// in which entries are returned is undefined. The user should call [[next]] to
+// enumerate entries, and [[finish]] when done iterating.
 export fn iter(fs: *fs, path: str) (*iterator | error) = {
 	match (fs.iter) {
 	case null =>

@@ -23,8 +23,8 @@ export fn move(oldpath: str, newpath: str) (void | fs::error) =
 	fs::move(cwd, oldpath, newpath);
 
 // Creates an [[fs::iterator]] for a given directory to read its contents. The
-// user should call [[fs::next]] to enumerate entries, and [[fs::finish]] when
-// done using the object.
+// order in which entries are returned is undefined. The user should call
+// [[fs::next]] to enumerate entries, and [[fs::finish]] when done iterating.
 export fn iter(path: str) (*fs::iterator | fs::error) = fs::iter(cwd, path);
 
 // Reads all entries from a directory. The caller must free the return value
