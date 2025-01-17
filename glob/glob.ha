@@ -55,7 +55,7 @@ export type failure = !struct {
 	error: fs::error,
 };
 
-// Converts an error info a human-friendly string. The result is statically
+// Converts a [[failure]] into a human-friendly string. The result is statically
 // allocated.
 export fn strerror(err: failure) str = {
 	static let buf: [path::MAX + 1024]u8 = [0...];

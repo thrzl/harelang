@@ -8,7 +8,7 @@ use strings;
 // Invalid shell syntax.
 export type syntaxerr = !void;
 
-// Converts an error into a human-friendly string.
+// Returns a human-friendly string for [[syntaxerr]].
 export fn strerror(err: syntaxerr) str = "Invalid shell syntax";
 
 // Splits a string of arguments according to shell quoting. The result must be

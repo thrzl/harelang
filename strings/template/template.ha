@@ -19,7 +19,7 @@ export type param = (str, fmt::formattable);
 // The template string has an invalid format.
 export type invalid = !void;
 
-// Converts an error into a human-friendly string.
+// Returns a human-friendly string for [[invalid]].
 export fn strerror(err: invalid) str = "Template string has invalid format";
 
 // Compiles a template string. The return value must be freed with [[finish]]

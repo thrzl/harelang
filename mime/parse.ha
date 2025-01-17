@@ -10,7 +10,7 @@ export type type_params = strings::tokenizer;
 // A syntax error.
 export type syntax = !void;
 
-// Converts an error into a human-friendly string.
+// Returns a human-friendly string for [[syntax]].
 export fn strerror(err: syntax) str = "Can't parse Media Type";
 
 // Parses a Media Type, returning a tuple of the content type (e.g.

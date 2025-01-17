@@ -8,5 +8,5 @@ export type more = void;
 // Returned when an invalid UTF-8 sequence was found.
 export type invalid = !void;
 
-// Converts an error into a human-friendly string.
+// Returns a human-friendly string for [[invalid]].
 export fn strerror(err: invalid) str = "Invalid UTF-8";
