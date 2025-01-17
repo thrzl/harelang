@@ -91,7 +91,7 @@ export fn eqslice(x: []u8, y: []u8) int = {
 export fn equ8(x: u8, y: u8) int = ((((x ^ y): u32) - 1) >> 31): int;
 
 // Returns x if ctl == 1 and y if ctl == 0.
-export fn muxu32(ctl: u32, x: u32, y: u32) u32 = y ^ ((-(ctl: i32)): u32 & (x ^ y));
+export fn muxu32(ctl: u32, x: u32, y: u32) u32 = y ^ (-ctl & (x ^ y));
 
 @test fn muxu32() void = {
 	assert(muxu32(1, 0x4, 0xff) == 0x4);
@@ -104,7 +104,7 @@ export fn notu32(x: u32) u32 = x ^ 1;
 // Compares 'x' and 'y'. Returns 1 if they are equal or 0 otherwise.
 export fn equ32(x: u32, y: u32) u32 = {
 	let q = x ^ y;
-	return ((q | -(q: i32): u32) >> 31) ^ 1;
+	return ((q | -q) >> 31) ^ 1;
 };
 
 @test fn equ32() void = {
@@ -128,7 +128,7 @@ export fn eq0u32(x: u32) u32 = {
 // Returns 1 if x != y and 0 otherwise.
 export fn nequ32(x: u32, y: u32) u32 = {
 	let q = x ^ y;
-	return (q | -(q: i32): u32) >> 31;
+	return (q | -q) >> 31;
 };
 
 // Returns 1 if x > y and 0 otherwise.
