@@ -29,7 +29,7 @@ export fn trimprefix(buf: *buffer, prefix: str) (str | error) = {
 // Equivalent to [[trimprefix]], but modifies the buffer in the process.
 export fn popprefix(buf: *buffer, prefix: str) (str | error) = {
 	const start = splitprefix(buf, prefix)?;
-	static delete(buf.buf[..][..start]);
+	buf.buf[..buf.end - start] = buf.buf[start..buf.end];
 	buf.end -= start;
 	return string(buf);
 };
