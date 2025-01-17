@@ -169,7 +169,7 @@ fn sum(h: *hash::hash, buf: []u8) void = {
 	// Length in bits
 	ln <<= 3;
 	endian::beputu64(tmp, 0u64); // upper 64 bits are always zero
-	endian::beputu64(tmp[8..], ln : u64);
+	endian::beputu64(tmp[8..], ln: u64);
 	write(d, tmp[..16])!;
 
 	assert(d.nx == 0);

@@ -639,7 +639,7 @@ export fn socketpair(
 	sv: *[*]int,
 ) (int | errno) = {
 	return wrap_return(syscall4(SYS_socketpair, domain: u64,
-		type_: u64, protocol: u64, sv: uintptr : u64))?: int;
+		type_: u64, protocol: u64, sv: uintptr: u64))?: int;
 };
 
 export fn fsync(fd: int) (void | errno) = {

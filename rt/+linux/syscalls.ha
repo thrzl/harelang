@@ -652,7 +652,7 @@ export fn socketpair(
 	sv: *[2]int
 ) (int | errno) = {
 	return wrap_return(syscall4(SYS_socketpair, domain: u64,
-		type_: u64, protocol: u64, sv: uintptr : u64))?: int;
+		type_: u64, protocol: u64, sv: uintptr: u64))?: int;
 };
 
 export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {

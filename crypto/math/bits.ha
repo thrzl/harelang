@@ -88,7 +88,7 @@ export fn eqslice(x: []u8, y: []u8) int = {
 
 // Compare two bytes in constant time. Returns 1 if the bytes are the same
 // value, 0 otherwise.
-export fn equ8(x: u8, y: u8) int = ((((x ^ y) : u32) - 1) >> 31) : int;
+export fn equ8(x: u8, y: u8) int = ((((x ^ y): u32) - 1) >> 31): int;
 
 // Returns x if ctl == 1 and y if ctl == 0.
 export fn muxu32(ctl: u32, x: u32, y: u32) u32 = y ^ ((-(ctl: i32)): u32 & (x ^ y));

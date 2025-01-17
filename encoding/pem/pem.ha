@@ -122,7 +122,7 @@ fn pem_read(st: *io::stream, buf: []u8) (size | io::EOF | io::error) = {
 	case io::EOF => void;
 	};
 
-	const line = match (bufio::scan_line(&(st.b64.in : *b64stream).in)) {
+	const line = match (bufio::scan_line(&(st.b64.in: *b64stream).in)) {
 	case io::EOF =>
 		return io::EOF;
 	case utf8::invalid =>

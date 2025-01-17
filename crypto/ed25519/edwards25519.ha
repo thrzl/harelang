@@ -143,15 +143,15 @@ fn fe_encode(out: *scalar, a: const *elem) void = {
 	};
 
 	for (let i = 0z; i < FIELDSZ; i += 1) {
-		out[2*i+0] = (t[i] & 0xff) : u8;
-		out[2*i+1] = (t[i] >> 8) : u8;
+		out[2*i+0] = (t[i] & 0xff): u8;
+		out[2*i+1] = (t[i] >> 8): u8;
 	};
 };
 
 // len(in) must be SCALARSZ
 fn fe_decode(fe: *elem, in: []u8) *elem = {
 	for (let i = 0z; i < FIELDSZ; i += 1) {
-		fe[i] = in[2 * i] : i64 + ((in[2 * i + 1] : i64) << 8);
+		fe[i] = in[2 * i]: i64 + ((in[2 * i + 1]: i64) << 8);
 	};
 	fe[15] &= 0x7fff;
 	return fe;
