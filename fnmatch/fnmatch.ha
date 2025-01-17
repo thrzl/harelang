@@ -4,15 +4,15 @@
 use ascii;
 use strings;
 
-// A set of flags that alter the matching behavior of [[fnmatch]]
+// A set of flags that alter the matching behavior of [[fnmatch]].
 export type flag = enum uint {
 	NONE = 0,
 
 	// If this flag is set, slashes in the string will only be matched by
-	// literal slashes in the pattern
+	// literal slashes in the pattern.
 	PATHNAME = 1u << 0,
 	// If this flag is set, backslash will be treated as an ordinary
-	// character
+	// character.
 	NOESCAPE = 1u << 1,
 	// If this flag is set, a '.' at the beginning of the string can only
 	// be matched by a literal '.' in the pattern. If [[flag::PATHNAME]] is

@@ -51,7 +51,7 @@ export fn getenvs() []str = {
 let uts: rt::utsname = rt::utsname { ... };
 let uts_valid: bool = false;
 
-// Returns the host kernel name
+// Returns the host kernel name.
 export fn sysname() const str = {
 	if (!uts_valid) {
 		rt::uname(&uts) as void;
@@ -60,7 +60,7 @@ export fn sysname() const str = {
 	return c::tostr(&uts.sysname: *const c::char)!;
 };
 
-// Returns the host system hostname
+// Returns the host system hostname.
 export fn hostname() const str = {
 	if (!uts_valid) {
 		rt::uname(&uts) as void;
@@ -69,7 +69,7 @@ export fn hostname() const str = {
 	return c::tostr(&uts.nodename: *const c::char)!;
 };
 
-// Returns the host kernel version
+// Returns the host kernel version.
 export fn release() const str = {
 	if (!uts_valid) {
 		rt::uname(&uts) as void;
@@ -78,7 +78,7 @@ export fn release() const str = {
 	return c::tostr(&uts.release: *const c::char)!;
 };
 
-// Returns the host operating system version
+// Returns the host operating system version.
 export fn version() const str = {
 	if (!uts_valid) {
 		rt::uname(&uts) as void;

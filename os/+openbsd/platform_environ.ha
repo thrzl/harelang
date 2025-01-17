@@ -46,7 +46,7 @@ export fn getenvs() []str = {
 	return envp;
 };
 
-// Returns the host kernel name
+// Returns the host kernel name.
 export fn sysname() const str = {
 	let name: [2]int = [rt::CTL_KERN, rt::KERN_OSTYPE];
 
@@ -57,7 +57,7 @@ export fn sysname() const str = {
 	return strings::fromutf8(buf[..(buf_sz -1)])!;
 };
 
-// Returns the host system hostname
+// Returns the host system hostname.
 export fn hostname() const str = {
 	let name: [2]int = [rt::CTL_KERN, rt::KERN_HOSTNAME];
 
@@ -68,7 +68,7 @@ export fn hostname() const str = {
 	return strings::fromutf8(buf[..(buf_sz -1)])!;
 };
 
-// Returns the host operating system version
+// Returns the host operating system version.
 export fn version() const str = {
 	let name: [2]int = [rt::CTL_KERN, rt::KERN_OSRELEASE];
 

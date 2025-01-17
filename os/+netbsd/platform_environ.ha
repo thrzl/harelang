@@ -47,7 +47,7 @@ export fn getenvs() []str = {
 	return envp;
 };
 
-// Returns the host kernel name
+// Returns the host kernel name.
 export fn sysname() const str = {
 	static let buf: [512]u8 = [0...];
 	let sz: size = len(buf);
@@ -55,7 +55,7 @@ export fn sysname() const str = {
 	return strings::fromutf8(buf[..(sz - 1)])!;
 };
 
-// Returns the host system hostname
+// Returns the host system hostname.
 export fn hostname() const str = {
 	static let buf: [512]u8 = [0...];
 	let sz: size = len(buf);
@@ -63,7 +63,7 @@ export fn hostname() const str = {
 	return strings::fromutf8(buf[..(sz - 1)])!;
 };
 
-// Returns the host kernel version
+// Returns the host kernel version.
 export fn release() const str = {
 	static let buf: [512]u8 = [0...];
 	let sz: size = len(buf);
@@ -71,7 +71,7 @@ export fn release() const str = {
 	return strings::fromutf8(buf[..(sz - 1)])!;
 };
 
-// Returns the host operating system version
+// Returns the host operating system version.
 export fn version() const str = {
 	static let buf: [512]u8 = [0...];
 	let sz: size = len(buf);
