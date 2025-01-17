@@ -124,15 +124,12 @@ export fn decrypt(
 	return plaintext;
 };
 
-// Compares two slices and returns true if they are equal. Comparison is done
-// in constant time, meaning that, if the slices have equal length, the time it
-// takes depends only on the length of the slices and not the content.
+// Compares two slices and returns true if their contents are the same.
+// Comparison is done in constant time, meaning that, if the slices have equal
+// length, the time it takes depends only on the length of the slices and not
+// their content.
 export fn compare(a: []u8, b: []u8) bool = {
-	if (len(a) != len(b)) {
-		return false;
-	};
-
-	return math::eqslice(a, b) == 1;
+	return len(a) == len(b) && math::eqslice(a, b) == 1;
 };
 
 // TODO: Add additional entry-points which provide a finer degree of control
