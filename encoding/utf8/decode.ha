@@ -8,7 +8,7 @@ export type decoder = struct {
 	src: []u8,
 };
 
-// Initializes a new UTF-8 decoder.
+// Initializes a new UTF-8 decoder. You may copy the decoder to save its state.
 export fn decode(src: []u8) decoder = decoder {
 	src = src,
 	offs = 0,
