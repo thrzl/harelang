@@ -6,8 +6,8 @@ use strconv;
 use strings;
 use time;
 
-// A parsing error occurred. This shall contain a byteindex of and rune from the
-// layout at the position where the parsing error occured.
+// A parsing error occurred. This contains a byte index of and rune from the
+// layout at the position where the parsing failure occured.
 export type parsefail = !(size, rune);
 
 // TODO: improve parsefail
