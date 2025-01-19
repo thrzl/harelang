@@ -174,7 +174,7 @@ export fn gather_submodules(
 	return _gather_submodules(&subctx, out, buf, &id, recursive);
 };
 
-export fn _gather_submodules(
+fn _gather_submodules(
 	ctx: *context,
 	out: *[]module,
 	buf: *path::buffer,
