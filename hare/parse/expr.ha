@@ -743,7 +743,7 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 					ast::for_kind::ACCUMULATOR
 					|| tok != ltok::EQUAL) {
 				return syntaxerr(lex::mkloc(lexer),
-					"Cannot create multiple bindings in non-c-style loop");
+					"Cannot create multiple bindings in for-each loop");
 			};
 
 			const init_expr = alloc(expr(lexer)?)!;
