@@ -2,7 +2,7 @@ wordexp: shell expansion support
 
 The wordexp module implements word expansion using shell semantics, similar to
 POSIX wordexp(3). Word expansion is performed with the platform-specific system
-shell, which is generally POSIX sh(1) compatible on Unix-like systems.
+shell, which is generally compatible with POSIX sh(1) on Unix-like systems.
 
 When used with a POSIX shell, the IFS variable is unconditionally unset in the
 environment, causing the shell to assume the default value of " \t\n".
