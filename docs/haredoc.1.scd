@@ -86,7 +86,7 @@ its corresponding default sequence is used.
 
 For example:
 
-	HAREDOC\_COLORS='comment=3 primary=1;4 attribute=41' haredoc log
+	HAREDOC\_COLORS='comment=3 primary=1;4 attribute=41' haredoc log::
 
 # ENVIRONMENT
 
