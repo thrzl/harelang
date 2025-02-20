@@ -217,6 +217,7 @@ fn read_die(
 		append(fields, field)?;
 	};
 
+	ok = true;
 	return entry {
 		tag = abbrev.tag,
 		children = abbrev.has_children,
