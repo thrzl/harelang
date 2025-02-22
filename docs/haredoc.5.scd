@@ -6,9 +6,9 @@ haredoc - Hare documentation format
 
 # DESCRIPTION
 
-Hare documentation is written in a simple markup language. *haredoc*(1) will
-display the documentation literally, without any additional formatting. Other
-tools may format Hare documentation into other formats.
+Hare documentation is written in a simple markup language. By default,
+*haredoc*(1) will display the documentation literally, without any additional
+formatting. Other tools may format Hare documentation into other formats.
 
 Text may be written normally, broken into several lines to conform to the
 80-column limit. To begin a new paragraph, insert an empty line.
