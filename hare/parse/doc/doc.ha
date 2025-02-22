@@ -23,9 +23,13 @@ export type list = []paragraph;
 export type code_sample = str;
 
 // A reference to a declaration.
+//
+// 	[[foo::bar]]
 export type decl_ref = ast::ident;
 
 // A reference to a module.
+//
+// 	[[foo::bar::]]
 export type mod_ref = ast::ident;
 
 // Converts an error into a human-friendly string. The result may be statically
