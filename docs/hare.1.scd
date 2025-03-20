@@ -32,6 +32,8 @@ versions and suitable for machine reading.
 
 *hare-test*(1) compiles and runs tests for Hare code.
 
+*hare-tool*(1) runs a third-party Hare tool.
+
 # BUGS
 
 The quality of error messages is poor.

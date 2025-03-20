@@ -17,6 +17,7 @@ HARE_DEFINES = \
 	-D ARCH:str='"$(ARCH)"' \
 	-D VERSION:str="\"$(VERSION)\"" \
 	-D HAREPATH:str='"$(HAREPATH)"' \
+	-D TOOLDIR:str='"$(TOOLDIR)"' \
 	-D AARCH64_AS:str='"$(AARCH64_AS)"' \
 	-D AARCH64_CC:str='"$(AARCH64_CC)"' \
 	-D AARCH64_LD:str='"$(AARCH64_LD)"' \
@@ -84,6 +85,7 @@ docs: \
 	docs/hare-build.1 \
 	docs/hare-cache.1 \
 	docs/hare-deps.1 \
+	docs/hare-tool.1 \
 	docs/haredoc.1 \
 	docs/hare-run.1 \
 	docs/hare-test.1 \

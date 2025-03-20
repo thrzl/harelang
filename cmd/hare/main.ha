@@ -15,6 +15,7 @@ use strconv;
 
 def VERSION: str = "unknown";
 def HAREPATH: str = ".";
+def TOOLDIR: str = "/usr/local/libexec/hare";
 
 const help: []getopt::help = [
 	"compile, run, and test Hare programs",
@@ -65,6 +66,10 @@ const help: []getopt::help = [
 		('T', "tagset", "set/unset build tags"),
 		"[path [args...]]",
 	]: []getopt::help),
+	("tool", [
+		"runs a third-party Hare tool",
+		"<name> [args...]"
+	]: []getopt::help),
 	("test", [
 		"compiles and runs tests for Hare code",
 		('q', "build silently"),
@@ -100,6 +105,8 @@ export fn main() void = {
 			yield &cache;
 		case "deps" =>
 			yield &deps;
+		case "tool" =>
+			yield &tool;
 		case "version" =>
 			yield &version;
 		case => abort();
