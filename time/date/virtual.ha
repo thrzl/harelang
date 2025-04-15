@@ -264,7 +264,7 @@ export fn newvirtual() virtual = virtual {
 export fn realize(
 	v: virtual,
 	locs: locality...
-) (date | insufficient | invalid | zfunresolved) = {
+) (date | insufficient | invalid | zfunresolved | nomem) = {
 	// determine .loc
 	if (v.vloc is locality) {
 		v.loc = v.vloc as locality;
@@ -458,7 +458,7 @@ fn realize_datetimezoff(
 fn realize_validzoffs(
 	v: virtual,
 	locs: locality...
-) ([]date | insufficient | invalid) = {
+) ([]date | insufficient | invalid | nomem) = {
 	// check if only zoff is missing
 	v.zoff = 0o0;
 	match (realize_validzoff(v, locs...)) {
@@ -469,7 +469,9 @@ fn realize_validzoffs(
 	};
 	v.zoff = void;
 
+	let ok = false;
 	let dates: []date = [];
+	defer if (!ok) free(dates);
 
 	// try matching zone abbreviation
 	if (v.zabbr is str) {
@@ -484,8 +486,8 @@ fn realize_validzoffs(
 					case size =>
 						void;
 					case void =>
-						append(dates, d)!;
-						sort::sort(dates, size(date), &cmpdates)!;
+						append(dates, d)?;
+						sort::sort(dates, size(date), &cmpdates)?;
 					};
 				case invalid =>
 					continue;
@@ -507,8 +509,8 @@ fn realize_validzoffs(
 			case size =>
 				void;
 			case void =>
-				append(dates, d)!;
-				sort::sort(dates, size(date), &cmpdates)!;
+				append(dates, d)?;
+				sort::sort(dates, size(date), &cmpdates)?;
 			};
 		case invalid =>
 			continue;
@@ -517,6 +519,7 @@ fn realize_validzoffs(
 		};
 	};
 
+	ok = true;
 	return dates;
 };
 

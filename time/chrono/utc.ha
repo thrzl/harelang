@@ -47,15 +47,24 @@ export let utc_status: (bool | utciniterror) = false;
 	free(utc_leapsecs);
 };
 
-fn utc_init_leapsecs() (void | utciniterror) = {
+fn utc_init_leapsecs() (void | utciniterror | nomem) = {
 	const file = os::open(UTC_LEAPSECS_PATH)?;
 	defer io::close(file)!;
-	utc_parse_leapsecs(file)?;
+
+	match (utc_parse_leapsecs(file)) {
+	case void => void;
+	// passing on errors manually since the result is not assignable to
+	// function result type.
+	case utf8::invalid =>
+		return utf8::invalid;
+	case let e: io::error =>
+		return e;
+	};
 };
 
 // Parse UTC/TAI leapsecond data from [[UTC_LEAPSECS_PATH]].
 // See that file for format details.
-fn utc_parse_leapsecs(h: io::handle) (void | utf8::invalid | io::error) = {
+fn utc_parse_leapsecs(h: io::handle) (void | utf8::invalid | io::error | nomem) = {
 	const scan = bufio::newscanner(h);
 	defer bufio::finish(&scan);
 
@@ -73,7 +82,7 @@ fn utc_parse_leapsecs(h: io::handle) (void | utf8::invalid | io::error) = {
 
 		let secs = secs as i64 - SECONDS_1900_1970;
 		let diff = diff as i64;
-		append(utc_leapsecs, (secs, diff))!;
+		append(utc_leapsecs, (secs, diff))?;
 	};
 };
 

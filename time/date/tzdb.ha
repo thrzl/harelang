@@ -30,7 +30,7 @@ export type invalidtzif = !void;
 //
 // The loaded timezones are assigned the TZID as its name, the
 // [[time::chrono::utc]] timescale, and the [[EARTH_DAY]] day-length
-export fn tzdb(tzid: str) (locality | tzdberror) = {
+export fn tzdb(tzid: str) (locality | tzdberror | nomem) = {
 	const filepath = match (path::init(TZDB_PATH, tzid)) {
 	case let buf: path::buffer =>
 		yield buf;
@@ -43,17 +43,22 @@ export fn tzdb(tzid: str) (locality | tzdberror) = {
 	static let buf: [os::BUFSZ]u8 = [0...];
 	const bufstrm = bufio::init(file, buf, []);
 
+	let ok = false;
+	let name = strings::dup(tzid)?;
+	defer if (!ok) free(name);
 	let loc = alloc(timezone {
-		name = strings::dup(tzid)!,
 		tsc = &chrono::utc,
 		daylength = EARTH_DAY,
 		petz = PETZ_EMPTY,
+		name = name,
 		...
-	})!;
+	})?;
+	defer if (!ok) free(loc);
 	match (load_tzif(&bufstrm, loc)) {
 	case void =>
 		io::close(&bufstrm)?;
 		io::close(file)?;
+		ok = true;
 		return loc;
 	case invalidtzif =>
 		io::close(&bufstrm): void;
@@ -70,11 +75,12 @@ export fn tzdb(tzid: str) (locality | tzdberror) = {
 // initializing the fields ".phases", ".transitions", and ".petz".
 //
 // Refer to "RFC 8536" for the TZif format.
-export fn load_tzif(h: io::handle, tz: *timezone) (void | invalidtzif | io::error) = {
+export fn load_tzif(h: io::handle, tz: *timezone) (void | invalidtzif | io::error | nomem) = {
 	const buf1: [1]u8 = [0...];
 	const buf4: [4]u8 = [0...];
 	const buf8: [8]u8 = [0...];
 	const buf15: [15]u8 = [0...];
+	let ok = false;
 
 	// test for magic "TZif"
 	mustread(h, buf4)?;
@@ -157,23 +163,23 @@ export fn load_tzif(h: io::handle, tz: *timezone) (void | invalidtzif | io::erro
 	};
 	defer free(transition_times);
 	const zone_indicies: []u8 = [];
-	readbytes(h, &zone_indicies, timecnt)?;
 	defer free(zone_indicies);
+	readbytes(h, &zone_indicies, timecnt)?;
 	const zonedata: []u8 = [];
-	readbytes(h, &zonedata, typecnt * 6)?;
 	defer free(zonedata);
+	readbytes(h, &zonedata, typecnt * 6)?;
 	const abbrdata: []u8 = [];
-	readbytes(h, &abbrdata, charcnt)?;
 	defer free(abbrdata);
+	readbytes(h, &abbrdata, charcnt)?;
 	const leapdata: []u8 = [];
-	readbytes(h, &leapdata, leapcnt * (timesz: u32 + 4))?;
 	defer free(leapdata);
+	readbytes(h, &leapdata, leapcnt * (timesz: u32 + 4))?;
 	const stdwalldata: []u8 = [];
-	readbytes(h, &stdwalldata, isstdcnt)?;
 	defer free(stdwalldata);
+	readbytes(h, &stdwalldata, isstdcnt)?;
 	const normlocaldata: []u8 = [];
-	readbytes(h, &normlocaldata, isutcnt)?;
 	defer free(normlocaldata);
+	readbytes(h, &normlocaldata, isutcnt)?;
 	// read footer
 
 	let footerdata: []u8 = [];
@@ -190,7 +196,7 @@ export fn load_tzif(h: io::handle, tz: *timezone) (void | invalidtzif | io::erro
 		if (buf1[0] == 0x0) { // cannot contain NUL
 			return invalidtzif;
 		};
-		append(footerdata, buf1...)!;
+		append(footerdata, buf1...)?;
 	};
 	const petz = match (strings::fromutf8(footerdata)) {
 	case let s: str =>
@@ -203,6 +209,7 @@ export fn load_tzif(h: io::handle, tz: *timezone) (void | invalidtzif | io::erro
 
 	// assemble zones
 	let zones: []zonephase = [];
+	defer if (!ok) free(zones);
 	for (let i = 0z; i < typecnt; i += 1) {
 		const idx = i * 6;
 		const zone = zonephase { ... };
@@ -245,13 +252,18 @@ export fn load_tzif(h: io::handle, tz: *timezone) (void | invalidtzif | io::erro
 		case utf8::invalid =>
 			return invalidtzif;
 		};
-		zone.abbr = strings::dup(abbr)!;
+		zone.abbr = strings::dup(abbr)?;
 
-		append(zones, zone)!;
+		if (append(zones, zone) is nomem) {
+			free(zone.abbr);
+			return nomem;
+		};
 	};
 
 	// assemble transitions
 	let transitions: []zonetransition = [];
+	defer if (!ok) free(transitions);
+
 	for (let i = 0z; i < timecnt; i += 1) {
 		const zoneindex = zone_indicies[i];
 		if (zoneindex < 0 || zoneindex > (typecnt - 1)) {
@@ -269,7 +281,7 @@ export fn load_tzif(h: io::handle, tz: *timezone) (void | invalidtzif | io::erro
 		// stdwalldata and normlocaldata have been omitted,
 		// until they show their utility.
 
-		append(transitions, tx)!;
+		append(transitions, tx)?;
 	};
 
 	// save and return data
@@ -279,6 +291,8 @@ export fn load_tzif(h: io::handle, tz: *timezone) (void | invalidtzif | io::erro
 	if (parse_petz(&tz.petz, petz) is invalidpetzstr) {
 		return invalidtzif;
 	};
+
+	ok = true;
 };
 
 fn mustread(h: io::handle, buf: []u8) (void | invalidtzif | io::error) = {
@@ -296,12 +310,12 @@ fn readbytes(
 	h: io::handle,
 	items: *[]u8,
 	n: size,
-) (void | invalidtzif | io::error) = {
+) (void | invalidtzif | io::error | nomem) = {
 	const buf: [1]u8 = [0];
 	for (let i = 0z; i < n; i += 1) {
 		mustread(h, buf)?;
 		const it = buf[0];
-		append(items, it)!;
+		append(items, it)?;
 	};
 };
 
@@ -309,12 +323,12 @@ fn readitems8(
 	h: io::handle,
 	items: *[]i64,
 	n: size,
-) (void | invalidtzif | io::error) = {
+) (void | invalidtzif | io::error | nomem) = {
 	const buf: [8]u8 = [0...];
 	for (let i = 0z; i < n; i += 1) {
 		mustread(h, buf)?;
 		const it = endian::begetu64(buf): i64;
-		append(items, it)!;
+		append(items, it)?;
 	};
 };
 
@@ -322,11 +336,11 @@ fn readitems4(
 	h: io::handle,
 	items: *[]i64,
 	n: size,
-) (void | invalidtzif | io::error) = {
+) (void | invalidtzif | io::error | nomem) = {
 	const buf: [4]u8 = [0...];
 	for (let i = 0z; i < n; i += 1) {
 		mustread(h, buf)?;
 		const it = endian::begetu32(buf): i64;
-		append(items, it)!;
+		append(items, it)?;
 	};
 };

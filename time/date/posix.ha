@@ -61,18 +61,18 @@ fn parse_petz(p: *petz, petzstring: str) (void | invalidpetzstr) = {
 	};
 };
 
-fn parse_petz_string(p: *petz, petzstring: str) parsed = {
+fn parse_petz_string(p: *petz, petzstring: str) (parsed | nomem) = {
 	p.dst_starttime = 2 * time::HOUR;
 	p.dst_endtime   = 2 * time::HOUR;
 
 	let t = strings::iter(petzstring);
 
-	p.std_abbr   = strings::dup(scan_petz_abbr(&t)?)!;
+	p.std_abbr   = strings::dup(scan_petz_abbr(&t)?)?;
 	p.std_offset = -scan_petz_time(&t, 25, parsed_err)?;
 
 	scan_rune(&t, void, parsed_done)?; strings::prev(&t);
 
-	p.dst_abbr   = strings::dup(scan_petz_abbr(&t)?)!;
+	p.dst_abbr   = strings::dup(scan_petz_abbr(&t)?)?;
 	p.dst_offset = -scan_petz_time(&t, 25, -(p.std_offset + 1 * time::HOUR))?;
 
 	// enforce PETZ strings with DST to specify a rule

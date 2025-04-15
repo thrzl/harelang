@@ -155,16 +155,24 @@ export fn fixedzone(
 	name: str,
 	daylen: time::duration,
 	z: zonephase,
-) *timezone = {
-	return alloc(timezone {
-		name = strings::dup(name)!,
+) (*timezone | nomem) = {
+	let ok = false;
+	let name = strings::dup(name)?;
+	defer if (!ok) free(name);
+	let phases = alloc([z])?;
+	defer if (!ok) free(phases);
+
+	let zone = alloc(timezone {
+		name = name,
 		tsc = tsc,
 		daylength = daylen,
-		phases = alloc([z])!,
+		phases = phases,
 		transitions = [],
 		lookupzone = null,
 		petz = PETZ_EMPTY,
-	})!;
+	})?;
+	ok = true;
+	return zone;
 };
 
 // The local [[locality]]; the system or environment configured [[timezone]].

@@ -95,19 +95,33 @@ def MONTHS_SHORT: [_]str = [
 	"Oct", "Nov", "Dec",
 ];
 
-// Formats a [[date]] and writes it into a caller supplied buffer.
-// The returned string is borrowed from this buffer.
-export fn bsformat(buf: []u8, layout: str, d: *date) (str | io::error) = {
+// Formats a [[date]] and writes it into a caller supplied buffer. The returned
+// string is borrowed from this buffer. If the resulting string does not fit
+// into 'buf', nomem is returned.
+export fn bsformat(buf: []u8, layout: str, d: *date) (str | nomem) = {
 	let sink = memio::fixed(buf);
-	format(&sink, layout, d)?;
+	match (format(&sink, layout, d)) {
+	case size => void;
+	case nomem =>
+		return nomem;
+	case =>
+		abort();
+	};
 	return memio::string(&sink)!;
 };
 
 // Formats a [[date]] and writes it into a heap-allocated string.
 // The caller must free the return value.
-export fn asformat(layout: str, d: *date) (str | io::error) = {
+export fn asformat(layout: str, d: *date) (str | nomem) = {
 	let sink = memio::dynamic();
-	format(&sink, layout, d)?;
+	match (format(&sink, layout, d)) {
+	case size => void;
+	case nomem =>
+		io::close(&sink)!;
+		return nomem;
+	case =>
+		abort();
+	};
 	return memio::string(&sink)!;
 };
 
