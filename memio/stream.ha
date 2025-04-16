@@ -7,8 +7,17 @@ use errors;
 use io;
 use strings;
 
+// Flags for memio streams.
+export type flag = enum uint {
+	NONE = 0,
+	// A NONBLOCK memio stream returns [[errors::again]] instead of
+	// [[io::EOF]] on reads from the end of the buffer.
+	NONBLOCK = 1 << 0,
+};
+
 export type stream = struct {
 	stream: io::stream,
+	flags: flag,
 	buf: []u8,
 	pos: size,
 };
@@ -34,8 +43,9 @@ const dynamic_vt: io::vtable = io::vtable {
 // cause subsequent writes to overwrite existing contents of the buffer.
 // Writes return an error if they would exceed the buffer's capacity. The
 // stream doesn't have to be closed.
-export fn fixed(in: []u8) stream = stream {
+export fn fixed(in: []u8, flags: flag = flag::NONE) stream = stream {
 	stream = &fixed_vt,
+	flags = flags,
 	buf = in,
 	pos = 0,
 };
@@ -45,14 +55,15 @@ export fn fixed(in: []u8) stream = stream {
 // Calling [[io::close]] on this stream will free the buffer. If a stream's
 // data is referenced via [[buffer]], the stream shouldn't be closed as
 // long as the data is used.
-export fn dynamic() stream = dynamic_from([]);
+export fn dynamic(flags: flag = flag::NONE) stream = dynamic_from([], flags);
 
 // Like [[dynamic]], but takes an existing slice as input. Writes will
 // overwrite the buffer and reads consume bytes from the initial buffer.
 // Ownership of the provided slice is transferred to the returned [[stream]].
 // Calling [[io::close]] will free the buffer.
-export fn dynamic_from(in: []u8) stream = stream {
+export fn dynamic_from(in: []u8, flags: flag = flag::NONE) stream = stream {
 	stream = &dynamic_vt,
+	flags = flags,
 	buf = in,
 	pos = 0,
 };
@@ -92,6 +103,9 @@ export fn borrowedread(st: *stream, amt: size) ([]u8 | io::EOF) = {
 fn read(s: *io::stream, buf: []u8) (size | io::EOF | io::error) = {
 	let s = s: *stream;
 	if (len(s.buf) == s.pos) {
+		if (s.flags & flag::NONBLOCK != 0) {
+			return errors::again;
+		};
 		return io::EOF;
 	};
 	const n = if (len(s.buf) - s.pos < len(buf)) {
@@ -278,4 +292,13 @@ fn dynamic_close(s: *io::stream) (void | io::error) = {
 	assert(string(&stream)! == "hello ");
 	io::writeall(&stream, strings::toutf8("world")) as size;
 	assert(string(&stream)! == "hello world");
+};
+
+@test fn nonblock() void = {
+	let in: [4]u8 = [1, 2, 3, 4];
+	let source = fixed(in, flag::NONBLOCK);
+
+	let buf: [4]u8 = [0...];
+	assert(io::read(&source, buf) as size == 4);
+	assert(io::read(&source, buf) as io::error is errors::again);
 };
