@@ -1,0 +1,3 @@
+[[net::tcp]] provides support for Transmission Control Protocol (TCP) sockets.
+To connect to a server, see [[connect]]; to implement a server, see [[listen]]
+and [[accept]].

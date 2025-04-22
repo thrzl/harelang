@@ -1,0 +1,2 @@
+[[unix::passwd]] provides functions to assist in parsing Unix /etc/passwd and
+/etc/group files, for working with the local user and group system databases.
