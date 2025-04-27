@@ -8,7 +8,6 @@ use hare::ast;
 use hare::lex;
 use hare::module;
 use hare::parse;
-use hare::parse::doc;
 use io;
 use os::exec;
 

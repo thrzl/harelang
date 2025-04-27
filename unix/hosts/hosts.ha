@@ -2,9 +2,6 @@
 // (c) Hare authors <https://harelang.org>
 
 use bufio;
-use errors;
-use encoding::utf8;
-use fs;
 use io;
 use net::ip;
 use os;

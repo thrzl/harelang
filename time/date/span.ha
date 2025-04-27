@@ -2,7 +2,6 @@
 // (c) Hare authors <https://harelang.org>
 
 use fmt;
-use io;
 
 // Represents a span of time in the Gregorian chronology; a set of nominal
 // periods of time. Used for chronological arithmetic.

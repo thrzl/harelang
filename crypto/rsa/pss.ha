@@ -7,7 +7,6 @@ use endian;
 use errors;
 use hash;
 use io;
-use types;
 
 export type default = void;
 

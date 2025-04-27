@@ -3,7 +3,6 @@
 
 use hash;
 use hash::fnv;
-use rt;
 
 def TRACE_BUCKETS = 65535;
 

@@ -6,7 +6,6 @@ use fmt;
 use fs;
 use io;
 use os;
-use strings;
 
 @test fn pty() void = {
 	let pty = openpty()!;

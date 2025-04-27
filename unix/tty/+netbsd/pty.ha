@@ -8,7 +8,6 @@ use io;
 use os;
 use rt;
 use types::c;
-use strings;
 
 // Opens an available pseudoterminal and returns the file descriptors of the
 // master and slave.

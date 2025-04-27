@@ -130,7 +130,7 @@ $(HARECACHE)/types_c.ssa: $(types_c_ha) $(HARECACHE)/encoding_utf8.td $(HARECACH
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/types_c.td.tmp -N types::c $(types_c_ha)
 
 os_ha = os/+netbsd/dirfdfs.ha os/+netbsd/exit.ha os/+netbsd/fcntl.ha os/+netbsd/fs.ha os/+netbsd/platform_environ.ha os/+netbsd/shm.ha os/+netbsd/status.ha os/+netbsd/stdfd.ha os/environ.ha os/os.ha
-$(HARECACHE)/os.ssa: $(os_ha) $(HARECACHE)/bufio.td $(HARECACHE)/bytes.td $(HARECACHE)/errors.td $(HARECACHE)/fs.td $(HARECACHE)/io.td $(HARECACHE)/path.td $(HARECACHE)/rt.td $(HARECACHE)/strings.td $(HARECACHE)/time.td $(HARECACHE)/types_c.td
+$(HARECACHE)/os.ssa: $(os_ha) $(HARECACHE)/bufio.td $(HARECACHE)/errors.td $(HARECACHE)/fs.td $(HARECACHE)/io.td $(HARECACHE)/path.td $(HARECACHE)/rt.td $(HARECACHE)/strings.td $(HARECACHE)/time.td $(HARECACHE)/types_c.td
 	@mkdir -p -- "$(HARECACHE)"
 	@printf 'HAREC\t%s\n' "$@"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/os.td.tmp -N os $(os_ha)
@@ -214,7 +214,7 @@ $(HARECACHE)/shlex.ssa: $(shlex_ha) $(HARECACHE)/ascii.td $(HARECACHE)/encoding_
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/shlex.td.tmp -N shlex $(shlex_ha)
 
 unix_tty_ha = unix/tty/+netbsd/isatty.ha unix/tty/+netbsd/open.ha unix/tty/+netbsd/pgid.ha unix/tty/+netbsd/pty.ha unix/tty/+netbsd/termios.ha unix/tty/+netbsd/winsize.ha unix/tty/types.ha
-$(HARECACHE)/unix_tty.ssa: $(unix_tty_ha) $(HARECACHE)/errors.td $(HARECACHE)/fmt.td $(HARECACHE)/fs.td $(HARECACHE)/io.td $(HARECACHE)/os.td $(HARECACHE)/os_exec.td $(HARECACHE)/rt.td $(HARECACHE)/strings.td $(HARECACHE)/types_c.td
+$(HARECACHE)/unix_tty.ssa: $(unix_tty_ha) $(HARECACHE)/errors.td $(HARECACHE)/fmt.td $(HARECACHE)/fs.td $(HARECACHE)/io.td $(HARECACHE)/os.td $(HARECACHE)/os_exec.td $(HARECACHE)/rt.td $(HARECACHE)/types_c.td
 	@mkdir -p -- "$(HARECACHE)"
 	@printf 'HAREC\t%s\n' "$@"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/unix_tty.td.tmp -N unix::tty $(unix_tty_ha)

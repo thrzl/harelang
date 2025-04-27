@@ -4,7 +4,6 @@
 use fmt;
 use fs;
 use io;
-use strings;
 use time::chrono;
 
 // All possible errors returned from this module.

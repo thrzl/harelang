@@ -9,7 +9,6 @@ use errors;
 use fmt;
 use io;
 use memio;
-use os;
 use strings;
 
 

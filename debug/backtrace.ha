@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
-use bufio;
 use debug::dwarf;
 use debug::image;
 use fmt;
@@ -9,7 +8,6 @@ use format::elf;
 use fs;
 use io;
 use os;
-use time;
 
 def MAX_FRAMES_TOP: size = 16z;
 def MAX_FRAMES_BOTTOM: size = 16z;

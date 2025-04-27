@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
-use bufio;
 use fmt;
 use io;
-use memio;
 use net::ip;
 use os;
 use strings;

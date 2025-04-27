@@ -3,7 +3,6 @@
 
 use errors;
 use rt;
-use time;
 use unix;
 
 // Forward declaration to resolve signal => test => signal loop
