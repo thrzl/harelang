@@ -23,14 +23,10 @@ export fn strerror(err: syntax) str = "Can't parse Media Type";
 // cause [[syntax]] to be returned unless [[next_param]] is used to enumerate
 // all of the parameters.
 export fn parse(in: str) ((str, type_params) | syntax) = {
-	const items = strings::cut(in, ";");
-	const mtype = items.0, params = items.1;
-	const items = strings::cut(mtype, "/");
-	if (len(items.0) < 1 || len(items.1) < 1) {
-		return syntax;
-	};
-	typevalid(items.0)?;
-	typevalid(items.1)?;
+	const (mtype, params) = strings::cut(in, ";");
+	const (_type, subtype) = strings::cut(mtype, "/");
+	typevalid(_type)?;
+	typevalid(subtype)?;
 	return (mtype, strings::tokenize(params, ";"));
 };
 
@@ -49,20 +45,20 @@ export fn next_param(in: *type_params) ((str, str) | done | syntax) = {
 		return done;
 	};
 
-	const items = strings::cut(tok, "=");
+	let (key, value) = strings::cut(tok, "=");
 	// The RFC does not permit whitespace here, but whitespace is very
 	// common in the wild. ¯\_(ツ)_/¯
-	items.0 = strings::trim(items.0);
-	items.1 = strings::trim(items.1);
-	if (len(items.0) == 0 || len(items.1) == 0) {
+	key = strings::trim(key);
+	value = strings::trim(value);
+	if (key == "" || value == "") {
 		return syntax;
 	};
 
-	if (strings::hasprefix(items.1, "\"")) {
-		items.1 = quoted(items.1)?;
+	if (strings::hasprefix(value, "\"")) {
+		value = quoted(value)?;
 	};
 
-	return (items.0, items.1);
+	return (key, value);
 };
 
 fn quoted(in: str) (str | syntax) = {
@@ -85,6 +81,9 @@ fn quoted(in: str) (str | syntax) = {
 };
 
 fn typevalid(in: str) (void | syntax) = {
+	if (in == "") {
+		return syntax;
+	};
 	const miter = strings::iter(in);
 	for (let rn => strings::next(&miter)) {
 		if (!ascii::valid(rn) || rn == ' '
@@ -96,26 +95,28 @@ fn typevalid(in: str) (void | syntax) = {
 };
 
 @test fn parse() void = {
-	const res = parse("text/plain")!;
-	assert(res.0 == "text/plain");
+	const (content_type, _) = parse("text/plain")!;
+	assert(content_type == "text/plain");
 
-	const res = parse("image/png")!;
-	assert(res.0 == "image/png");
+	const (content_type, _) = parse("image/png")!;
+	assert(content_type == "image/png");
 
-	const res = parse("application/svg+xml; charset=utf-8; foo=\"bar baz\"")!;
-	assert(res.0 == "application/svg+xml");
-	const params = res.1;
-	const param = next_param(&params)! as (str, str);
-	assert(param.0 == "charset" && param.1 == "utf-8");
-	const param = next_param(&params)! as (str, str);
-	assert(param.0 == "foo" && param.1 == "bar baz");
+	const (content_type, params) = parse("application/svg+xml; charset=utf-8; foo=\"bar baz\"")!;
+	assert(content_type == "application/svg+xml");
+	const (pk, pv) = next_param(&params)! as (str, str);
+	assert(pk == "charset" && pv == "utf-8");
+	const (pk, pv) = next_param(&params)! as (str, str);
+	assert(pk == "foo" && pv == "bar baz");
 	assert(next_param(&params) is done);
 
+	assert(parse("") is syntax);
 	assert(parse("hi") is syntax);
+	assert(parse("type/") is syntax);
 	assert(parse("text/ spaces ") is syntax);
 	assert(parse("text/@") is syntax);
+	assert(parse("/subtype") is syntax);
 
-	const res = parse("text/plain;charset")!;
-	assert(res.0 == "text/plain");
-	assert(next_param(&res.1) is syntax);
+	const (content_type, params) = parse("text/plain;charset")!;
+	assert(content_type == "text/plain");
+	assert(next_param(&params) is syntax);
 };
