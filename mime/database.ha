@@ -25,35 +25,40 @@ def MIME_BUCKETS: size = 256;
 let mimetable: [MIME_BUCKETS][]*mimetype = [[]...];
 let exttable: [MIME_BUCKETS][]*mimetype = [[]...];
 
+// Frees a [[mimetype]] and all resources associated with it.
+export fn mimetype_free(m: *mimetype) void = {
+	free(m.mime);
+	strings::freeall(m.exts);
+	free(m);
+};
+
 // Registers a Media Type and its extensions in the internal MIME database. This
 // function is designed to be used by @init functions for modules which
 // implement new Media Types. The input is expected to be statically allocated
 // and is never freed.
-export fn register(mime: *mimetype...) void = {
+export fn register(mime: *mimetype...) (void | nomem) = {
 	let i = len(static_db);
-	append(static_db, mime...)!;
+	append(static_db, mime...)?;
 	for (i < len(static_db); i += 1) {
-		hashtable_insert(static_db[i]);
+		hashtable_insert(static_db[i])?;
 	};
 };
 
-fn hashtable_insert(item: *mimetype) void = {
+fn hashtable_insert(item: *mimetype) (void | nomem) = {
 	const hash = fnv::string(item.mime);
 	let bucket = &mimetable[hash % len(mimetable)];
-	append(bucket, item)!;
+	append(bucket, item)?;
 
 	for (let ext .. item.exts) {
 		const hash = fnv::string(ext);
 		let bucket = &exttable[hash % len(exttable)];
-		append(bucket, item)!;
+		append(bucket, item)?;
 	};
 };
 
 @fini fn fini() void = {
 	for (let m .. heap_db) {
-		free(m.mime);
-		strings::freeall(m.exts);
-		free(m);
+		mimetype_free(m);
 	};
 	free(heap_db);
 	free(static_db);

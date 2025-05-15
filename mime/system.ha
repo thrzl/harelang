@@ -13,7 +13,7 @@ use strings;
 	load_systemdb(): void;
 };
 
-fn load_systemdb() (void | fs::error | io::error | utf8::invalid) = {
+fn load_systemdb() (void | fs::error | io::error | utf8::invalid | nomem) = {
 	const file = os::open(SYSTEM_DB)?;
 	defer io::close(file)!;
 
@@ -26,29 +26,62 @@ fn load_systemdb() (void | fs::error | io::error | utf8::invalid) = {
 			continue;
 		};
 
-		const items = strings::cut(line, "\t");
-		const mime = strings::trim(items.0),
-			exts = strings::trim(items.1);
+		const (mime, exts) = strings::cut(line, "\t");
+		exts = strings::trim(exts);
 		if (len(exts) == 0) {
 			continue;
 		};
+		mime = strings::trim(mime);
+
+		mime = strings::dup(mime)?;
+
+		let entry = match (alloc(mimetype { mime = mime, exts = [] })) {
+		case let mt: *mimetype =>
+			yield mt;
+		case nomem =>
+			// We intentionally free on the error path here
+			// instead of having a `defer if (err)` block above.
+			// Once the mimetype is allocated, the mimetype_free
+			// function will take care of freeing the duplicated
+			// mime string. So freeing both the mimetype and the
+			// mime string on error would be a double-free.
+			free(mime);
+			return nomem;
+		};
+		let err = false;
+		defer if (err) mimetype_free(entry);
 
 		const tok = strings::tokenize(exts, " ");
-		let entry = alloc(mimetype {
-			mime = strings::dup(mime)!,
-			exts = [],
-		})!;
 		for (let ext => strings::next_token(&tok)) {
-			append(entry.exts, strings::dup(ext)!)!;
+			ext = match(strings::dup(ext)) {
+			case let s: str =>
+				yield s;
+			case nomem =>
+				err = true;
+				return nomem;
+			};
+			match (append(entry.exts, ext)) {
+			case void => void;
+			case nomem =>
+				// This case is similar to the comment above.
+				free(ext);
+				err = true;
+				return nomem;
+			};
 		};
-		register_heap(entry);
+		match (register_heap(entry)) {
+		case void => void;
+		case nomem =>
+			err = true;
+			return nomem;
+		};
 	};
 };
 
-fn register_heap(mime: *mimetype) void = {
+fn register_heap(mime: *mimetype) (void | nomem) = {
 	let i = len(heap_db);
-	append(heap_db, mime)!;
+	append(heap_db, mime)?;
 	for (i < len(heap_db); i += 1) {
-		hashtable_insert(heap_db[i]);
+		hashtable_insert(heap_db[i])?;
 	};
 };

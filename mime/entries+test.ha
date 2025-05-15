@@ -12,7 +12,7 @@ const text_hare: mimetype = mimetype {
 };
 
 @init fn init() void = {
-	register(&text_plain, &text_hare);
+	register(&text_plain, &text_hare)!;
 };
 
 @test fn lookup_mime() void = {
