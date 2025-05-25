@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
-def U: u8 = 0o1;
-def L: u8 = 0o2;
-def N: u8 = 0o4;
-def S: u8 = 0o10;
-def P: u8 = 0o20;
-def C: u8 = 0o40;
-def B: u8 = 0o100;
-def X: u8 = 0o200;
+def U: u8 = 0o1;   // Upper
+def L: u8 = 0o2;   // Lower
+def N: u8 = 0o4;   // Number
+def S: u8 = 0o10;  // Whitespace
+def P: u8 = 0o20;  // Punct
+def C: u8 = 0o40;  // Control
+def B: u8 = 0o100; // ' ' (space), is printable
+def X: u8 = 0o200; // Hex
 
 // LUT of bitfields with character attributes
 const cclass: []u8 = [
