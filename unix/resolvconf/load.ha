@@ -57,6 +57,7 @@ export fn load() *config = {
 // Parses a resolv.conf-formatted file and populates the given config object.
 fn parse(conf: *config, in: io::handle) (void | nomem | error) = {
 	const rd = read(in);
+	defer finish(&rd);
 	for (const param => next(&rd)?) {
 		switch (param.name) {
 		case "nameserver" =>
