@@ -106,7 +106,11 @@ export fn pwent_finish(ent: *pwent) void = {
 };
 
 fn pwent_dup(ent: *pwent) (void | nomem) = {
-	let dup = pwent { ... };
+	let dup = pwent {
+		uid = ent.uid,
+		gid = ent.gid,
+		...
+	};
 	let ok = false;
 	defer if (!ok) pwent_finish(&dup);
 

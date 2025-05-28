@@ -96,7 +96,10 @@ export fn grents_free(ents: []grent) void = {
 };
 
 fn grent_dup(ent: *grent) (void | nomem) = {
-	let dup = grent { ... };
+	let dup = grent {
+		gid = ent.gid,
+		...
+	};
 	let ok = false;
 	defer if (!ok) grent_finish(&dup);
 
