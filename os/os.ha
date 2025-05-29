@@ -109,6 +109,9 @@ export fn symlink(target: str, path: str) (void | fs::error) =
 //
 // [[fs::flag::CREATE]] isn't very useful with this function, since the new
 // file's mode is set to zero. For this use-case, use [[create]] instead.
+//
+// The return value is an unbuffered [[io::file]]. For buffered I/O, see
+// [[open_buffered]].
 export fn open(
 	path: str,
 	flags: fs::flag = fs::flag::RDONLY,
@@ -120,7 +123,8 @@ export fn open(
 // Only the permission bits of the mode are used. If other bits are set, they
 // are discarded.
 //
-// To create a file without opening it, see [[mkfile]].
+// The return value is an unbuffered [[io::file]]. For buffered I/O, see
+// [[create_buffered]]. To create a file without opening it, see [[mkfile]].
 export fn create(
 	path: str,
 	mode: fs::mode,
