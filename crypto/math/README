@@ -1,3 +1,5 @@
+math: constant-time mathematical operations
+
 crypto::math provides constant-time mathematical operations useful for
 cryptographic algorithms.
 

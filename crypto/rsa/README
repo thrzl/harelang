@@ -1,3 +1,5 @@
+rsa: RSA signature and encryption scheme implementation
+
 This module provides RSA signature and encryption schemes defined in PKCS #1.
 The implementation only supports RSA keys with two prime factors. Most of the
 RSA operations in this module require buffers to perform. Buffer sizes are

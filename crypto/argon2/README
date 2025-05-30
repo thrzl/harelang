@@ -1,3 +1,5 @@
+argon2: Argon2 key derivation algorithm family support
+
 This module provides an implementation of the argon2 key derivation function as
 described by RFC 9106. This is the recommended algorithm for password hashing in
 Hare programs, and for deriving keys for use with other cryptographic

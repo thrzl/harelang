@@ -50,7 +50,7 @@ export type context = struct {
 	ambiguous: bool,
 	parse_errs: []lex::syntax,
 	srcs: module::srcset,
-	submods: []str,
+	submods: []submodule,
 	summary: summary,
 	template: bool,
 	show_lineno: bool,

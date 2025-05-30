@@ -1,3 +1,5 @@
+os: operating system features and the local filesystem
+
 The os module provides access to resources from the host operating system,
 particularly to the filesystem and standard I/O. [[cwd]] provides an
 implementation of [[fs::fs]] which is backed by the host filesystem, and this

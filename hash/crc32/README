@@ -1,1 +1,3 @@
-Implements the CRC-32 checksum algorithm. It is a non-cryptographic checksum.
+crc32: CRC-32 (Cyclic Redundancy Check) support
+
+This is a non-cryptographic hash and is not suitable for cryptographic use.

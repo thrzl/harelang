@@ -1,1 +1,3 @@
-Implements the Adler-32 checksum algorithm. It is a non-cryptographic checksum.
+adler32: Adler-32 checksum algorithm
+
+This is a non-cryptographic hash and is not suitable for cryptographic use.

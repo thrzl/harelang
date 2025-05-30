@@ -1,3 +1,5 @@
+date: international Gregorian chronology & calendar support
+
 The time::date module implements the common international Gregorian chronology,
 based on the astronomically numbered proleptic Gregorian calendar and the ISO
 week-numbering calendar, as per the ISO 8601 standard, and the common 24 hour

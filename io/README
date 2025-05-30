@@ -1,3 +1,5 @@
+io: high-level I/O abstraction and low-level file I/O
+
 The io module provides input and output (I/O) functionality for Hare programs,
 such as reading from or writing to files. The I/O module is not generally
 responsible for provisioning the I/O objects themselves; see modules like

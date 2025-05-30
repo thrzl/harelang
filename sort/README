@@ -1,3 +1,5 @@
+sort: sorting algorithms and support for sorted data structures
+
 The sort module provides functions for sorting slices, as well as operations on
 sorted slices, such as binary search.
 

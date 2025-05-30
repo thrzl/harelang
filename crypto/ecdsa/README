@@ -1,3 +1,5 @@
+ecdsa: Elliptic Curve Digital Signature Algorithm support
+
 This module implements the elliptic curve digital signature algorithm for
 a selection of curves supported by [[crypto::ec]].
 

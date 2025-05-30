@@ -101,13 +101,19 @@ export fn emit_html(ctx: *context) (void | error) = {
 		};
 		fmt::fprintln(ctx.out, "<ul class='submodules'>")?;
 		for (let submodule .. ctx.submods) {
-			let path = path::init("/", identpath, submodule)!;
+			let path = path::init("/", identpath, submodule.name)!;
 
 			fmt::fprintf(ctx.out, "<li><a href='")?;
 			html_escape(ctx.out, path::string(&path))?;
 			fmt::fprintf(ctx.out, "'>")?;
-			html_escape(ctx.out, submodule)?;
-			fmt::fprintfln(ctx.out, "</a></li>")?;
+			html_escape(ctx.out, submodule.name)?;
+			if (submodule.desc != "") {
+				fmt::fprintfln(ctx.out, "</a>: ")?;
+				html_escape(ctx.out, submodule.desc)?;
+				fmt::fprintfln(ctx.out, "</li>")?;
+			} else {
+				fmt::fprintfln(ctx.out, "</a></li>")?;
+			};
 		};
 		fmt::fprintln(ctx.out, "</ul>")?;
 	};

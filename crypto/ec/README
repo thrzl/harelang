@@ -1,3 +1,5 @@
+ec: selected elliptic curves
+
 The crypto::ec module provides implementations for a selection of elliptic
 curves and their operations.
 

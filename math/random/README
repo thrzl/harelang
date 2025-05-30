@@ -1,3 +1,5 @@
+random: pseudorandom number generator
+
 math::random provides a pseudorandom number generator, which yields a
 deterministic sequence of psuedo-random numbers based on a seed value.
 

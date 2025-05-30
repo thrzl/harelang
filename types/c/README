@@ -1,3 +1,5 @@
+c: support for C types and ABI interoperation
+
 types::c provides type aliases that are compatible with standard C builtin types
 and typedefs, as specified ISO/IEC 9899 and POSIX, as well as convenience
 functions for working with C types. This module is useful for C interop, for

@@ -1,3 +1,5 @@
+fnmatch: wildcard pattern matching support
+
 The fnmatch module provides an implementation of fnmatch string matching as
 defined by POSIX.
 

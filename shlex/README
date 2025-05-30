@@ -1,1 +1,3 @@
+shlex: lexical support for POSIX shell grammar
+
 The shlex module provides lexical tools for working with POSIX shell grammar.

@@ -1,3 +1,5 @@
+signal: Unix signal handling and dispatching
+
 The signal module provides support for Unix signal handlers. Typical
 applications will provide a signal handler to [[handle]] to configure it for the
 desired signal, possibly along with flags and a signal mask. This function

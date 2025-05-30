@@ -1,3 +1,5 @@
+regex: regular expressions
+
 The regex module provides an implementation of regular expressions which adheres
 closely to the POSIX Extended Regular Expressions (ERE) specification.
 

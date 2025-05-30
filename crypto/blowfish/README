@@ -1,3 +1,5 @@
+blowfish: Blowfish encryption support
+
 The crypto::blowfish module provides an implementation of Bruce Schneier's
 Blowfish encryption standard via the [[crypto::cipher::block]] interface. The
 use of this algorithm is not recommended except for legacy use-cases; prefer

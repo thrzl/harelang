@@ -1,3 +1,5 @@
+crypto: cryptographic algorithms
+
 Important notice: Hare's cryptography implementations have not been audited. You
 can contribute to the funding of an independent audit of our cryptography
 implementation on OpenCollective:

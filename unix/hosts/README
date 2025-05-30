@@ -1,3 +1,5 @@
+hosts: /etc/hosts file format support and resolver
+
 [[unix::hosts]] provides a parser and support code for working with a Unix
 /etc/hosts file to look up hostnames from a fixed list of hostname/IP
 assignments.

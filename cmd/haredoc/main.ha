@@ -264,14 +264,15 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 		};
 	};
 
-	const submods: []str = if (!ambiguous && modpath != "") {
-		yield match (doc::submodules(modpath, show_undocumented)) {
-		case let s: []str =>
-			yield s;
-		case doc::error =>
-			yield [];
-		};
-	} else [];
+	const submods: []doc::submodule =
+		if (!ambiguous && modpath != "") {
+			yield match (doc::submodules(modpath, show_undocumented)) {
+			case let s: []doc::submodule =>
+				yield s;
+			case doc::error =>
+				yield [];
+			};
+		} else [];
 
 	if (only_lineno) {
 		if (len(decls) == 0) {

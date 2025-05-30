@@ -1,3 +1,5 @@
+udp: User Datagram Protocol (UDP) sockets support
+
 [[net::udp]] provides support for User Datagram Protocol (UDP) sockets. For
 connectionless use, see [[sendto]] and [[recvfrom]]. For "connected" UDP
 sockets, see [[connect]], [[send]], and [[recv]]. To listen for incoming

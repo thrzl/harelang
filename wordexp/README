@@ -1,3 +1,5 @@
+wordexp: shell expansion support
+
 The wordexp module implements word expansion using shell semantics, similar to
 POSIX wordexp(3). Word expansion is performed with the platform-specific system
 shell, which is generally POSIX sh(1) compatible on Unix-like systems.

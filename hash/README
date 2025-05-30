@@ -1,1 +1,3 @@
+hash: cryptographic and non-cryptographic hashing algorithms
+
 hash provides a generic interface for use with hashing functions.

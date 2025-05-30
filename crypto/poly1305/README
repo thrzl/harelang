@@ -1,3 +1,5 @@
+poly1305: Poly1305 MAC support
+
 This module provides the poly1305 MAC as defined in RFC 8439.
 
 This is a low-level module which implements cryptographic primitives. Direct use

@@ -1,3 +1,5 @@
+bufio: buffered I/O primitives
+
 bufio provides an [[io::stream]] implementation which provides buffered I/O
 support, utility functions which pair well with buffered streams, and a
 [[scanner]] type which allocates and maintains its own read buffer.

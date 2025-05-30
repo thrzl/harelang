@@ -1,3 +1,5 @@
+curve25519: Curve25519/X25519 support
+
 The curve25519 module implements the x25519 function which performs scalar
 multiplication on the elliptic curve known as Curve25519. See RFC 7748.
 

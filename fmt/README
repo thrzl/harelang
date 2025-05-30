@@ -1,3 +1,5 @@
+fmt: formatted string I/O
+
 A format string consists of a string of literal characters, to be printed
 verbatim, and format sequences, which describe how to format arguments from a
 set of variadic parameters for printing.

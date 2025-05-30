@@ -1,3 +1,5 @@
+getopt: command line option parsing
+
 getopt provides an interface for parsing command line arguments and
 automatically generates a brief help message explaining the command usage. See
 [[parse]] or [[tryparse]] for the main entry point.

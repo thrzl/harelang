@@ -1,2 +1,1 @@
-mac provides a generic interface for use with message authentication code (MAC)
-functions.
+mac: general interface for message authentication code (MAC) algorithms

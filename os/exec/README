@@ -1,3 +1,5 @@
+exec: command execution and process management
+
 os::exec handles the execution of arbitrary commands. A programmer who needs to
 spawn an external command will usually utilize [[cmd]] to obtain a [[command]]
 instance (possibly using functions like [[setenv]] to customize it), then

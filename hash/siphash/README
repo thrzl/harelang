@@ -1,3 +1,5 @@
+siphash: SipHash keyed hash function, for untrusted hash map keys
+
 Implements the SipHash keyed hash function. Output of SipHash(secret, input)
 for any input does not reveal anything about the secret used, which makes it a
 good choice for use cases that require resistance against hash flooding.

@@ -1,4 +1,4 @@
-Implementation of the base32 encoding scheme as defined by RFC 4648.
+base32: RFC 4648 base32 encoding support
 
 A stream-based encoding and decoding interface is available via [[newencoder]]
 and [[newdecoder]], which transparently encode or decode bytes to or from base32

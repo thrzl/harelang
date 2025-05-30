@@ -1,3 +1,5 @@
+module: Hare module system support
+
 hare::module provides an interface to the module system used by this Hare
 implementation, as well as to the Hare cache. Note that these interfaces may not
 be portable to other Hare implementations.

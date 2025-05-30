@@ -1,3 +1,5 @@
+salsa: Salsa20/XSalsa20 stream ciphers
+
 crypto::salsa provides an implementation of the Salsa20 and XSalsa20 stream
 ciphers, per "Salsa20 specification" by Daniel J. Bernstein.
 

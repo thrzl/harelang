@@ -1,3 +1,5 @@
+lex: lexical analysis for the Hare grammar
+
 hare::lex provides a lexer for Hare source code. A lexer takes an [[io::handle]]
 and returns a series of Hare [[token]]s. See the Hare specification for more
 details:

@@ -1,3 +1,5 @@
+types: constants and types related to the Hare type system
+
 The types module provides access to some information about the Hare type system.
 It provides constants like [[INT_MAX]], which defines the useful range for
 integer types (see [[math::]] for f32 and f64 limits), as well as types like

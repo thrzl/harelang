@@ -117,6 +117,17 @@ export fn emit_tty(ctx: *context) (void | error) = {
 };
 
 fn emit_submodules_tty(ctx: *context) (void | error) = {
+	const ident = unparse::identstr(ctx.ident);
+	defer free(ident);
+
+	let max_submod = 0z;
+	for (let submod .. ctx.submods) {
+		const ln = len(submod.name);
+		if (max_submod < ln) {
+			max_submod = ln;
+		};
+	};
+
 	if (len(ctx.submods) != 0) {
 		if (!firstline) {
 			fmt::fprintln(ctx.out)?;
@@ -129,17 +140,27 @@ fn emit_submodules_tty(ctx: *context) (void | error) = {
 		} else {
 			fmt::fprintln(ctx.out, "// Submodules")?;
 		};
-		for (let submodule .. ctx.submods) {
-			let submodule = if (len(ctx.ident) != 0) {
-				const s = unparse::identstr(ctx.ident);
-				defer free(s);
-				yield strings::concat(s, "::", submodule)!;
+		for (let submod .. ctx.submods) {
+			const id = if (len(ident) != 0) {
+				yield strings::concat(ident, "::", submod.name)!;
 			} else {
-				yield strings::dup(submodule)!;
+				yield strings::dup(submod.name)!;
 			};
-			defer free(submodule);
+			defer free(id);
 
-			fmt::fprintfln(ctx.out, "// - [[{}::]]", submodule)?;
+			if (submod.desc != "") {
+				const padding = max_submod - len(submod.name);
+				fmt::fprintfln(ctx.out, "// - [[{}::]] {%}{}",
+					id,
+					"", &fmt::mods {
+						pad = ' ',
+						width = padding,
+						...
+					},
+					submod.desc)?;
+			} else {
+				fmt::fprintfln(ctx.out, "// - [[{}::]]", id)?;
+			};
 		};
 	};
 };

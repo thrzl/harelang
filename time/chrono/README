@@ -1,3 +1,5 @@
+chrono: timescales and chronologies
+
 The time::chrono module provides timescale utilities, and the foundations for
 chronology with the [[moment]] type, an abstract, extendable temporal object.
 

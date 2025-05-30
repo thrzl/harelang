@@ -1,3 +1,5 @@
+chachapoly: Chacha+Poly1305-based authenticated stream cipher
+
 This module provides Chacha20-Poly1305 and XChacha20-Poly1305 stream
 implementations as described in RFC 8439.
 
