@@ -11,7 +11,7 @@ def B: u8 = 0o100; // ' ' (space), is printable
 def X: u8 = 0o200; // Hex
 
 // LUT of bitfields with character attributes
-const cclass: []u8 = [
+const cclass: [128]u8 = [
 //	 0	 1	 2	 3	 4	 5	 6	 7
 	C,	C,	C,	C,	C,	C,	C,	C,	// 0
 	C,	S|C,	S|C,	S|C,	S|C,	S|C,	C,	C,	// 10
