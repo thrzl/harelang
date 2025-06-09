@@ -1217,8 +1217,31 @@ export fn seteuid(uid: uid_t) (void | errno) = {
 // pathconf
 // fpathconf
 // swapctl
-// getrlimit
-// setrlimit
+
+@symbol("getrlimit") fn libc_getrlimit(
+	resource: int,
+	rlp: *rlimit,
+) int;
+
+export fn getrlimit(resource: int, rlp: *rlimit) (void | errno) = {
+	let res = libc_getrlimit(resource, rlp);
+	if (res == -1) {
+		return *__errno(): errno;
+	};
+};
+
+@symbol("setrlimit") fn libc_setrlimit(
+	resource: int,
+	rlp: const *rlimit,
+) int;
+
+export fn setrlimit(resource: int, rlp: const *rlimit) (void | errno) = {
+	let res = libc_setrlimit(resource, rlp);
+	if (res == -1) {
+		return *__errno(): errno;
+	};
+};
+
 // sysctl
 
 @symbol("sysctl") fn libc_sysctl(

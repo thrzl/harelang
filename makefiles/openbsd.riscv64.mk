@@ -189,7 +189,7 @@ $(HARECACHE)/hare_module.ssa: $(hare_module_ha) $(HARECACHE)/ascii.td $(HARECACH
 	@printf 'HAREC\t%s\n' "$@"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/hare_module.td.tmp -N hare::module $(hare_module_ha)
 
-unix_ha = unix/+openbsd/creds.ha unix/+openbsd/nice.ha unix/+openbsd/pipe.ha unix/+openbsd/umask.ha
+unix_ha = unix/+openbsd/creds.ha unix/+openbsd/nice.ha unix/+openbsd/pipe.ha unix/+openbsd/rlimit.ha unix/+openbsd/umask.ha
 $(HARECACHE)/unix.ssa: $(unix_ha) $(HARECACHE)/errors.td $(HARECACHE)/fs.td $(HARECACHE)/io.td $(HARECACHE)/rt.td
 	@mkdir -p -- "$(HARECACHE)"
 	@printf 'HAREC\t%s\n' "$@"

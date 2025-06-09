@@ -18,6 +18,7 @@ export type blksize_t = i32;
 export type nfds_t = uint;
 export type mode_t = u32;
 export type sigset = uint;
+export type rlim_t = u64;
 
 // Passing this to a pledge() promise specifies to not change the current value.
 export type nullpromise = void;
@@ -513,6 +514,23 @@ export def LOCK_SH: int = 1;
 export def LOCK_EX: int = 2;
 export def LOCK_NB: int = 4;
 export def LOCK_UN: int = 8;
+
+export type rlimit = struct {
+	rlim_cur: rlim_t,
+	rlim_max: rlim_t,
+};
+
+export def RLIM_INFINITY: rlim_t = -1;
+
+export def RLIMIT_CPU: int = 0;
+export def RLIMIT_FSIZE: int = 1;
+export def RLIMIT_DATA: int = 2;
+export def RLIMIT_STACK: int = 3;
+export def RLIMIT_CORE: int = 4;
+export def RLIMIT_RSS: int = 5;
+export def RLIMIT_MEMLOCK: int = 6;
+export def RLIMIT_NPROC: int = 7;
+export def RLIMIT_NOFILE: int = 8;
 
 // sysctl
 export def CTL_KERN: int = 1;

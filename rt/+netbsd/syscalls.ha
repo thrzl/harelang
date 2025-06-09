@@ -452,6 +452,17 @@ export fn sigprocmask(
 		how: u64, set: uintptr: u64, old: uintptr: u64))?: int;
 };
 
+export fn getrlimit(resource: int, rlim: *rlimit) (void | errno) = {
+	wrap_return(syscall2(SYS_getrlimit,
+		resource: u64, rlim: uintptr: u64))?;
+};
+
+export fn setrlimit(resource: int, rlim: *const rlimit) (void | errno) = {
+	wrap_return(syscall2(SYS_setrlimit,
+		resource: u64, rlim: uintptr: u64))?;
+};
+
+
 export fn open(
 	path: path,
 	flags: int,
