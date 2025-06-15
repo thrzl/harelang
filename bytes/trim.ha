@@ -2,23 +2,28 @@
 // (c) Hare authors <https://harelang.org>
 
 // Returns a slice (borrowed from given input slice) after trimming off of
-// the start of the input slice the bytes in the given list.
+// the start of the input slice the bytes in the given list, which must not be
+// empty.
 export fn ltrim(in: []u8, trim: u8...) []u8 = {
+	assert(len(trim) > 0);
 	let i = 0z;
 	for (i < len(in) && contains(trim, in[i]); i+= 1) void;
 	return in[i..];
 };
 
 // Returns a slice (borrowed from given input slice) after trimming off of
-// the end of the input slice the bytes in the given list.
+// the end of the input slice the bytes in the given list, which must not be
+// empty.
 export fn rtrim(in: []u8, trim: u8...) []u8 = {
+	assert(len(trim) > 0);
 	let i = len(in) - 1;
 	for (i < len(in) && contains(trim, in[i]); i -= 1) void;
 	return in[..i + 1];
 };
 
 // Returns a slice (borrowed from given input slice) after trimming off of
-// the both ends of the input slice the bytes in the given list.
+// the both ends of the input slice the bytes in the given list, which must not
+// be empty.
 export fn trim(in: []u8, trim: u8...) []u8 = ltrim(rtrim(in, trim...), trim...);
 
 @test fn trim() void = {
