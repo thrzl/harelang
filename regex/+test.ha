@@ -711,6 +711,7 @@ fn run_rawreplace_case(
 			2, "hello xyz and xyz test abq thanks"),
 		(`.`, "blablabla", `x`, 0, "blablabla"),
 		(`([[:digit:]])([[:digit:]])`, "1234", `\2`, 1, "234"),
+		(`[[:alpha:]]`, `1a2b3`, `\\`, types::SIZE_MAX, `1\2\3`),
 	];
 
 	for (let (expr, string, target, n, expected) .. cases) {
