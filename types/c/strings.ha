@@ -2,6 +2,7 @@
 // (c) Hare authors <https://harelang.org>
 
 use encoding::utf8;
+use sort::cmp;
 use types;
 
 let empty: [_]u8 = [0];
@@ -20,11 +21,37 @@ export fn strlen(cstr: *const char) size = {
 
 // Computes the length of a NUL-terminated C string, only looking at the first
 // maxlen bytes. The computed length does not include the NUL terminator.
+//
+// Note: although cstr's type is non-nullable, passing in a null pointer has
+// well-defined behavior if maxlen == 0.
 export fn strnlen(cstr: *const char, maxlen: size) size = {
 	const ptr = cstr: *[*]u8;
 	let ln = 0z;
 	for (ln < maxlen && ptr[ln] != 0; ln += 1) void;
 	return ln;
+};
+
+// Compares two NUL-terminated C strings. Zero is returned if the strings are
+// equal, a negative value if a is less than b, or a positive value if a is
+// greater than b.
+export fn strcmp(a: *const char, b: *const char) int = {
+	return cmp::cstrs(&a, &b);
+};
+
+// Compares two NUL-terminated C strings, only looking at the first n bytes.
+// Zero is returned if the strings are equal, a negative value if a is less than
+// b, or a positive value if a is greater than b.
+//
+// Note: although the string parameters have non-nullable types, passing in a
+// null pointer for either of them has well-defined behavior if n == 0.
+export fn strncmp(a: *const char, b: *const char, n: size) int = {
+	if (n == 0) {
+		return 0;
+	};
+	const a = a: *const [*]u8, b = b: *const [*]u8;
+	let i = 0z;
+	for (i < n - 1 && a[i] == b[i] && a[i] != '\0'; i += 1) void;
+	return a[i]: int - b[i]: int;
 };
 
 // Converts a C string to a Hare string in O(n), and does not check if it's
