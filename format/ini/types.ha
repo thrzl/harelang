@@ -5,7 +5,8 @@ use encoding::utf8;
 use fmt;
 use io;
 
-// A syntax error occurred during parsing.
+// A syntax error occurred during parsing. The line number at which parsing
+// failed is stored in the error.
 export type syntaxerr = !size;
 
 // Any error that may occur during parsing.

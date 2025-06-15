@@ -11,8 +11,10 @@ export type scanner = struct {
 	section: str,
 };
 
-// Creates an INI file scanner. Use [[next]] to read entries. The caller must
-// call [[finish]] once they're done with this object.
+// Creates an INI file scanner. The supplied handle need not be buffered, since
+// the returned [[scanner]] manages its own internal [[bufio::scanner]]. Use
+// [[next]] to read entries. The caller must call [[finish]] once they're done
+// with the INI scanner.
 export fn scan(in: io::handle) scanner = {
 	return scanner {
 		scan = bufio::newscanner(in),
@@ -30,7 +32,7 @@ export fn finish(sc: *scanner) void = {
 // An entry in an INI file: (section, key, value).
 export type entry = (const str, const str, const str);
 
-// Duplicates an [[entry]]. Use [[entry_finish]] to get rid of it.
+// Duplicates an [[entry]]. Use [[entry_finish]] to free it.
 export fn entry_dup(ent: entry) (entry | nomem) = {
 	let dup: entry = ("", "", "");
 	let ok = false;
