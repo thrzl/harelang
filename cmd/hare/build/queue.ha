@@ -263,7 +263,7 @@ fn cleanup_task(ctx: *context, t: *task) (void | error) = {
 
 	let tmp = strings::concat(out, ".tmp")!;
 	defer free(tmp);
-	os::move(tmp, out)?;
+	os::rename(tmp, out)?;
 };
 
 fn cleanup_ssa_task(ctx: *context, t: *task, out: str) (void | error) = {
