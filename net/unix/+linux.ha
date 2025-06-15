@@ -43,7 +43,7 @@ export fn connect(
 	match (rt::connect(sockfd, &sockaddr, sz)) {
 	case let err: rt::errno =>
 		return errors::errno(err);
-	case int => void;
+	case void => void;
 	};
 	return io::fdopen(sockfd);
 };
@@ -87,7 +87,7 @@ export fn listen(
 	match (rt::bind(sockfd, &sockaddr, size(rt::sockaddr_un): u32)) {
 	case let err: rt::errno =>
 		return errors::errno(err);
-	case int => void;
+	case void => void;
 	};
 	match (rt::listen(sockfd, bk)) {
 	case let err: rt::errno =>

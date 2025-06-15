@@ -577,14 +577,14 @@ export fn socket(domain: int, type_: int, protocol: int) (int | errno) = {
 		domain: u64, type_: u64, protocol: u64))?: int;
 };
 
-export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {
-	return wrap_return(syscall3(SYS_connect,
-		sockfd: u64, addr: uintptr: u64, addrlen: u64))?: int;
+export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (void | errno) = {
+	wrap_return(syscall3(SYS_connect, sockfd: u64,
+		addr: uintptr: u64, addrlen: u64))?;
 };
 
-export fn bind(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {
-	return wrap_return(syscall3(SYS_bind,
-		sockfd: u64, addr: uintptr: u64, addrlen: u64))?: int;
+export fn bind(sockfd: int, addr: *const sockaddr, addrlen: u32) (void | errno) = {
+	wrap_return(syscall3(SYS_bind, sockfd: u64,
+		addr: uintptr: u64, addrlen: u64))?;
 };
 
 export fn getsockname(sockfd: int, addr: nullable *sockaddr, addrlen: nullable *u32) (int | errno) = {
