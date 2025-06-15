@@ -120,6 +120,7 @@ fn deps_graph(mods: *[]module::module) void = {
 		return;
 	};
 
+	const no_color = os::tryenv("NO_COLOR", "") != "";
 	let links: []link = [];
 	defer free(links);
 	let depth: []uint = alloc([0...], len(mods))!;
@@ -138,6 +139,8 @@ fn deps_graph(mods: *[]module::module) void = {
 			};
 		};
 
+		let color = (0, 31); // (active, next)
+
 		// print in-between row
 		for (let d = 0u; d < depth[i]; d += 1) {
 			let passing = false;
@@ -149,11 +152,15 @@ fn deps_graph(mods: *[]module::module) void = {
 					passing = true;
 				};
 			};
+			color = (color.1, next_color(color.1));
+			if (!no_color) fmt::printf("\x1b[{}m", color.0)!;
 			fmt::print(if (passing) "│  " else "   ")!;
+			if (!no_color) fmt::print("\x1b[m")!;
 		};
 		if (i < len(mods) - 1) {
 			fmt::println()!;
 		};
+		color = (0, 31);
 
 		// print row itself
 		let on_path = false;
@@ -176,6 +183,10 @@ fn deps_graph(mods: *[]module::module) void = {
 					};
 				};
 			};
+			if (final || connected || (!on_path && passing)) {
+				color.0 = color.1;
+			};
+			if (!no_color) fmt::printf("\x1b[{}m", color.0)!;
 			fmt::print(
 				if (final) "└──"
 				else if (connected) "├──"
@@ -183,6 +194,8 @@ fn deps_graph(mods: *[]module::module) void = {
 				else if (passing) "│  "
 				else "   "
 			)!;
+			if (!no_color) fmt::print("\x1b[m")!;
+			color.1 = next_color(color.1);
 		};
 		fmt::println(mods[i].name)!;
 		for (let j = 0z; j < len(mods[i].deps); j += 1) {
@@ -197,3 +210,9 @@ fn deps_graph(mods: *[]module::module) void = {
 
 // sorts in reverse
 fn revsort(a: const *opaque, b: const *opaque) int = -cmp::sizes(a, b);
+
+fn next_color(c: int) int = {
+	return if (c == 97) 31
+		else if (c == 37) 91
+		else c + 1;
+};
