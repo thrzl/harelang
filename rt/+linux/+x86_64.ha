@@ -51,9 +51,9 @@ export type cpu_set = struct {
 	__bits: [16]u64,
 };
 
-export type ucontext = struct {
+export type ucontext_t = struct {
 	uc_flags: u64,
-	uc_link: *ucontext,
+	uc_link: *ucontext_t,
 	uc_stack: stack_t,
 	uc_mcontext: sigcontext,
 	uc_sigmask: sigset,

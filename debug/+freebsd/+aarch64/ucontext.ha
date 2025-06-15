@@ -8,18 +8,18 @@ def AARCH64_LR: uint = 30; // lr is an alias of r30
 
 // Returns the stack pointer from a ucontext.
 fn uctx_sp(uctx: *opaque) uintptr = {
-	const uctx = uctx: *rt::ucontext;
+	const uctx = uctx: *rt::ucontext_t;
 	return uctx.uc_mcontext.mc_gpregs.gp_sp: uintptr;
 };
 
 // Returns the instruction pointer from a ucontext.
 fn uctx_ip(uctx: *opaque) uintptr = {
-	const uctx = uctx: *rt::ucontext;
+	const uctx = uctx: *rt::ucontext_t;
 	return uctx.uc_mcontext.mc_gpregs.gp_elr: uintptr;
 };
 
 // Returns the current call frame from a ucontext.
 fn uctx_frame(uctx: *opaque) stackframe = {
-	const uctx = uctx: *rt::ucontext;
+	const uctx = uctx: *rt::ucontext_t;
 	return *(uctx.uc_mcontext.mc_gpregs.gp_x[AARCH64_FP]: uintptr: *stackframe);
 };

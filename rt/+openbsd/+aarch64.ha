@@ -12,4 +12,4 @@ export type sigcontext = struct {
 	sc_cookie: u64,
 };
 
-export type ucontext = sigcontext;
+export type ucontext_t = sigcontext;

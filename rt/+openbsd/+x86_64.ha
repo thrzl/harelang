@@ -50,4 +50,4 @@ export type fxsave64 = struct {
 	fx_unused3: [96]u8,
 };
 
-export type ucontext = sigcontext;
+export type ucontext_t = sigcontext;
