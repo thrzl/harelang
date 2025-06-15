@@ -21,6 +21,9 @@ const masks: [2][8]u8 = [
 
 // Returns the next rune from a decoder. done is returned when there are no
 // remaining codepoints.
+//
+// If an invalid UTF-8 sequence is encountered, the position of the decoder is
+// set to immediately after the first invalid byte.
 export fn next(d: *decoder) (rune | done | more | invalid) = {
 	if (d.offs == len(d.src)) {
 		return done;
