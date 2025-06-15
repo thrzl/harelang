@@ -13,35 +13,84 @@ def PADDING: u8 = '=';
 
 export type encoding = struct {
 	encmap: [32]u8,
-	decmap: [256]u8,
-	valid: [256]bool,
+	decmap: [128]u8,
 };
 
 // Represents the standard base-32 encoding alphabet as defined in RFC 4648.
-export const std_encoding: encoding = encoding { ... };
+export const std_encoding: encoding = encoding {
+	encmap = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+		'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
+		'Z', '2', '3', '4', '5', '6', '7'],
+	decmap = [
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+		0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+		0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
+		0x17, 0x18, 0x19, 0xff...
+	],
+};
 
 // Represents the "base32hex" alphabet as defined in RFC 4648.
-export const hex_encoding: encoding = encoding { ... };
+export const hex_encoding: encoding = encoding {
+	encmap = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B',
+		'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+		'P', 'Q', 'R', 'S', 'T', 'U', 'V'],
+	decmap = [
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x08, 0x09, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+		0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+		0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0xff...
+	],
+};
 
 // Initializes a new encoding based on the passed alphabet, which must be a
 // 32-byte ASCII string.
 export fn encoding_init(enc: *encoding, alphabet: str) void = {
 	const alphabet = strings::toutf8(alphabet);
 	assert(len(alphabet) == 32);
+	enc.decmap[..] = [0xff...];
 	for (let i: u8 = 0; i < 32; i += 1) {
 		const ch = alphabet[i];
-		assert(ascii::valid(ch: rune));
+		assert(ascii::valid(ch: rune) && enc.decmap[ch] == 0xff);
 		enc.encmap[i] = ch;
 		enc.decmap[ch] = i;
-		enc.valid[ch] = true;
 	};
 };
 
-@init fn init() void = {
-	const std_alpha: str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-	const hex_alpha: str = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
-	encoding_init(&std_encoding, std_alpha);
-	encoding_init(&hex_encoding, hex_alpha);
+@test fn std_encodings() void = {
+	let std = encoding { ... };
+	const std_alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+	encoding_init(&std, std_alpha);
+	for (let i = 0z; i < len(std.encmap); i += 1) {
+		assert(std.encmap[i] == std_encoding.encmap[i]);
+	};
+	for (let i = 0z; i < len(std.decmap); i += 1) {
+		assert(std.decmap[i] == std_encoding.decmap[i]);
+	};
+
+	let hex = encoding { ... };
+	const hex_alpha = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
+	encoding_init(&hex, hex_alpha);
+	for (let i = 0z; i < len(hex.encmap); i += 1) {
+		assert(hex.encmap[i] == hex_encoding.encmap[i]);
+	};
+	for (let i = 0z; i < len(hex.decmap); i += 1) {
+		assert(hex.decmap[i] == hex_encoding.decmap[i]);
+	};
 };
 
 export type encoder = struct {
@@ -323,7 +372,7 @@ fn decode_reader(
 			};
 			np += 1;
 		} else {
-			if (!s.enc.valid[ch]) {
+			if (s.enc.decmap[ch] == 0xff) {
 				valid = false;
 				break;
 			};
