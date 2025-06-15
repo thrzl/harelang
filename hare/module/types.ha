@@ -57,9 +57,7 @@ export type context = struct {
 // The location of a module
 export type location = (*path::buffer | ast::ident);
 
-// Returns a string representation of a [[location]]. The result must be freed
-// by the caller.
-export fn locstr(loc: location) str = {
+fn locstr(loc: location) str = {
 	match (loc) {
 	case let buf: *path::buffer =>
 		return strings::dup(path::string(buf))!;
