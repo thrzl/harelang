@@ -32,10 +32,6 @@ export type decl_ref = ast::ident;
 // 	[[foo::bar::]]
 export type mod_ref = ast::ident;
 
-// Converts an error into a human-friendly string. The result may be statically
-// allocated.
-export fn strerror(err: lex::error) const str = lex::strerror(err);
-
 // Parses a haredoc document from an [[io::handle]]. 'start' is the location of
 // the top-left corner of the document, for accurate locations in error messages
 // (e.g. declaration documentation starts at col=3; READMEs start at col=1).
