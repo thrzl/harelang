@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
+// Passed to [[strings::sub]] to make the returned substring span to the end of
+// the original string.
 export type end = void;
 
 fn utf8_byte_len_bounded(iter: *iterator, end: size) size = {
