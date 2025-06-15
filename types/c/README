@@ -32,6 +32,9 @@ Some C types are mostly compatible with Hare types, with minor differences:
   [[math::complex::]]. Hare doesn't allow casting between real and complex types
   like C does.
 
+[[io::off]] is compatible with off_t as defined in <sys/types.h> and specified
+by POSIX.1.
+
 The following C types are *not* supported by Hare:
 
 - 128-bit integer types (__int128) (will be supported in a future release)
