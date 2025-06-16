@@ -15,18 +15,9 @@ _arguments_.
 
 Third-party tools are installed in the "libexec" directory that the toolchain
 was configured with, which is typically _/usr/libexec/hare_. Each is prefixed
-with "hare-", so on a typical configuration "hare tool example" will run
+with "hare-", so on a typical configuration, *hare tool example* will run
 _/usr/libexec/hare/hare-example_.
 
 # SEE ALSO
 
 *hare*(1)
-
-See _https://harelang.org/community/_ for information on where to ask questions,
-send patches, submit bug reports, and chat with others in the community.
-
-Documentation for the language itself can be found at
-_https://harelang.org/documentation/_.
-
-The language specification is available at
-_https://harelang.org/specification/_.
