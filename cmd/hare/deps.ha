@@ -29,13 +29,13 @@ fn deps(name: str, cmd: *getopt::command) (void | error) = {
 
 	let build_dir: str = "";
 	let goal = deps_fmt::TERM;
-	let recursive = true;
+	let direct = false;
 	let submodules = false;
 
 	for (let opt .. cmd.opts) {
 		switch (opt.0) {
 		case 'D' =>
-			recursive = false;
+			direct = true;
 		case 'd' =>
 			goal = deps_fmt::DOT;
 		case 'T' =>
@@ -74,10 +74,10 @@ fn deps(name: str, cmd: *getopt::command) (void | error) = {
 	};
 
 	if (submodules) {
-		module::gather_submodules(&ctx, &mods, mod, recursive)?;
+		module::gather_submodules(&ctx, &mods, mod)?;
 	};
 
-	match (module::gather(&ctx, &mods, mod, recursive)) {
+	match (module::gather(&ctx, &mods, mod)) {
 	case let err: module::error =>
 		if (!(module::unwrap_error(err) is module::not_found) ||
 				len(mods) == 0) {
@@ -89,10 +89,13 @@ fn deps(name: str, cmd: *getopt::command) (void | error) = {
 
 	switch (goal) {
 	case deps_fmt::TERM =>
-		deps_graph(&mods);
+		deps_graph(&mods, direct);
 	case deps_fmt::DOT =>
 		fmt::println("strict digraph deps {")!;
 		for (let mod .. mods) {
+			if (mod.is_dep && direct) {
+				continue;
+			};
 			if (module::gathered(&mod) && len(mod.deps) == 0) {
 				fmt::printfln("\t\"{}\"", mod.name)!;
 			} else for (let dep .. mod.deps) {
@@ -104,6 +107,9 @@ fn deps(name: str, cmd: *getopt::command) (void | error) = {
 		fmt::println("}")!;
 	case deps_fmt::TEXT =>
 		for (let mod .. mods) {
+			if (mod.is_dep && direct) {
+				continue;
+			};
 			if (module::gathered(&mod) && len(mod.deps) == 0) {
 				fmt::printfln("{} -", mod.name)!;
 			} else for (let dep .. mod.deps) {
@@ -114,7 +120,7 @@ fn deps(name: str, cmd: *getopt::command) (void | error) = {
 	};
 };
 
-fn deps_graph(mods: *[]module::module) void = {
+fn deps_graph(mods: *[]module::module, direct: bool) void = {
 	if (len(mods) == 1 && len(mods[0].deps) == 0) {
 		fmt::println(mods[0].name, "has no dependencies")!;
 		return;
@@ -125,11 +131,18 @@ fn deps_graph(mods: *[]module::module) void = {
 	defer free(links);
 	let depth: []uint = alloc([0...], len(mods))!;
 	defer free(depth);
+	let is_direct: []bool = alloc([false...], len(mods))!;
+	defer free(is_direct);
 	// traverse in reverse because reverse-topo-sort
 	for (let i = len(mods) - 1; i < len(mods); i -= 1) {
 		// reverse-sort deps so that we know the last in the list is the
 		// "final" child during show_deps
 		sort::sort(mods[i].deps, size((size, ast::ident)), &revsort)!;
+
+		is_direct[i] ||= !mods[i].is_dep;
+		for (let (dep, _) .. mods[i].deps) {
+			is_direct[dep] ||= !mods[i].is_dep;
+		};
 
 		for (let j = 0z; j < len(links); j += 1) {
 			if (i < links[j].child) {
@@ -138,6 +151,10 @@ fn deps_graph(mods: *[]module::module) void = {
 			if (depth[i] <= links[j].depth) {
 				depth[i] = links[j].depth + 1;
 			};
+		};
+
+		if (mods[i].is_dep && direct && !is_direct[i]) {
+			continue;
 		};
 
 		let color = (0, 31); // (active, next)
@@ -199,6 +216,9 @@ fn deps_graph(mods: *[]module::module) void = {
 			color.1 = next_color(color.1);
 		};
 		fmt::println(mods[i].name)!;
+		if (mods[i].is_dep && direct) {
+			continue;
+		};
 		for (let j = 0z; j < len(mods[i].deps); j += 1) {
 			append(links, link{
 				depth = depth[i],
