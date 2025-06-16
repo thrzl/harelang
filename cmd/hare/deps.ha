@@ -74,10 +74,10 @@ fn deps(name: str, cmd: *getopt::command) (void | error) = {
 	};
 
 	if (submodules) {
-		module::gather_submodules(&ctx, &mods, mod)?;
+		module::gather_submodules(&ctx, &mods, mod, false)?;
 	};
 
-	match (module::gather(&ctx, &mods, mod)) {
+	match (module::gather(&ctx, &mods, mod, false)) {
 	case let err: module::error =>
 		if (!(module::unwrap_error(err) is module::not_found) ||
 				len(mods) == 0) {
