@@ -122,11 +122,10 @@ export fn gather(
 	ctx: *context,
 	out: *[]module,
 	mod: location,
-	recursive: bool = true,
 ) (size | error) = {
 	let stack: []str = [];
 	defer free(stack);
-	return _gather(ctx, out, &stack, mod, false, recursive)?;
+	return _gather(ctx, out, &stack, mod, false)?;
 };
 
 // Gather submodules and by default all their dependencies, appending them to
@@ -139,7 +138,6 @@ export fn gather_submodules(
 	ctx: *context,
 	out: *[]module,
 	mod: location,
-	recursive: bool = true,
 ) (size | error) = {
 	let id: ast::ident = [];
 	defer ast::ident_free(id);
@@ -171,7 +169,7 @@ export fn gather_submodules(
 		harecache = ctx.harecache,
 		tags = ctx.tags,
 	};
-	return _gather_submodules(&subctx, out, buf, &id, recursive);
+	return _gather_submodules(&subctx, out, buf, &id);
 };
 
 fn _gather_submodules(
@@ -179,7 +177,6 @@ fn _gather_submodules(
 	out: *[]module,
 	buf: *path::buffer,
 	mod: *ast::ident,
-	recursive: bool = true,
 ) (size | error) = {
 	let n = 0z;
 	let it = os::iter(path::string(buf))?;
@@ -192,7 +189,7 @@ fn _gather_submodules(
 		defer path::pop(buf);
 		append(mod, dir.name)!;
 		defer delete(mod[len(mod) - 1]);
-		match (_gather(ctx, out, &stack, *mod, false, recursive)) {
+		match (_gather(ctx, out, &stack, *mod, false)) {
 		case size =>
 			n += 1;
 		case let e: error =>
@@ -200,7 +197,7 @@ fn _gather_submodules(
 				return e;
 			};
 		};
-		n += _gather_submodules(ctx, out, buf, mod, recursive)?;
+		n += _gather_submodules(ctx, out, buf, mod)?;
 	};
 	return n;
 };
@@ -211,7 +208,6 @@ fn _gather(
 	stack: *[]str,
 	mod: location,
 	is_dep: bool,
-	recursive: bool,
 ) (size | error) = {
 	let (modpath, srcs) = match (find(ctx, mod)) {
 	case let r: (str, srcset) =>
@@ -245,11 +241,9 @@ fn _gather(
 	defer free(depids);
 	let deps: [](size, ast::ident) = alloc([], len(depids))!;
 
-	if (!is_dep || recursive) {
-		for (let depid .. depids) {
-			static append(deps, (_gather(ctx, out, stack, depid,
-						true, recursive)?, depid))!;
-		};
+	for (let depid .. depids) {
+		static append(deps,
+			(_gather(ctx, out, stack, depid, true)?, depid))!;
 	};
 
 	append(out, module {
