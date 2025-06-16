@@ -162,7 +162,7 @@ fn deps_graph(mods: *[]module::module, direct: bool) void = {
 		// print in-between row
 		for (let d = 0u; d < depth[i]; d += 1) {
 			let passing = false;
-			for (let j = 0z; j < len(links); j += 1) {
+			for (let j = 0z; !passing && j < len(links); j += 1) {
 				if (i < links[j].child) {
 					continue;
 				};
@@ -186,7 +186,7 @@ fn deps_graph(mods: *[]module::module, direct: bool) void = {
 			let connected = false;
 			let passing = false;
 			let final = false;
-			for (let j = 0z; j < len(links); j += 1) {
+			for (let j = 0z; !final && j < len(links); j += 1) {
 				if (i < links[j].child) {
 					continue;
 				};
