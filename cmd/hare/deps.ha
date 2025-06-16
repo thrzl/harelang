@@ -190,16 +190,16 @@ fn deps_graph(mods: *[]module::module, direct: bool) void = {
 				if (i < links[j].child) {
 					continue;
 				};
-				if (d == links[j].depth) {
-					passing = true;
-					if (i == links[j].child) {
-						connected = true;
-						on_path = true;
-						if (links[j].final) {
-							final = true;
-						};
-					};
+				if (d != links[j].depth) {
+					continue;
 				};
+				passing = true;
+				if (i != links[j].child) {
+					continue;
+				};
+				connected = true;
+				on_path = true;
+				final ||= links[j].final;
 			};
 			if (final || connected || (!on_path && passing)) {
 				color.0 = color.1;
