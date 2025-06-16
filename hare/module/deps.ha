@@ -24,6 +24,7 @@ export type module = struct {
 	// [](index to the module, module's identifier)
 	deps: [](size, ast::ident),
 	is_dep: bool,
+	missing: bool,
 };
 
 // Get the list of dependencies referred to by a set of source files.
@@ -122,10 +123,11 @@ export fn gather(
 	ctx: *context,
 	out: *[]module,
 	mod: location,
+	required: bool = true,
 ) (size | error) = {
 	let stack: []str = [];
 	defer free(stack);
-	return _gather(ctx, out, &stack, mod, false)?;
+	return _gather(ctx, out, &stack, mod, false, required)?;
 };
 
 // Gather submodules and by default all their dependencies, appending them to
@@ -138,6 +140,7 @@ export fn gather_submodules(
 	ctx: *context,
 	out: *[]module,
 	mod: location,
+	required: bool = true,
 ) (size | error) = {
 	let id: ast::ident = [];
 	defer ast::ident_free(id);
@@ -169,7 +172,7 @@ export fn gather_submodules(
 		harecache = ctx.harecache,
 		tags = ctx.tags,
 	};
-	return _gather_submodules(&subctx, out, buf, &id);
+	return _gather_submodules(&subctx, out, buf, &id, required);
 };
 
 fn _gather_submodules(
@@ -177,6 +180,7 @@ fn _gather_submodules(
 	out: *[]module,
 	buf: *path::buffer,
 	mod: *ast::ident,
+	required: bool,
 ) (size | error) = {
 	let n = 0z;
 	let it = os::iter(path::string(buf))?;
@@ -189,7 +193,7 @@ fn _gather_submodules(
 		defer path::pop(buf);
 		append(mod, dir.name)!;
 		defer delete(mod[len(mod) - 1]);
-		match (_gather(ctx, out, &stack, *mod, false)) {
+		match (_gather(ctx, out, &stack, *mod, false, required)) {
 		case size =>
 			n += 1;
 		case let e: error =>
@@ -197,7 +201,7 @@ fn _gather_submodules(
 				return e;
 			};
 		};
-		n += _gather_submodules(ctx, out, buf, mod)?;
+		n += _gather_submodules(ctx, out, buf, mod, required)?;
 	};
 	return n;
 };
@@ -208,17 +212,23 @@ fn _gather(
 	stack: *[]str,
 	mod: location,
 	is_dep: bool,
+	required: bool,
 ) (size | error) = {
+	let missing = false;
 	let (modpath, srcs) = match (find(ctx, mod)) {
 	case let r: (str, srcset) =>
-		yield r;
+		yield (strings::dup(r.0)!, r.1);
 	case let e: error =>
-		if (len(stack) == 0) {
+		missing = unwrap_error(e) is not_found && is_dep;
+		if (!missing || required) {
+			if (len(stack) > 0) {
+				e = attach(strings::dup(
+					stack[len(stack) - 1])!, e);
+			};
 			return e;
 		};
-		return attach(strings::dup(stack[len(stack) - 1])!, e);
+		yield (locstr(mod), srcset { ... });
 	};
-	modpath = strings::dup(modpath)!;
 	defer free(modpath);
 
 	for (let j = 0z; j < len(stack); j += 1) {
@@ -229,6 +239,10 @@ fn _gather(
 	};
 	for (let j = 0z; j < len(out); j += 1) {
 		if (modpath == out[j].path) {
+			if (out[j].missing && !is_dep) {
+				assert(out[j].is_dep);
+				return attach(strings::dup(modpath)!, not_found);
+			};
 			out[j].is_dep &&= is_dep;
 			return j;
 		};
@@ -242,8 +256,8 @@ fn _gather(
 	let deps: [](size, ast::ident) = alloc([], len(depids))!;
 
 	for (let depid .. depids) {
-		static append(deps,
-			(_gather(ctx, out, stack, depid, true)?, depid))!;
+		static append(deps, (_gather(ctx, out, stack,
+					depid, true, required)?, depid))!;
 	};
 
 	append(out, module {
@@ -263,6 +277,7 @@ fn _gather(
 		srcs = srcs,
 		deps = deps,
 		is_dep = is_dep,
+		missing = missing,
 	})!;
 	return len(out) - 1;
 };
