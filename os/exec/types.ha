@@ -13,8 +13,8 @@ export type closefd = void;
 
 export type command = struct {
 	platform: platform_cmd,
-	argv: []str,
-	env: []str,
+	argv: platform_argv,
+	env: platform_env,
 	files: []((io::file | nullfd | closefd), io::file),
 	dir: str,
 };

@@ -33,11 +33,15 @@ export fn wordexp(s: str, flags: flag = flag::NONE) ([]str | nomem | error) = {
 	const cmd = exec::cmd("/bin/sh",
 		if (flags & flag::UNDEF != 0) "-uc" else "-c",
 		`eval "printf %s\\\\0 x $1"`, "sh", s)!;
+	let cmdinit = true;
+	defer if (cmdinit) exec::finish(&cmd);
+
 	exec::unsetenv(&cmd, "IFS")!;
-	exec::addfile(&cmd, os::stdout_file, wr);
+	exec::addfile(&cmd, os::stdout_file, wr)?;
 	if (flags & flag::SHOWERR == 0) {
-		exec::addfile(&cmd, os::stderr_file, exec::nullfd);
+		exec::addfile(&cmd, os::stderr_file, exec::nullfd)?;
 	};
+	cmdinit = false;
 	const child = exec::start(&cmd)!;
 	io::close(wr)!;
 	let rddone = false;

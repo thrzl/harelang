@@ -91,27 +91,7 @@ fn open(path: str) (platform_cmd | error) = {
 
 };
 
-fn platform_finish(cmd: *command) void = rt::close(cmd.platform)!;
-
 fn platform_exec(cmd: *command) error = {
-	// We don't worry about freeing the return values from c::fromstr
-	// because once we exec(2) our heap is fried anyway
-	let argv: []nullable *const c::char = alloc([], len(cmd.argv) + 1z)!;
-	for (let arg .. cmd.argv) {
-		append(argv, c::fromstr(arg)!)!;
-	};
-	append(argv, null)!;
-
-	let envp: nullable *[*]nullable *const c::char = null;
-	if (len(cmd.env) != 0) {
-		let env: []nullable *const c::char = alloc([], len(cmd.env) + 1)!;
-		for (let e .. cmd.env) {
-			append(env, c::fromstr(e)!)!;
-		};
-		append(env, null)!;
-		envp = env: *[*]nullable *const c::char;
-	};
-
 	let need_devnull = false;
 	for (let file &.. cmd.files) {
 		const from = match (file.0) {
@@ -168,8 +148,13 @@ fn platform_exec(cmd: *command) error = {
 		os::chdir(cmd.dir)?;
 	};
 
+	let envp: nullable *[*]nullable *const c::char = null;
+	if (len(cmd.env) > 1) {
+		envp = cmd.env: *[*]nullable *const c::char;
+	};
+
 	return errors::errno(rt::fexecve(cmd.platform,
-		argv: *[*]nullable *const u8,
+		cmd.argv: *[*]nullable *const u8,
 		envp: *[*]nullable *const u8));
 };
 

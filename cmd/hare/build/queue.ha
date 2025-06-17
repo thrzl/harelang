@@ -186,8 +186,8 @@ fn run_task(ctx: *context, jobs: *[]job, t: *task) (bool | error) = {
 	path::set(&buf, out)?;
 	let output = os::create(path::push_ext(&buf, "log")?, 0o644)?;
 	defer io::close(output)!;
-	exec::addfile(&cmd, os::stdout_file, output);
-	exec::addfile(&cmd, os::stderr_file, output);
+	exec::addfile(&cmd, os::stdout_file, output)!;
+	exec::addfile(&cmd, os::stderr_file, output)!;
 	static append(jobs, job {
 		pid = exec::start(&cmd)?,
 		task = t,

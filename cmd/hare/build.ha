@@ -237,8 +237,8 @@ fn run(name: str, path: str, args: []str) error = {
 	case let c: exec::command =>
 		yield c;
 	};
-	exec::setname(&cmd, name);
-	exec::exec(&cmd);
+	exec::setname(&cmd, name)!;
+	return exec::exec(&cmd);
 };
 
 fn get_output(goal: build::stage, input: str) (str | error) = {
