@@ -35,6 +35,7 @@ fn tool(name: str, cmd: *getopt::command) (void | error) = {
 	};
 
 	const argv0 = fmt::asprintf("hare tool {}", tool)!;
-	exec::setname(&cmd, argv0);
-	exec::exec(&cmd);
+	exec::setname(&cmd, argv0)!;
+	const err = exec::exec(&cmd);
+	fmt::fatalf("exec {}: {}", path::string(&path), exec::strerror(err));
 };

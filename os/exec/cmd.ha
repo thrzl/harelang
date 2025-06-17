@@ -72,8 +72,14 @@ export fn finish(cmd: *command) void = {
 };
 
 // Executes a prepared command in the current address space, overwriting the
-// running process with the new command. This function will only return on
-// error.
+// running process with the new command.
+//
+// This function will only return if an error occurs.
+//
+//	const cmd = exec::cmd("/bin/sh", "-c", "echo hello world")?;
+//	const err = exec::exec(&cmd);
+//	// This only runs if exec failed:
+//	fmt::fatal("exec /bin/sh:", exec::strerror(err));
 export fn exec(cmd: *command) error = {
 	defer finish(cmd); // Note: doesn't happen if exec succeeds
 	return platform_exec(cmd);

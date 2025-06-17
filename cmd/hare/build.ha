@@ -238,7 +238,8 @@ fn run(name: str, path: str, args: []str) error = {
 		yield c;
 	};
 	exec::setname(&cmd, name)!;
-	return exec::exec(&cmd);
+	const err = exec::exec(&cmd);
+	fmt::fatalf("exec {}: {}", path, exec::strerror(err));
 };
 
 fn get_output(goal: build::stage, input: str) (str | error) = {
