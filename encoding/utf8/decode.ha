@@ -197,6 +197,11 @@ export fn slice(begin: *decoder, end: *decoder) []u8 = {
 	assert(len(remaining(&d1)) == 0);
 };
 
+// Returns the position of the decoder. When possible, it's generally considered
+// more idiomatic to use other functions in this module, such as [[remaining]]
+// and [[slice]].
+export fn position(d: *decoder) size = d.offs;
+
 // Returns void if a given byte slice contains only valid UTF-8 sequences,
 // otherwise returns invalid.
 export fn validate(src: []u8) (void | invalid) = {

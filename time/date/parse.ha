@@ -44,12 +44,14 @@ export fn parse(v: *virtual, layout: str, info: str) (void | parsefail) = {
 		if (!escaped) {
 			const ir = match (strings::next(&info_iter)) {
 			case done =>
-				return (layout_iter.dec.offs, lr): parsefail;
+				return (strings::position(&layout_iter),
+					lr): parsefail;
 			case let ir: rune =>
 				yield ir;
 			};
 			if (ir != lr) {
-				return (layout_iter.dec.offs, lr): parsefail;
+				return (strings::position(&layout_iter),
+					lr): parsefail;
 			};
 			continue;
 		};
@@ -57,10 +59,9 @@ export fn parse(v: *virtual, layout: str, info: str) (void | parsefail) = {
 		escaped = false;
 
 		match (parse_specifier(v, &info_iter, lr)) {
-		case parsed_done =>
-			void;
+		case parsed_done => void;
 		case parsed_err =>
-			return (layout_iter.dec.offs, lr): parsefail;
+			return (strings::position(&layout_iter), lr): parsefail;
 		};
 	};
 
