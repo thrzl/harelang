@@ -26,7 +26,7 @@ export fn symbol_byname(
 		return;
 	};
 
-	const st_name = scan_strtab(image, strtab, name) as u64;
+	const st_name = scan_strtab(image, strtab, name);
 	const data = image::section_data(image, symtab);
 	const entsz = symtab.sh_entsize: size;
 	const nsym = len(data) / entsz;
@@ -84,7 +84,7 @@ fn scan_strtab(
 	image: *image::image,
 	strtab: *elf::section64,
 	name: str,
-) (u64 | io::error | void) = {
+) u64 = {
 	let buf: [4096]u8 = [0...];
 	let namebuf: [MAX_SYMNAME]u8 = [0...];
 
@@ -95,9 +95,5 @@ fn scan_strtab(
 	name = namebuf[..len(name)+1];
 
 	const data = image::section_data(image, strtab);
-	match (bytes::index(data, name)) {
-	case let z: size =>
-		return z: u64;
-	case void => void;
-	};
+	return bytes::index(data, name) as size: u64;
 };
