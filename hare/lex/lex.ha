@@ -350,7 +350,11 @@ fn lex_unicode(lex: *lexer, loc: location, n: size) (rune | error) = {
 		buf[i] = r: u8;
 	};
 	let s = strings::fromutf8_unsafe(buf[..n]);
-	return strconv::stou32(s, strconv::base::HEX) as u32: rune;
+	let u = strconv::stou32(s, strconv::base::HEX) as u32;
+	if (u > 0x10FFFF || (u >= 0xD800 && u < 0xE000)) {
+		return syntaxerr(loc, "invalid unicode codepoint in escape");
+	};
+	return u: rune;
 };
 
 fn lex_rune(lex: *lexer, loc: location) (rune | error) = {

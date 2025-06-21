@@ -364,6 +364,9 @@ fn loc(line: uint, col: uint) location = location {
 		// crash
 		("0e)", "expected exponent"),
 
+		(`'\U00110000'`, "invalid unicode codepoint in escape"),
+		(`'\uD800'`, "invalid unicode codepoint in escape"),
+
 		// Invalid digit separators
 		("1_", "Expected digit after separator"),
 		("100_", "Expected digit after separator"),
