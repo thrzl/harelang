@@ -419,10 +419,7 @@ fn lex_string(lex: *lexer, loc: location, delim: rune) (token | error) = {
 			memio::appendrune(&buf, r.0)?;
 		};
 	};
-	for (true) match (nextw(lex)?) {
-	case io::EOF =>
-		break;
-	case let r: (rune, location) =>
+	for (let r => nextw(lex)?) {
 		switch (r.0) {
 		case '"', '`' =>
 			const tok = lex_string(lex, loc, r.0)?;
@@ -492,9 +489,7 @@ fn lex_name(lex: *lexer, loc: location) (token | error) = {
 		abort();
 	};
 
-	for (true) match (next(lex)?) {
-	case io::EOF => break;
-	case let r: (rune, location) =>
+	for (let r => next(lex)?) {
 		if (!is_name(r.0, true)) {
 			unget(lex, r.0);
 			break;
@@ -547,10 +542,7 @@ fn line_comment(lex: *lexer) (void | error) = {
 
 fn lex_comment(lexr: *lexer) (void | error) = {
 	if (lexr.flags & flag::COMMENTS != flag::COMMENTS) {
-		for (true) match (next(lexr)?) {
-		case io::EOF =>
-			break;
-		case let r: (rune, location) =>
+		for (let r => next(lexr)?) {
 			if (r.0 == '\n') {
 				break;
 			};
@@ -560,10 +552,7 @@ fn lex_comment(lexr: *lexer) (void | error) = {
 
 	let buf = memio::dynamic();
 	defer io::close(&buf)!;
-	for (true) match (next(lexr)?) {
-	case io::EOF =>
-		break;
-	case let r: (rune, location) =>
+	for (let r => next(lexr)?) {
 		memio::appendrune(&buf, r.0)!;
 		if (r.0 == '\n') {
 			break;
@@ -957,10 +946,7 @@ fn next(lex: *lexer) ((rune, location) | syntax | io::EOF | io::error) = {
 };
 
 fn nextw(lex: *lexer) ((rune, location) | io::EOF | error) = {
-	for (true) match (next(lex)?) {
-	case io::EOF =>
-		return io::EOF;
-	case let r: (rune, location) =>
+	for (let r => next(lex)?) {
 		if (r.0 == ' ' || r.0 == '\n' || r.0 == '\t') {
 			if (r.0 == '\n') {
 				free(lex.comment);
@@ -974,6 +960,7 @@ fn nextw(lex: *lexer) ((rune, location) | io::EOF | error) = {
 		};
 		return r;
 	};
+	return io::EOF;
 };
 
 fn try(
