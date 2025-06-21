@@ -577,6 +577,7 @@ fn lex_comment(lexr: *lexer) (void | error) = {
 fn lex_literal(lex: *lexer) (token | error) = {
 	const loc = mkloc(lex);
 	let chars: []u8 = [];
+	defer free(chars);
 	let r = match (next(lex)?) {
 	case io::EOF =>
 		return (ltok::EOF, void, loc);
