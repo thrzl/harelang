@@ -535,8 +535,9 @@ export type siginfo = union {
 			},
 		},
 	},
-	_si_pad: [SI_MAX_SIZE - 3 * size(int)]u8,
+	_si_pad: [SI_MAX_SIZE]u8,
 };
+static assert(size(siginfo) == SI_MAX_SIZE);
 
 export def SA_NOCLDSTOP: u64 = 0x00000001;
 export def SA_NOCLDWAIT: u64 = 0x00000002;
