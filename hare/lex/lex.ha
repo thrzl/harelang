@@ -960,7 +960,7 @@ fn nextw(lex: *lexer) ((rune, location) | io::EOF | error) = {
 	case io::EOF =>
 		return io::EOF;
 	case let r: (rune, location) =>
-		if (ascii::isspace(r.0)) {
+		if (r.0 == ' ' || r.0 == '\n' || r.0 == '\t') {
 			if (r.0 == '\n') {
 				free(lex.comment);
 				lex.comment = "";

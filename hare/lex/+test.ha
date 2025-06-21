@@ -339,6 +339,10 @@ fn loc(line: uint, col: uint) location = location {
 };
 
 @test fn invalid() void = {
+	// \r is not whitespace
+	let lexer = initbuf(['\r', '\n']);
+	const s = lex(&lexer) as error as syntax;
+
 	// Using \x80 within a string literal will cause this to output an
 	// empty string
 	let lexer = initbuf(['1', 0x80]);
