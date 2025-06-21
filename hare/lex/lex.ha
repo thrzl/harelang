@@ -39,21 +39,21 @@ export type lexer = struct {
 	annotations: []([]str, *annotatefn, nullable *opaque),
 };
 
-// Flags which apply to this lexer
+// Flags which apply to this lexer.
 export type flag = enum uint {
 	NONE = 0,
-	// Enables lexing comments
+	// Enables lexing comments.
 	COMMENTS = 1 << 0,
 };
 
-// A syntax error
+// A syntax error.
 export type syntax = !(location, str);
 
-// All possible lexer errors
+// All possible lexer errors.
 export type error = !(io::error | syntax);
 
-// Returns a human-friendly string for a given error. The result may be
-// statically allocated.
+// Returns a human-friendly string for a given error. The result is statically
+// allocated.
 export fn strerror(err: error) const str = {
 	static let buf: [2048]u8 = [0...];
 	match (err) {
@@ -66,7 +66,7 @@ export fn strerror(err: error) const str = {
 };
 
 // Initializes a new lexer for the given [[bufio::scanner]]. The path is
-// borrowed.
+// borrowed and must remain valid for the lifetime of the lexer.
 export fn init(
 	in: *bufio::scanner,
 	path: str,
@@ -90,6 +90,7 @@ export fn init(
 	};
 };
 
+// A restore point for a lexer.
 export type restore_point = struct {
 	off: io::off,
 	state: lexer,
@@ -1023,6 +1024,7 @@ fn lexloc(lex: *lexer, r: rune) void = {
 	};
 };
 
+// The lexer's current location.
 export fn mkloc(lex: *lexer) location = {
 	const loc = if (lex.un.0 == ltok::EOF) lex.loc
 		else lex.prevunlocs[1].1;
@@ -1034,6 +1036,7 @@ export fn mkloc(lex: *lexer) location = {
 	};
 };
 
+// The location of the previous rune.
 export fn prevloc(lex: *lexer) location = {
 	const loc = if (lex.un.0 == ltok::EOF) lex.prevrloc
 		else lex.prevunlocs[1].0;

@@ -290,8 +290,8 @@ static assert(len(bmap) == ltok::LAST_BTOK: size + 1);
 // A token value, used for tokens such as '1337' (an integer).
 export type value = (str | rune | u64 | f64 | void);
 
-// A location within a source file.
-// The path is borrowed from the file name given to the lexer.
+// A location within a source file. The path is borrowed from the file name
+// given to the lexer.
 export type location = struct {
 	path: str,
 	line: uint,
