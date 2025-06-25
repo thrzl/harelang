@@ -91,7 +91,7 @@ fn platform_setenv(
 
 fn platform_unsetenv(cmd: *command, key: str) (void | errors::invalid) = {
 	// XXX: This can be a binary search
-	for (let i = 0z; i < len(cmd.env) - 1; i += 1) {
+	for (let i = 0z; i < len(cmd.env) && cmd.env[i] != null; i += 1) {
 		let e = c::tostr(cmd.env[i]: *const c::char)!;
 		if (strings::cut(e, "=").0 == key) {
 			free(cmd.env[i]);

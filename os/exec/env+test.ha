@@ -43,3 +43,22 @@ use bufio;
 	io::close(rd)!;
 	wait(&proc)!;
 };
+
+@test fn clearenv() void = {
+	let cmd = cmd("env")!;
+	clearenv(&cmd);
+	setenv(&cmd, "HARETEST", "single")!;
+
+	const (rd, wr) = pipe();
+	addfile(&cmd, os::stdout_file, wr)!;
+	let proc = start(&cmd)!;
+	io::close(wr)!;
+
+	let sc = bufio::newscanner(rd);
+	defer io::close(&sc)!;
+	for (let l => bufio::scan_line(&sc)!) {
+		assert(l == "HARETEST=single");
+	};
+	io::close(rd)!;
+	wait(&proc)!;
+};
