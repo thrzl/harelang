@@ -92,7 +92,7 @@ docs: \
 	docs/haredoc.5 \
 	docs/hare-module.5
 
-MAN1 = hare hare-build hare-cache hare-deps haredoc hare-run hare-test
+MAN1 = hare hare-build hare-cache hare-deps haredoc hare-run hare-test hare-tool
 MAN5 = haredoc hare-module
 
 bootstrap:
