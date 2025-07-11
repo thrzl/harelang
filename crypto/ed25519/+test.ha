@@ -13,7 +13,7 @@ use strings;
 
 	const msg = strings::toutf8("hello, world!");
 	let sig = sign(&priv_key, msg);
-	assert(verify_buf(&pub_key, msg, &sig));
+	assert(verify_buf(&pub_key, msg, &sig) is void);
 
 	let bad_pub_key = pub_key;
 	bad_pub_key[0] ^= 1;
@@ -21,9 +21,9 @@ use strings;
 	let bad_sig = sig;
 	bad_sig[0] ^= 1;
 
-	assert(!verify_buf(&bad_pub_key, msg, &sig));
-	assert(!verify_buf(&pub_key, bad_msg, &sig));
-	assert(!verify_buf(&pub_key, msg, &bad_sig));
+	assert(verify_buf(&bad_pub_key, msg, &sig) is invalidsig);
+	assert(verify_buf(&pub_key, bad_msg, &sig) is invalidsig);
+	assert(verify_buf(&pub_key, msg, &bad_sig) is invalidsig);
 };
 
 @test fn golden() void = {
@@ -39,7 +39,7 @@ use strings;
 
 	const sig = sign(priv_key, msg);
 	assert(bytes::equal(sig, good_sig));
-	assert(verify_buf(pub_key, msg, sig));
+	assert(verify_buf(pub_key, msg, sig) is void);
 };
 
 @test fn issue716() void = {
@@ -62,5 +62,5 @@ use strings;
 		0x7c, 0x22, 0x80, 0x60, 0x84, 0x96, 0x53, 0xef, 0x54, 0x42, 0x29, 0x9b,
 		0x07, 0xf8, 0x88, 0xaa, 0xb1, 0x04, 0xe2, 0x4d,
 	];
-	assert(verify_buf(&pubkey, msg, &signature));
+	assert(verify_buf(&pubkey, msg, &signature) is void);
 };

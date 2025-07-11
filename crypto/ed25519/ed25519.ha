@@ -161,15 +161,10 @@ export fn verifier(pub: []u8, sig: []u8) (hash | invalidkey | invalidsig) = {
 // Given a public key, verifies a signature produced with the
 // corresponding private key for a given message, returning true if the
 // signature is valid and false otherwise.
-export fn verify_buf(pub: []u8, msg: []u8, sig: []u8) bool = {
-	let h = match (verifier(pub, sig)) {
-	case let h: hash =>
-		yield h;
-	case invalidkey =>
-		return false;
-	};
+export fn verify_buf(pub: []u8, msg: []u8, sig: []u8) (void | error) = {
+	let h = verifier(pub, sig)?;
 	hash::write(&h, msg);
-	return verify(&h) is void;
+	verify(&h)?;
 };
 
 // Checks if the given hash 'h' is valid.
