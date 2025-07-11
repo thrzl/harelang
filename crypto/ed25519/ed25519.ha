@@ -25,6 +25,25 @@ export type privkey = [PRIVKEYSZ]u8;
 export type pubkey = [PUBKEYSZ]u8;
 export type seed = [SEEDSZ]u8;
 
+// Invalid signature
+export type invalidsig = !void;
+
+// Invalid key
+export type invalidkey = !void;
+
+// Possible errors returned by this module.
+export type error = !(invalidsig | invalidkey);
+
+// String representation of error 'e'.
+export fn strerror(e: error) str = {
+	match (e) {
+	case invalidsig =>
+		return "invalid signature";
+	case invalidkey =>
+		return "invalid key";
+	};
+};
+
 // Derives a new Ed25519 private key from a given seed. The seed must be
 // initialized to cryptographically random data; [[crypto::random::]] is
 // recommended for this purpose.
@@ -103,36 +122,76 @@ export fn sign(priv: []u8, msg: []u8) [SIGNATURESZ]u8 = {
 	return sig;
 };
 
+export type hash = struct {
+	h: sha512::digest,
+	pub: []u8,
+	point: point,
+	sig: []u8,
+};
+
+// Creates a [[hash::hash]] function in that the message to be verified can
+// be written into. [[verify]] needs to be called afterwards, to verify
+// if the signature is valid for the given message.
+export fn verifier(pub: []u8, sig: []u8) (hash | invalidkey | invalidsig) = {
+	if (len(pub) != PUBKEYSZ) {
+		return invalidkey;
+	};
+
+	if (len(sig) != SIGNATURESZ) {
+		return invalidsig;
+	};
+
+	let h = hash {
+		h = sha512::sha512(),
+		pub = pub,
+		point = point { ... },
+		sig = sig,
+	};
+
+
+	if (!point_decode(&h.point, pub)) {
+		return invalidkey;
+	};
+
+	hash::write(&h.h, sig[0..32]);
+	hash::write(&h.h, pub[..]);
+	return h;
+};
+
 // Given a public key, verifies a signature produced with the
 // corresponding private key for a given message, returning true if the
 // signature is valid and false otherwise.
-export fn verify(pub: []u8, msg: []u8, sig: []u8) bool = {
-	assert(len(pub) == PUBKEYSZ);
-	assert(len(sig) == SIGNATURESZ);
-
-	let A = point { ... };
-	if (!point_decode(&A, pub)) {
+export fn verify_buf(pub: []u8, msg: []u8, sig: []u8) bool = {
+	let h = match (verifier(pub, sig)) {
+	case let h: hash =>
+		yield h;
+	case invalidkey =>
 		return false;
 	};
+	hash::write(&h, msg);
+	return verify(&h) is void;
+};
 
-	let sha = sha512::sha512();
-	hash::write(&sha, sig[0..32]);
-	hash::write(&sha, pub[..]);
-	hash::write(&sha, msg);
+// Checks if the given hash 'h' is valid.
+export fn verify(h: *hash) (void | invalidsig) = {
+	let A = point { ... };
+
 	let hram: [64]u8 = [0...];
-	hash::sum(&sha, hram);
-	hash::close(&sha);
+	hash::sum(&h.h, hram);
+	hash::close(&h.h);
 
 	let hram_reduced: scalar = [0...];
 	scalar_reduce(&hram_reduced, &hram);
 	let check_R = point { ... };
-	scalarmult(&check_R, &A, &hram_reduced);
+	scalarmult(&check_R, &h.point, &hram_reduced);
 
 	let s: scalar = [0...];
-	s[..] = sig[32..64];
+	s[..] = h.sig[32..64];
 	scalarmult_base(&A, &s);
 	point_add(&check_R, &check_R, &A);
 	let R_bytes: [POINTSZ]u8 = [0...];
 	point_encode(&R_bytes, &check_R);
-	return bytes::equal(R_bytes, sig[0..32]);
+	if (!bytes::equal(R_bytes, h.sig[0..32])) {
+		return invalidsig;
+	};
 };

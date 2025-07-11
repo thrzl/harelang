@@ -2,7 +2,7 @@
 // (c) Hare authors <https://harelang.org>
 
 def FIELDSZ: size = 16;
-type elem = [FIELDSZ]i64;
+export type elem = [FIELDSZ]i64;
 
 const feZero: elem = [0...];
 const feOne: elem = [1, 0...];
@@ -227,7 +227,7 @@ fn scalar_multiply_add(s: *scalar, a: *scalar, b: *scalar, c: *scalar) void = {
 
 def POINTSZ: size = 32;
 
-type point = struct {
+export type point = struct {
 	x: elem,
 	y: elem,
 	z: elem,
