@@ -8,7 +8,9 @@ use strings;
 export fn gather(ctx: *context, input: str) ([]module::module | error) = {
 	let mods: []module::module = [];
 	path::set(&buf, input)!;
-	module::gather(&ctx.ctx, &mods, ["rt"])?;
+	if (ctx.goal == stage::BIN) {
+		module::gather(&ctx.ctx, &mods, ["rt"])?;
+	};
 	if (ctx.test) {
 		module::gather(&ctx.ctx, &mods, ["test"])?;
 	};
