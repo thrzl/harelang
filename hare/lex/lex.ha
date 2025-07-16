@@ -1006,6 +1006,7 @@ fn unget(lex: *lexer, r: rune) void = {
 
 	lex.loc = lex.prevrloc;
 	lex.prevrloc.1 -= 1;
+	lex.prevrloc.2 -= 1;
 };
 
 fn lexloc(lex: *lexer, r: rune) void = {
