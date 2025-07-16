@@ -73,7 +73,7 @@ export type zonetransition = struct {
 };
 
 // Determines the correct [[zonephase]] to observe for a given [[date]].
-export type zonelookuper = fn(locality, *date) *zonephase;
+export type zonelookuper = fn(loc: locality, d: *date) *zonephase;
 
 // Frees a [[timezone]]. A [[locality]] argument can be passed.
 export fn timezone_free(tz: *timezone) void = {

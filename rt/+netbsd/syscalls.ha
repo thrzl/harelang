@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
-fn syscall0(u64) u64;
-fn syscall1(u64, u64) u64;
-fn syscall2(u64, u64, u64) u64;
-fn syscall3(u64, u64, u64, u64) u64;
-fn syscall4(u64, u64, u64, u64, u64) u64;
-fn syscall5(u64, u64, u64, u64, u64, u64) u64;
-fn syscall6(u64, u64, u64, u64, u64, u64, u64) u64;
-fn __sigtramp_siginfo_2(u64) u64;
+fn syscall0(_: u64) u64;
+fn syscall1(_: u64, _: u64) u64;
+fn syscall2(_: u64, _: u64, _: u64) u64;
+fn syscall3(_: u64, _: u64, _: u64, _: u64) u64;
+fn syscall4(_: u64, _: u64, _: u64, _: u64, _: u64) u64;
+fn syscall5(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
+fn syscall6(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
 
 let pathbuf: [PATH_MAX]u8 = [0...];
 

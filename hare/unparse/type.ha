@@ -74,7 +74,11 @@ fn prototype(
 
 	for (let i = 0z; i < len(t.params); i += 1) {
 		const param = &t.params[i];
-		if (param.name != "") {
+		if (param.name == "") {
+			n += syn(ctx, "_", synkind::PUNCTUATION)?;
+			n += syn(ctx, ":", synkind::PUNCTUATION)?;
+			n += space(ctx)?;
+		} else {
 			n += syn(ctx, param.name, synkind::SECONDARY)?;
 			n += syn(ctx, ":", synkind::PUNCTUATION)?;
 			n += space(ctx)?;
@@ -403,7 +407,7 @@ fn type_test(t: *ast::_type, expected: str) void = {
 			},
 		],
 	};
-	type_test(&t, "fn(int, ...) int");
+	type_test(&t, "fn(_: int, ...) int");
 	t.repr = ast::func_type {
 		result = &type_int,
 		variadism = variadism::HARE,

@@ -97,11 +97,11 @@ export type baz = (bat | foo::bar::baz | long_type_name | yet_another_very_long_
 };
 
 @test fn func() void = {
-	roundtrip("export type foo = fn(int) void;
+	roundtrip("export type foo = fn(_: int) void;
 
-export type foo = fn(int...) void;
+export type foo = fn(_: int...) void;
 
-export type foo = fn(int, ...) void;
+export type foo = fn(_: int, ...) void;
 
 export type foo = fn(
 	long_param_name: long_type_name,
@@ -126,27 +126,27 @@ export type foo = fn(
 ) void;
 
 export type foo = fn(
-	long_type_name,
-	blablablabla,
-	multiple_lines,
-	and_stuff = 4,
+	_: long_type_name,
+	_: blablablabla,
+	_: multiple_lines,
+	_: and_stuff = 4,
 ) void;
 
 export type foo = fn(
-	long_type_name,
-	blablablabla,
-	multiple_lines,
-	and_stuff...
+	_: long_type_name,
+	_: blablablabla,
+	_: multiple_lines,
+	_: and_stuff...
 ) void;
 
 export type foo = fn(
-	long_type_name,
-	blablablabla,
-	multiple_lines,
-	and_stuff,
+	_: long_type_name,
+	_: blablablabla,
+	_: multiple_lines,
+	_: and_stuff,
 	...
 ) void;
 ");
 
-	roundtrip_reparse("type foo = fn(int,) void;");
+	roundtrip_reparse("type foo = fn(_: int,) void;");
 };

@@ -21,34 +21,30 @@ fn prototype(lexer: *lex::lexer) (ast::func_type | error) = {
 		case void => void;
 		};
 
-		let name_or_type = _type(lexer)?;
-		match (try(lexer, ltok::COLON)?) {
+		let name = match (try(lexer, ltok::UNDERSCORE)?) {
 		case void =>
-			append(params, ast::func_param {
-				loc = loc,
-				name = "",
-				_type = alloc(name_or_type)!,
-				default_value = void,
-			})!;
+			yield want(lexer, ltok::NAME)?.1 as str;
 		case lex::token =>
-			// Bit of a hack because we can't unlex twice.
-			synassert(loc, name_or_type.repr is ast::alias_type,
-				"Invalid parameter name")?;
-			let ns = (name_or_type.repr as ast::alias_type).ident;
-			synassert(loc, len(ns) == 1, "Invalid parameter name")?;
-			append(params, ast::func_param {
-				loc = loc,
-				name = ns[0],
-				_type = alloc(_type(lexer)?)!,
-				default_value = void,
-			})!;
+			yield "";
 		};
-		match (try(lexer, ltok::EQUAL)?) {
+
+		want(lexer, ltok::COLON)?;
+		let _type = alloc(_type(lexer)?)!;
+
+		let default = match (try(lexer, ltok::EQUAL)?) {
 		case void =>
 			yield void;
 		case lex::token =>
-			params[len(params) - 1].default_value = expr(lexer)?;
+			yield expr(lexer)?;
 		};
+
+		append(params, ast::func_param {
+			loc = loc,
+			name = name,
+			_type = _type,
+			default_value = default,
+		})!;
+
 		match (try(lexer, ltok::ELLIPSIS)?) {
 		case lex::token =>
 			variadism = ast::variadism::HARE;
