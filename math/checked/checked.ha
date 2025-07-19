@@ -482,3 +482,41 @@ export fn mulz(a: size, b: size) (size, bool) = {
 		return (ret.0: size, ret.1);
 	};
 };
+
+// Return x to the power of n (a positive integer)
+export fn powi64(in: i64, n: uint) (i64, bool) = {
+	if (n == 0) {
+		return (1, false);
+	};
+	let y: i64 = 1;
+	let x: i64 = in;
+	let overflow_out = false;
+	for (n > 1) {
+		if (n % 2 == 1) {
+			const (ans, overflow) = muli64(x, y);
+			y = ans;
+			overflow_out = overflow_out || overflow;
+			n = n - 1;
+		};
+		const (ans, overflow) = muli64(x, x);
+		x = ans;
+		overflow_out = overflow_out || overflow;
+		n = n / 2;
+	};
+	const (ans, overflow) = muli64(x, y);
+	x = ans;
+	overflow_out = overflow_out || overflow;
+	return (ans, overflow_out);
+};
+
+@test fn power() void = {
+	const (ans, overflow) = powi64(2,2);
+	assert(ans == 4i64);
+	assert(!overflow);
+	const (ans, overflow) = powi64(5, 4);
+	assert(ans == 625i64);
+	assert(!overflow);
+	const (ans, overflow) = powi64(10,20);
+	assert(ans == 7766279631452241920i64);
+	assert(overflow);
+};
