@@ -264,8 +264,9 @@ export def NSIG: int = 32;
 
 export type sigact = struct {
 	union {
-		sa_handler: nullable *fn (int) void,
-		sa_sigaction: nullable *fn (int, *siginfo, *opaque) void,
+		sa_handler: nullable *fn (_: int) void,
+		sa_sigaction: nullable *fn (_: int,
+			_: *siginfo, _: *opaque) void,
 	},
 	sa_mask: sigset,
 	sa_flags: int,

@@ -147,7 +147,7 @@ export fn remaining_tokens(s: *tokenizer) []u8 = {
 };
 
 fn tokenize_test(
-	func: *fn([]u8, u8...) tokenizer,
+	func: *fn(_: []u8, _: u8...) tokenizer,
 	in: []u8,
 	delim: []u8,
 	tokens: [][]u8,

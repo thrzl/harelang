@@ -294,7 +294,7 @@ fn match_ctype(it: *strings::iterator, c: rune) (bool | invalid) = {
 		return invalid;
 	};
 	let name = strings::sub(s, 0, i - 1);
-	const map: [_](str, *fn(rune) bool) = [
+	const map: [_](str, *fn(_: rune) bool) = [
 		("alnum", &ascii::isalnum), ("alpha", &ascii::isalpha),
 		("blank", &ascii::isblank), ("cntrl", &ascii::iscntrl),
 		("digit", &ascii::isdigit), ("graph", &ascii::isgraph),
