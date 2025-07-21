@@ -9,6 +9,8 @@ fn syscall4(_: u64, _: u64, _: u64, _: u64, _: u64) u64;
 fn syscall5(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
 fn syscall6(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
 
+fn __sigtramp_siginfo_2(_: u64) u64;
+
 let pathbuf: [PATH_MAX]u8 = [0...];
 
 // The use of this function is discouraged, as it can create race conditions.
