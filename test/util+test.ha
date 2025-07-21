@@ -50,3 +50,15 @@ export fn require(keywords: str...) void = {
 		};
 	};
 };
+
+let _current: nullable *test = null;
+
+// Returns the name of the currently running test.
+export fn current() str = {
+	match (_current) {
+	case let t: *test =>
+		return t.name;
+	case null =>
+		abort("Attempted to call test::current outside of @test function");
+	};
+};

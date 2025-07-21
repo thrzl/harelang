@@ -135,7 +135,7 @@ export @symbol("__test_main") fn main() size = {
 
 	fmt::printfln("Running {}/{} tests:\n", len(enabled_tests), ntest)!;
 	reset(&ctx);
-	for (let test .. enabled_tests) {
+	for (let test &.. enabled_tests) {
 		do_test(&ctx, test);
 	};
 	fmt::println()!;
@@ -247,7 +247,7 @@ fn reset(ctx: *context) void = {
 	want_abort = false;
 };
 
-fn do_test(ctx: *context, test: test) void = {
+fn do_test(ctx: *context, test: *test) void = {
 	signal::handle(signal::sig::SEGV, &handle_segv,
 		signal::flag::NODEFER | signal::flag::ONSTACK);
 	memio::reset(&ctx.stdout);
@@ -281,7 +281,7 @@ fn do_test(ctx: *context, test: test) void = {
 	reset(ctx);
 };
 
-fn run_test(ctx: *context, test: test) status = {
+fn run_test(ctx: *context, test: *test) status = {
 	fmt::print(test.name)!;
 	dots(ctx.maxname - len(test.name) + 3);
 	bufio::flush(os::stdout)!; // write test name before test runs
@@ -300,11 +300,13 @@ fn run_test(ctx: *context, test: test) status = {
 	const n = rt::setjmp(&jmp_buf): status;
 	if (n == status::RETURN) {
 		jmp = &jmp_buf;
+		_current = test;
 		test.func();
 	};
 
 	os::stdout = orig_stdout;
 	os::stderr = orig_stderr;
+	_current = null;
 	return n;
 };
 

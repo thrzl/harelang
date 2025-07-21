@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
+// Returns the name of the currently running test.
+export fn current() str = {
+	abort("Attempted to call test::current outside of @test function");
+};
+
 // Expect the currently running test to abort. The test will fail if it doesn't
 // abort.
 export fn expectabort() void = {
