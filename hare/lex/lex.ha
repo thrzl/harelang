@@ -123,9 +123,15 @@ export fn register_annotation(
 	append(lex.annotations, (id, cb, user))!;
 };
 
-// Returns the current value of the comment buffer, or empty string if unset (or
-// if [[flag::COMMENTS]] was not enabled for this lexer).
-export fn comment(lex: *lexer) str = lex.comment;
+// Returns, and resets, the current value of the comment buffer.
+//
+// The empty string is returned if the buffer is unset or if [[flag::COMMENTS]]
+// was not enabled for this lexer.
+export fn comment(lex: *lexer) str = {
+	let c = lex.comment;
+	lex.comment = "";
+	return c;
+};
 
 // Returns the next token from the lexer.
 export fn lex(lex: *lexer) (token | error) = {
@@ -540,8 +546,7 @@ fn line_comment(lex: *lexer) (void | error) = {
 		return;
 	};
 
-	free(lex.comment);
-	lex.comment = "";
+	free(comment(lex));
 	lex_comment(lex)?;
 };
 
@@ -954,14 +959,12 @@ fn nextw(lex: *lexer) ((rune, location) | io::EOF | error) = {
 	for (let r => next(lex)?) {
 		if (r.0 == ' ' || r.0 == '\n' || r.0 == '\t') {
 			if (r.0 == '\n') {
-				free(lex.comment);
-				lex.comment = "";
+				free(comment(lex));
 			};
 			continue;
 		};
 		if (!is_name(r.0, true) && r.0 != '/') {
-			free(lex.comment);
-			lex.comment = "";
+			free(comment(lex));
 		};
 		return r;
 	};
