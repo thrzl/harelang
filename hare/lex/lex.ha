@@ -453,6 +453,7 @@ fn lex_string(lex: *lexer, loc: location, delim: rune) (token | error) = {
 	return (ltok::LIT_STR, memio::string(&buf)!, loc);
 };
 
+// lex a rune- or string-literal
 fn lex_rn_str(lex: *lexer) (token | error) = {
 	const loc = mkloc(lex);
 	let r = match (next(lex)) {

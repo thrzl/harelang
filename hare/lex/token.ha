@@ -300,6 +300,14 @@ export type location = struct {
 };
 
 // A single lexical token.
+//
+// When ltok is:
+//      a literal integer -> value is u64
+//      a literal float -> value is f64
+//      a literal rune -> value is rune
+//      a literal str -> value is str
+//      a name -> value is str
+//      a keyword, operator, symbol, or EOF -> value is void
 export type token = (ltok, value, location);
 
 // Converts a token to its string representation.
