@@ -281,7 +281,7 @@ fn struct_union_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 		let tok = want(lexer, ltok::NAME, ltok::STRUCT, ltok::UNION)?;
 		if (comment == "") {
-			comment = strings::dup(lex::comment(lexer))!;
+			comment = lex::comment(lexer);
 		};
 		switch (tok.0) {
 		case ltok::NAME =>
@@ -305,10 +305,8 @@ fn struct_union_type(lexer: *lex::lexer) (ast::_type | error) = {
 			const linecomment = lex::comment(lexer);
 			const docs = &membs[len(membs) - 1].docs;
 			if (linecomment != "" && *docs == "") {
-				*docs = strings::dup(linecomment)!;
-				free(lexer.comment);
-				lexer.comment = "";
-			};
+				*docs = linecomment;
+			} else free(linecomment);
 		case => abort();
 		};
 	};
@@ -437,7 +435,7 @@ fn enum_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 		const loc = lex::mkloc(lexer);
 		let name = want(lexer, ltok::NAME)?;
-		let comment = strings::dup(lex::comment(lexer))!;
+		let comment = lex::comment(lexer);
 		let value: nullable *ast::expr =
 			if (try(lexer, ltok::EQUAL)? is lex::token)
 				alloc(expr(lexer)?)!
@@ -455,10 +453,8 @@ fn enum_type(lexer: *lex::lexer) (ast::_type | error) = {
 			const linecomment = lex::comment(lexer);
 			if (linecomment != "" && comment == "") {
 				free(comment);
-				comment = strings::dup(linecomment)!;
-				free(lexer.comment);
-				lexer.comment = "";
-			};
+				comment = linecomment;
+			} else free(linecomment);
 		case ltok::RBRACE => break;
 		case => abort();
 		};
