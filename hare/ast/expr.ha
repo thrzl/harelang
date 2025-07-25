@@ -571,6 +571,8 @@ export fn expr_finish(e: nullable *expr) void = {
 					free(t[i]);
 				};
 				free(t);
+			case let s: str =>
+				free(s);
 			case (value | number_literal) => void;
 			};
 		case let c: continue_expr =>
@@ -593,6 +595,7 @@ export fn expr_finish(e: nullable *expr) void = {
 			free(f.afterthought);
 			expr_finish(f.body);
 			free(f.body);
+			free(f.label);
 		case let f: free_expr =>
 			expr_finish(f);
 			free(f);

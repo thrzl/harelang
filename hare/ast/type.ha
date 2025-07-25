@@ -164,19 +164,25 @@ export fn type_finish(t: nullable *_type) void = {
 			ident_free(a.ident);
 		case builtin_type => void;
 		case let e: enum_type =>
-			for (let i = 0z; i < len(e.values); i += 1) {
-				free(e.values[i].name);
-				expr_finish(e.values[i].value);
-				free(e.values[i].value);
+			for (let val .. e.values) {
+				free(val.name);
+				expr_finish(val.value);
+				free(val.value);
+				free(val.docs);
 			};
 			free(e.values);
 		case let f: func_type =>
 			type_finish(f.result);
 			free(f.result);
-			for (let i = 0z; i < len(f.params); i += 1) {
-				free(f.params[i].name);
-				type_finish(f.params[i]._type);
-				free(f.params[i]._type);
+			for (let param .. f.params) {
+				free(param.name);
+				type_finish(param._type);
+				free(param._type);
+				match(&param.default_value) {
+				case let e: *expr =>
+					expr_finish(e);
+				case void => void;
+				};
 			};
 			free(f.params);
 		case let l: list_type =>
