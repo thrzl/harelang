@@ -12,6 +12,11 @@ export fn duration_to_timespec(d: duration) rt::timespec = rt::timespec {
 	tv_nsec = d % SECOND,
 };
 
+// Converts a [[rt::timespec]] to a [[duration]]. This function is non-portable.
+export fn timespec_to_duration(spec: rt::timespec) duration = {
+	return (spec.tv_sec: i64 * SECOND) + spec.tv_nsec: i64;
+};
+
 // Converts a [[duration]] to an [[rt::timeval]]. This function is
 // non-portable.
 export fn duration_to_timeval(d: duration) rt::timeval = rt::timeval {
