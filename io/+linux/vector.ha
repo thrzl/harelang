@@ -13,6 +13,11 @@ export fn mkvector(buf: []u8) vector = vector {
 	iov_len = len(buf),
 };
 
+// Returns the byte slice a [[vector]] refers to.
+export fn vector_buf(vec: *vector) []u8 = {
+	return (vec.iov_base: *[*]u8)[..vec.iov_len];
+};
+
 // Performs a vectored read on the given file. A read is performed on each of
 // the vectors, prepared with [[mkvector]], in order, and the total number of
 // bytes read is returned.
