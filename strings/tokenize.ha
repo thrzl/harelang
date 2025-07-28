@@ -227,8 +227,16 @@ export fn rsplitn(in: str, delim: str, n: size) ([]str | nomem) = {
 	return toks;
 };
 
-// Splits a string into tokens delimited by 'delim'. The caller must free the
-// returned slice. The strings within the slice are borrowed from 'in'.
+// Splits a string into tokens delimited by any number of ASCII characters in
+// 'delim' (see [[tokenize]] for details).
+//
+//	strings::split("hello world", " ");
+//	// ["hello", "world"]
+//	strings::split("hello;world,foo:bar", ",:;");
+//	// ["hello", "world", "foo", "bar"]
+//
+// The caller must free the returned slice. The strings within the slice are
+// borrowed from 'in'.
 //
 // The caller must ensure that 'delim' is not an empty string.
 export fn split(in: str, delim: str) ([]str | nomem) =
