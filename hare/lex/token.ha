@@ -10,6 +10,7 @@ export type ltok = enum uint {
 
 	ATTR_FINI,
 	ATTR_INIT,
+	ATTR_OFFSET,
 	ATTR_PACKED,
 	ATTR_SYMBOL,
 	ATTR_TEST,
@@ -162,6 +163,7 @@ const bmap: [_]str = [
 	// Keep ordered with tok
 	"@fini",
 	"@init",
+	"@offset",
 	"@packed",
 	"@symbol",
 	"@test",

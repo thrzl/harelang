@@ -185,14 +185,11 @@ fn resolve(
 	// Embedded (union) alias
 	// TODO
 
-	// Padding
+	// Explicit offsets
 	let atype = parse_type("struct {
-		_: [8]u8,
-		x: int,
-		_: [4]u8,
-		y: int,
-		_: [12]u8,
-		z: int,
+		@offset(8)  x: int,
+		@offset(16) y: int,
+		@offset(32) z: int,
 	}");
 	defer ast::type_finish(&atype);
 	let htype = lookup(st, &atype)!;

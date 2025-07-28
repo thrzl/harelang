@@ -443,6 +443,18 @@ fn _struct_from_ast(
 		yield atype: []ast::struct_member;
 	};
 	for (let i = 0z; i < len(membs); i += 1) {
+		*offs = match (membs[i]._offset) {
+		case let ex: *ast::expr =>
+			yield match (store.resolve) {
+			case null =>
+				return noresolver;
+			case let res: *resolver =>
+				yield res(store.rstate, store, ex)?;
+			};
+		case null =>
+			yield *offs;
+		};
+
 		const memb = match (membs[i].member) {
 		case let se: ast::struct_embedded =>
 			let membs: []ast::struct_member = match (se.repr) {
@@ -467,13 +479,12 @@ fn _struct_from_ast(
 		if (*offs % _type._align != 0) {
 			*offs += _type._align - (*offs % _type._align);
 		};
-		if (memb.name != "_") {
-			append(fields, struct_field {
-				name = memb.name,
-				offs = *offs,
-				_type = _type,
-			})!;
-		};
+
+		append(fields, struct_field {
+			name = memb.name,
+			offs = *offs,
+			_type = _type,
+		})!;
 
 		if (!is_union) {
 			*offs += _type.sz;

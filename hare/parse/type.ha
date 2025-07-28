@@ -268,31 +268,31 @@ fn struct_union_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 		let comment = "";
 
-		let tok = want(lexer, ltok::NAME, ltok::UNDERSCORE,
-			ltok::STRUCT, ltok::UNION)?;
+		let offs: nullable *ast::expr = match (try(lexer, ltok::ATTR_OFFSET)?) {
+		case void =>
+			yield null;
+		case lex::token =>
+			comment = strings::dup(lex::comment(lexer))!;
+			want(lexer, ltok::LPAREN)?;
+			let ex = expr(lexer)?;
+			want(lexer, ltok::RPAREN)?;
+			yield alloc(ex)!;
+		};
+
+		let tok = want(lexer, ltok::NAME, ltok::STRUCT, ltok::UNION)?;
 		if (comment == "") {
 			comment = strings::dup(lex::comment(lexer))!;
 		};
 		switch (tok.0) {
-		case ltok::UNDERSCORE =>
-			want(lexer, ltok::COLON)?;
-			let field = ast::struct_field {
-				name = strings::dup("_")!,
-				_type = alloc(_type(lexer)?)!,
-			};
-			let memb = ast::struct_member {
-				member = field,
-				docs = comment,
-			};
-			append(membs, memb)!;
 		case ltok::NAME =>
 			lex::unlex(lexer, tok);
-			let memb = struct_embed_or_field(lexer, comment)?;
+			let memb = struct_embed_or_field(lexer, offs, comment)?;
 			append(membs, memb)!;
 		case ltok::STRUCT, ltok::UNION =>
 			lex::unlex(lexer, tok);
 			let subtype = struct_union_type(lexer)?;
 			append(membs, ast::struct_member {
+				_offset = offs,
 				member = alloc(subtype)!,
 				docs = comment,
 			})!;
@@ -329,6 +329,7 @@ fn struct_union_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 fn struct_embed_or_field(
 	lexer: *lex::lexer,
+	offs: nullable *ast::expr,
 	comment: str,
 ) (ast::struct_member | error) = {
 	// Disambiguates between `name: type` and `identifier`
@@ -353,6 +354,7 @@ fn struct_embed_or_field(
 				_type = alloc(_type(lexer)?)!,
 			};
 			return ast::struct_member {
+				_offset = offs,
 				member = field,
 				docs = comment,
 			};
@@ -365,6 +367,7 @@ fn struct_embed_or_field(
 	};
 
 	return ast::struct_member {
+		_offset = offs,
 		member = id: ast::struct_alias,
 		docs = comment,
 	};

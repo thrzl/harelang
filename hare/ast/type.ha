@@ -81,7 +81,7 @@ export type pointer_type = struct {
 
 // A single field of a struct type.
 export type struct_field = struct {
-	name: str, // may be "_"
+	name: str,
 	_type: *_type,
 };
 
@@ -91,8 +91,9 @@ export type struct_embedded = *_type;
 // An embedded type alias.
 export type struct_alias = ident;
 
-// struct { foo: int, struct { bar: int }, baz::quux }
+// struct { @offset(10) foo: int, struct { bar: int }, baz::quux }
 export type struct_member = struct {
+	_offset: nullable *expr,
 	member: (struct_field | struct_embedded | struct_alias),
 
 	// Only valid if the lexer has comments enabled
@@ -136,6 +137,8 @@ export type _type = struct {
 fn struct_members_free(membs: []struct_member) void = {
 	for (let i = 0z; i < len(membs); i += 1) {
 		free(membs[i].docs);
+		expr_finish(membs[i]._offset);
+		free(membs[i]._offset);
 		match (membs[i].member) {
 		case let f: struct_field =>
 			free(f.name);
