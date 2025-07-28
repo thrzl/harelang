@@ -105,3 +105,24 @@ use types;
 	assert(cmp::ints(&0, &types::INT_MIN) == 1);
 	assert(cmp::ints(&types::INT_MIN, &0) == -1);
 };
+
+@test fn shuffle() void = {
+	let rand = random::init(0x424242);
+	let cases: [_][]int = [
+		[1, 2, 3, 4, 5],
+		[1, 2],
+		[1],
+		[],
+	];
+	for (let testcase .. cases) {
+		assert(sorted(testcase, size(int), &cmp::ints));
+		shuffle(testcase, size(int), &rand);
+		if (len(testcase) <= 1) {
+			continue;
+		};
+
+		assert(!sorted(testcase, size(int), &cmp::ints));
+		sort(testcase, size(int), &cmp::ints)!;
+		assert(sorted(testcase, size(int), &cmp::ints));
+	};
+};
