@@ -256,7 +256,7 @@ export def POLLRDBAND: i16 = 0x80;
 export def POLLWRBAND: i16 = 0x100;
 
 export type iovec = struct {
-	iov_base: *opaque,
+	iov_base: nullable *opaque,
 	iov_len: size,
 };
 

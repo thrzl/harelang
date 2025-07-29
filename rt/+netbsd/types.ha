@@ -222,7 +222,7 @@ export type dirent = struct {
 };
 
 export type iovec = struct {
-	iov_base: *opaque,
+	iov_base: nullable *opaque,
 	iov_len: size
 };
 
