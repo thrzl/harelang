@@ -190,6 +190,14 @@ fn tocentries(
 				lname)?;
 			undoc = true;
 		};
+
+		match (&decls[i].decl) {
+		case let d: *ast::decl_func =>
+			free(d.symbol);
+			d.symbol = "";
+		case => void;
+		};
+
 		unparse::decl(out, &syn_centry, &decls[i])?;
 		fmt::fprintln(out)?;
 	};

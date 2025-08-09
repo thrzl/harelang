@@ -176,6 +176,12 @@ fn details_tty(ctx: *context, decl: *ast::decl) (bool | error) = {
 	};
 	firstline = false;
 
+	match (&decl.decl) {
+	case let d: *ast::decl_func =>
+		d.symbol = "";
+	case => void;
+	};
+
 	unparse::decl(ctx.out, &syn_tty, decl)?;
 	fmt::fprintln(ctx.out)?;
 
