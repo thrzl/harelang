@@ -7,6 +7,7 @@ use getopt;
 use os;
 use os::exec;
 use path;
+use strings;
 
 fn tool(name: str, cmd: *getopt::command) (void | error) = {
 	if (len(cmd.args) < 1) {
@@ -19,23 +20,30 @@ fn tool(name: str, cmd: *getopt::command) (void | error) = {
 		args = cmd.args[1..];
 	};
 
-	const path = path::init(TOOLDIR)?;
+	const toolpaths = os::tryenv("HARE_TOOLPATH", TOOLDIR);
+	const paths = strings::tokenize(toolpaths, ":");
 	const tool = cmd.args[0];
 	const name = fmt::asprintf("hare-{}", tool)!;
 	defer free(name);
-	path::push(&path, name)?;
 
-	const cmd = match (exec::cmd(path::string(&path), args...)) {
-	case let cmd: exec::command =>
-		yield cmd;
-	case errors::noentry =>
-		fmt::fatalf("hare tool {}: tool not found", tool);
-	case let err: exec::error =>
-		return err;
+	for (const segment => strings::next_token(&paths)) {
+		const path = path::init(segment)?;
+		path::push(&path, name)?;
+
+		const cmd = match (exec::cmd(path::string(&path), args...)) {
+		case let cmd: exec::command =>
+			yield cmd;
+		case errors::noentry =>
+			continue;
+		case let err: exec::error =>
+			return err;
+		};
+
+		const argv0 = fmt::asprintf("hare tool {}", tool)!;
+		exec::setname(&cmd, argv0)!;
+		const err = exec::exec(&cmd);
+		fmt::fatalf("exec {}: {}", path::string(&path), exec::strerror(err));
 	};
 
-	const argv0 = fmt::asprintf("hare tool {}", tool)!;
-	exec::setname(&cmd, argv0)!;
-	const err = exec::exec(&cmd);
-	fmt::fatalf("exec {}: {}", path::string(&path), exec::strerror(err));
+	fmt::fatalf("hare tool {}: tool not found", tool);
 };
