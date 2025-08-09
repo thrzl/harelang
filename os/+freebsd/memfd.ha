@@ -17,7 +17,7 @@ export type memfd_flag = enum uint {
 // Creates a new anonyomous [[io::file]] backed by memory.
 //
 // The initial file size is zero. It can be written to normally, or the size can
-// be set manually with [[trunc]].
+// be set manually with [[io::trunc]].
 //
 // This function is available on Linux and FreeBSD.
 export fn memfd(

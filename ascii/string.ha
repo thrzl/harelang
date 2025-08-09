@@ -16,7 +16,7 @@ export fn strlower(s: str) (str | nomem) = {
 // Converts all ASCII uppercase characters in a string to their lowercase
 // representation, returning a new string. The new string data is stored in the
 // supplied buffer (overwriting any existing contents). The buffer is permitted
-// to exactly overlap the string. This function will return [[nomem]] if the
+// to exactly overlap the string. This function will return nomem if the
 // buffer's capacity is too small to fit the entire string.
 export fn strlower_buf(s: str, buf: []u8) (str | nomem) = {
 	let buf = buf[..0];
