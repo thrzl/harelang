@@ -382,22 +382,10 @@ fn has_decl(decl: ast::decl, name: str) bool = {
 		if (len(d.ident) == 1 && d.ident[0] == name) {
 			return true;
 		};
-		let tok = strings::rtokenize(d.symbol, ".");
-		match (strings::next_token(&tok)) {
-		case done => void;
-		case let s: str =>
-			return s == name;
-		};
 	case let globals: []ast::decl_global =>
 		for (let d .. globals) {
 			if (len(d.ident) == 1 && d.ident[0] == name) {
 				return true;
-			};
-			let tok = strings::rtokenize(d.symbol, ".");
-			match (strings::next_token(&tok)) {
-			case done => void;
-			case let s: str =>
-				return s == name;
 			};
 		};
 	case let types: []ast::decl_type =>
