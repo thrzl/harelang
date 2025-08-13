@@ -198,7 +198,22 @@ fn tocentries(
 		case => void;
 		};
 
-		unparse::decl(out, &syn_centry, &decls[i])?;
+		const decl = &decls[i];
+		match (decl.decl) {
+		case let t: []ast::decl_type =>
+			// Print summarized types in the TOC
+			for (const t .. t) {
+				fmt::fprintf(out, "<span class='keyword'>type</span> ")?;
+				fmt::fprintf(out, "<a href='#")?;
+				unparse::ident(out, decl_ident(decl))?;
+				fmt::fprintf(out, "'>")?;
+				unparse::ident(out, decl_ident(decl))?;
+				fmt::fprintf(out, "</a>;")?;
+			};
+		case =>
+			unparse::decl(out, &syn_centry, &decls[i])?;
+		};
+
 		fmt::fprintln(out)?;
 	};
 	fmt::fprint(out, "</pre>")?;
