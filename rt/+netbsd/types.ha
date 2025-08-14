@@ -8,6 +8,7 @@ export type ino_t = u64;
 export type nlink_t = u64;
 export type id_t = uint;
 export type pid_t = u64;
+export type lwpid_t = i32;
 export type uid_t = u32;
 export type gid_t = u32;
 export type off_t = i64;
@@ -664,3 +665,15 @@ export def SHMFS_OBJ_PREFIX =	".shmobj_";
 
 // Signal
 export def __SIGTRAMP_SIGINFO_VERSION = 2;
+
+// Scheduling
+export type sched_param = struct {
+	sched_priority: int
+};
+// Policies
+export def SCHED_NONE: int   = -1;
+export def SCHED_OTHER: int  = 0;
+export def SCHED_FIFO: int   = 1;
+export def SCHED_RR: int     = 2;
+// a special lwpid, used in _sched_{g,s}etparam(), referring to all LWPs in the process
+export def P_ALL_LWPS: lwpid_t = 0;

@@ -664,3 +664,35 @@ export fn fsync(fd: int) (void | errno) = {
 export fn fdatasync(fd: int) (void | errno) = {
 	wrap_return(syscall1(SYS_fdatasync, fd: u64))?;
 };
+
+// Scheduling
+// netbsd-specific scheduler access functions
+export fn _sched_getparam(pid: pid_t, lwpid: lwpid_t, policy: *int, sp: *sched_param) (void | errno) = {
+	wrap_return(syscall4(SYS__sched_getparam,
+		pid: u64, lwpid: u64, policy: uintptr: u64, sp: uintptr: u64))?;
+};
+
+export fn _sched_setparam(pid: pid_t, lwpid: lwpid_t, policy: int, sp: *sched_param) (void | errno) = {
+	wrap_return(syscall4(SYS__sched_setparam,
+		pid: u64, lwpid: u64, policy: u64, sp: uintptr: u64))?;
+};
+
+// The POSIX functions are defined in terms of the netbsd functions.
+export fn sched_getscheduler(pid: pid_t) (int | errno) = {
+	let policy: int = 0;
+	let sp = sched_param{...};
+	_sched_getparam(pid, P_ALL_LWPS, &policy, &sp)?;
+	return policy;
+};
+
+export fn sched_setscheduler(pid: pid_t, policy: int, params: *sched_param) (int | errno) = {
+	let old_policy: int = 0;
+	let old_sp = sched_param{...};
+	_sched_getparam(pid, P_ALL_LWPS, &old_policy, &old_sp)?;
+	_sched_setparam(pid, P_ALL_LWPS, policy, params)?;
+	return old_policy;
+};
+
+export fn sched_yield() void = {
+	syscall0(SYS_sched_yield);
+};

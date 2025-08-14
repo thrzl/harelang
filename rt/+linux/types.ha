@@ -1385,3 +1385,48 @@ export type io_uring_recvmsg_out = struct {
 	payloadlen: u32,
 	flags: u32,
 };
+
+
+// Scheduling policies.
+export def SCHED_OTHER: int = 0;
+export def SCHED_FIFO: int = 1;
+export def SCHED_RR: int = 2;
+export def SCHED_NORMAL: int = 0;
+export def SCHED_BATCH: int = 3;
+export def SCHED_ISO: int = 4;
+export def SCHED_IDLE: int = 5;
+export def SCHED_DEADLINE: int = 6;
+export def SCHED_EXT: int = 7;
+// This flag can be ORed with policy values.
+// This is the reason why the above scheduling policies can't be an enum.
+export def SCHED_RESET_ON_FORK: int = 0x40000000;
+
+export type sched_param = struct {
+	sched_priority: int
+};
+
+// sched_attr support. (linux only)
+export type sched_attr = struct {
+	size_: u32,
+	sched_policy: u32,
+	sched_flags: u64,
+	sched_nice: i32,
+	sched_priority: u32,
+	sched_runtime: u64,
+	sched_deadline: u64,
+	sched_period: u64,
+	sched_util_min: u32,
+	sched_util_max: u32,
+	// Additional fields may be added at the end.
+};
+// Flags for the sched_flags field in struct sched_attr.
+export def SCHED_FLAG_RESET_ON_FORK: u64 = 0x01;
+export def SCHED_FLAG_RECLAIM: u64 = 0x02;
+export def SCHED_FLAG_DL_OVERRUN: u64 = 0x04;
+export def SCHED_FLAG_KEEP_POLICY: u64 = 0x08;
+export def SCHED_FLAG_KEEP_PARAMS: u64 = 0x10;
+export def SCHED_FLAG_UTIL_CLAMP_MIN: u64 = 0x20;
+export def SCHED_FLAG_UTIL_CLAMP_MAX: u64 = 0x40;
+// Combinations of sched_flags fields.
+export def SCHED_FLAG_KEEP_ALL = SCHED_FLAG_KEEP_POLICY | SCHED_FLAG_KEEP_PARAMS;
+export def SCHED_FLAG_UTIL_CLAMP = SCHED_FLAG_UTIL_CLAMP_MIN | SCHED_FLAG_UTIL_CLAMP_MAX;

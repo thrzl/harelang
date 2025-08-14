@@ -502,3 +502,12 @@ export def SHM_LARGEPAGE: int = 0x00000004;
 export def SHM_LARGEPAGE_ALLOC_DEFAULT: int = 0;
 export def SHM_LARGEPAGE_ALLOC_NOWAIT: int = 1;
 export def SHM_LARGEPAGE_ALLOC_HARD: int = 2;
+
+// Scheduling
+// These policy constants are notably different from linux.
+export def SCHED_FIFO: int     = 1;
+export def SCHED_OTHER: int    = 2;
+export def SCHED_RR: int       = 3;
+export type sched_param = struct {
+	sched_priority: int
+};

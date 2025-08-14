@@ -1173,3 +1173,28 @@ export fn clone3(cl_args: *clone_args) (pid_t | errno) = {
 		cl_args: uintptr: u64,
 		size(clone_args)))?: pid_t;
 };
+
+// Scheduling
+export fn sched_getscheduler(pid: pid_t) (int | errno) = {
+	return wrap_return(syscall1(SYS_sched_getscheduler,
+		pid: u64))?: int;
+};
+
+export fn sched_setscheduler(pid: pid_t, policy: int, params: *sched_param) (int | errno) = {
+	return wrap_return(syscall3(SYS_sched_setscheduler,
+		pid: u64, policy: u64, params: uintptr: u64))?: int;
+};
+
+export fn sched_getattr(pid: pid_t, attr: *sched_attr, size_: uint, flags: uint) (void | errno) = {
+	wrap_return(syscall4(SYS_sched_getattr,
+		pid: u64, attr: uintptr: u64, size_: u64, flags: u64))?;
+};
+
+export fn sched_setattr(pid: pid_t, attr: *sched_attr, flags: uint) (void | errno) = {
+	wrap_return(syscall3(SYS_sched_setattr,
+		pid: u64, attr: uintptr: u64, flags: u64))?;
+};
+
+export fn sched_yield() void = {
+	syscall0(SYS_sched_yield);
+};

@@ -680,3 +680,18 @@ export fn fsync(fd: int) (void | errno) = {
 export fn fdatasync(fd: int) (void | errno) = {
 	wrap_return(syscall1(SYS_fdatasync, fd: u64))?;
 };
+
+// Scheduling
+export fn sched_getscheduler(pid: pid_t) (int | errno) = {
+	return wrap_return(syscall1(SYS_sched_getscheduler,
+		pid: u64))?: int;
+};
+
+export fn sched_setscheduler(pid: pid_t, policy: int, params: *sched_param) (int | errno) = {
+	return wrap_return(syscall3(SYS_sched_setscheduler,
+		pid: u64, policy: u64, params: uintptr: u64))?: int;
+};
+
+export fn sched_yield() void = {
+	syscall0(SYS_sched_yield);
+};
