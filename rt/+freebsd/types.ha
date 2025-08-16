@@ -440,6 +440,8 @@ export def CLOCK_SECOND: int = 13;
 export def CLOCK_THREAD_CPUTIME_ID: int = 14;
 export def CLOCK_PROCESS_CPUTIME_ID: int = 15;
 
+export def TIMER_ABSTIME: int = 1;
+
 export def WNOHANG: int = 1;
 export def WUNTRACED: int = 2;
 export def WSTOPPED: int = WUNTRACED;

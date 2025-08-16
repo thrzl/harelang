@@ -589,6 +589,8 @@ export def CLOCK_MONOTONIC: int = 3;
 export def CLOCK_THREAD_CPUTIME_ID: int = 0x20000000;
 export def CLOCK_PROCESS_CPUTIME_ID: int = 0x40000000;
 
+export def TIMER_ABSTIME: int = 1;
+
 export def WNOHANG: int = 1;
 export def WUNTRACED: int = 2;
 export def WSTOPPED: int = WUNTRACED;

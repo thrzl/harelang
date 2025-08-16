@@ -423,6 +423,20 @@ export fn nanosleep(req: *const timespec, rem: *timespec) (void | errno) = {
 		req: uintptr: u64, rem: uintptr: u64))?;
 };
 
+export fn clock_nanosleep(
+	clock_id: int,
+	flags: int,
+	requested: *timespec,
+	remaining: *timespec
+) (void | errno) = {
+	wrap_return(syscall4(SYS_clock_nanosleep,
+		clock_id: u64,
+		flags: u64,
+		requested: uintptr: u64,
+		remaining: uintptr: u64
+	))?;
+};
+
 export fn getrandom(buf: *opaque, bufln: size, flags: uint) (size | errno) = {
 	return wrap_return(syscall3(SYS_getrandom,
 		buf: uintptr: u64, bufln: u64, flags: u64))?: size;

@@ -271,6 +271,8 @@ export def CLOCK_BOOTTIME_ALARM: int		= 9;
 export def CLOCK_SGI_CYCLE: int			= 10;
 export def CLOCK_TAI: int			= 11;
 
+export def TIMER_ABSTIME: int = 1;
+
 export type open_how = struct {
 	flags: u64,
 	mode: u64,
