@@ -3,7 +3,7 @@
 
 @test fn struct_union() void = {
 	roundtrip("export type foo = struct {
-	@offset(void) x: int,
+	x: int,
 	y: int,
 };
 

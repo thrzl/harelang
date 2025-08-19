@@ -144,15 +144,6 @@ fn struct_union_type(
 			ctx.linelen += 8;
 		};
 
-		match (memb._offset) {
-		case null => void;
-		case let ex: *ast::expr =>
-			z += syn(ctx, "@offset(", synkind::ATTRIBUTE)?;
-			z += _expr(ctx, syn, ex)?;
-			z += syn(ctx, ")", synkind::ATTRIBUTE)?;
-			z += space(ctx)?;
-		};
-
 		match (memb.member) {
 		case let se: ast::struct_embedded =>
 			z += __type(ctx, syn, se)?;
