@@ -125,4 +125,15 @@ use types;
 		sort(testcase, size(int), &cmp::ints)!;
 		assert(sorted(testcase, size(int), &cmp::ints));
 	};
+
+	// TODO: check for uniformness
+	let same = 0;
+	for (let i = 0; i < 5000; i += 1) {
+		let data = [0, 1, 2, 3, 4];
+		shuffle(data, size(int), &rand);
+		if (sorted(data, size(int), &cmp::ints)) {
+			same += 1;
+		};
+	};
+	assert(same >= 36 && same <= 46); // 5000 / 120 ~= 41.6
 };

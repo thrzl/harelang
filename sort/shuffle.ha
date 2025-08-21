@@ -11,7 +11,7 @@ export fn shuffle(items: []opaque, itemsz: size, rand: *random::random) void = {
 
 	const data = items: *[*]u8;
 	for (let i = len(items) - 1; i > 0; i -= 1) {
-		const j = random::u64n(rand, i: u64): size;
+		const j = random::u64n(rand, i: u64 + 1): size;
 		let a = &data[i * itemsz];
 		let b = &data[j * itemsz];
 		swap(a, b, itemsz);
