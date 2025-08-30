@@ -301,7 +301,7 @@ fn binding_unpack(lexer: *lex::lexer) (ast::binding_unpack | error) = {
 		const (tok, value, _) = want(lexer, ltok::NAME,
 			ltok::UNDERSCORE)?;
 		if (tok == ltok::UNDERSCORE) {
-			append(fields, void)!;
+			append(fields, "")!;
 		} else {
 			append(fields, value as str)!;
 		};

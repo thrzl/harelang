@@ -719,11 +719,10 @@ fn binding_expr(
 		case let u: ast::binding_unpack =>
 			z += syn(ctx, "(", synkind::PUNCTUATION)?;
 			for (let i = 0z; i < len(u); i += 1) {
-				match (u[i]) {
-				case let s: str =>
-					z += syn(ctx, s,
+				if (u[i] != "") {
+					z += syn(ctx, u[i],
 						synkind::IDENT)?;
-				case void =>
+				} else {
 					z += syn(ctx, "_",
 						synkind::OPERATOR)?;
 				};

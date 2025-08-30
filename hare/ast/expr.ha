@@ -2,6 +2,7 @@
 // (c) Hare authors <https://harelang.org>
 
 use hare::lex;
+use strings;
 
 // An identifier access expression.
 //
@@ -142,7 +143,7 @@ export type binding = struct {
 // Tuple unpacking binding.
 //
 // 	(foo, _, bar)
-export type binding_unpack = [](str | void);
+export type binding_unpack = []str;
 
 // The kind of binding expression being used.
 export type binding_kind = enum {
@@ -518,14 +519,7 @@ export fn expr_finish(e: nullable *expr) void = {
 				case let s: str =>
 					free(s);
 				case let u: binding_unpack =>
-					for (let i = 0z; i < len(u); i += 1) {
-						match (u[i]) {
-						case let s: str =>
-							free(s);
-						case => void;
-						};
-					};
-					free(u);
+					strings::freeall(u);
 				};
 				type_finish(b.bindings[i]._type);
 				free(b.bindings[i]._type);
