@@ -212,7 +212,7 @@ fn build(name: str, cmd: *getopt::command) (void | error) = {
 		// in the case that we are outputting to a binary that is
 		// currently beeing executed, we need to remove it first or
 		// otherwise os::create() will fail
-		os::remove(output): void;
+		_ = os::remove(output);
 		dest = match (os::create(output, mode)) {
 		case let f: io::file =>
 			yield f;

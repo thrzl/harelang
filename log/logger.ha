@@ -29,18 +29,18 @@ fn log_println(sink: *logger, fields: fmt::formattable...) void = {
 	const sink = sink: *stdlogger;
 	assert(sink.println == &log_println);
 	const now = date::localnow();
-	fmt::fprint(sink.sink, "["): void;
-	date::format(sink.sink, date::STAMP, &now): void;
-	fmt::fprint(sink.sink, "] "): void;
-	fmt::fprintln(sink.sink, fields...): void;
+	_ = fmt::fprint(sink.sink, "[");
+	_ = date::format(sink.sink, date::STAMP, &now);
+	_ = fmt::fprint(sink.sink, "] ");
+	_ = fmt::fprintln(sink.sink, fields...);
 };
 
 fn log_printfln(sink: *logger, fmt: str, fields: fmt::field...) void = {
 	const sink = sink: *stdlogger;
 	assert(sink.printfln == &log_printfln);
 	const now = date::localnow();
-	fmt::fprint(sink.sink, "["): void;
-	date::format(sink.sink, date::STAMP, &now): void;
-	fmt::fprint(sink.sink, "] "): void;
-	fmt::fprintfln(sink.sink, fmt, fields...): void;
+	_ = fmt::fprint(sink.sink, "[");
+	_ = date::format(sink.sink, date::STAMP, &now);
+	_ = fmt::fprint(sink.sink, "] ");
+	_ = fmt::fprintfln(sink.sink, fmt, fields...);
 };

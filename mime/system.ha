@@ -10,7 +10,7 @@ use strings;
 
 @init fn init() void = {
 	// Done in a separate function so we can discard errors here
-	load_systemdb(): void;
+	_ = load_systemdb();
 };
 
 fn load_systemdb() (void | fs::error | io::error | utf8::invalid | nomem) = {

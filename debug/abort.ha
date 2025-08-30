@@ -26,7 +26,7 @@ fn debug_abort(
 	case let img: image::image =>
 		yield img;
 	case =>
-		fmt::errorfln("Abort: {}:{}:{}: {}", *path, line, col, msg): void;
+		_ = fmt::errorfln("Abort: {}:{}:{}: {}", *path, line, col, msg);
 		halt();
 	};
 	defer image::close(&self);
@@ -38,7 +38,7 @@ fn debug_abort(
 		yield fs::filestat { mask = 0, ... };
 	};
 
-	fmt::errorfln("Abort: {}:{}:{}: {}", *path, line, col, msg): void;
+	_ = fmt::errorfln("Abort: {}:{}:{}: {}", *path, line, col, msg);
 	print_context(*path, line, col, st.mtime);
 
 	let frame = walk();
@@ -56,6 +56,6 @@ fn debug_abort(
 };
 
 fn halt() never = {
-	rt::kill(rt::getpid(), rt::SIGABRT): void;
+	_ = rt::kill(rt::getpid(), rt::SIGABRT);
 	for (true) void;
 };

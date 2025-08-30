@@ -196,7 +196,7 @@ export fn decodestr(s: str) ([]u8 | errors::invalid | nomem) = {
 	defer free(s);
 	assert(bytes::equal(s, [0xCA, 0xFE, 0xBA, 0xBE, 0xDE, 0xAD, 0xF0, 0x0D]));
 
-	decodestr("this is not hex") as errors::invalid: void;
+	assert(decodestr("this is not hex") is errors::invalid);
 };
 
 // Outputs a dump of hex data alongside the offset and an ASCII representation

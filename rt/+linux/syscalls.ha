@@ -873,21 +873,21 @@ export fn io_uring_enter2(
 };
 
 export fn mlock2(addr: *opaque, length: size, flags: uint) (void | errno) = {
-	return wrap_return(syscall3(SYS_mlock2, addr: uintptr: u64,
-		length: u64, flags: u64))?: void;
+	wrap_return(syscall3(SYS_mlock2, addr: uintptr: u64,
+		length: u64, flags: u64))?;
 };
 
 export fn munlock(addr: *opaque, length: size) (void | errno) = {
-	return wrap_return(syscall2(SYS_munlock, addr: uintptr: u64,
-		length: u64))?: void;
+	wrap_return(syscall2(SYS_munlock, addr: uintptr: u64,
+		length: u64))?;
 };
 
 export fn mlockall(flags: uint) (void | errno) = {
-	return wrap_return(syscall1(SYS_mlockall, flags: u64))?: void;
+	wrap_return(syscall1(SYS_mlockall, flags: u64))?;
 };
 
 export fn munlockall() (void | errno) = {
-	return wrap_return(syscall0(SYS_munlockall))?: void;
+	wrap_return(syscall0(SYS_munlockall))?;
 };
 
 export fn prctl(
@@ -930,7 +930,7 @@ export fn getsid(pid: pid_t) (pid_t | errno) = {
 };
 
 export fn setsid() (void | errno) = {
-	return wrap_return(syscall0(SYS_setsid))?: void;
+	wrap_return(syscall0(SYS_setsid))?;
 };
 
 export fn mount(

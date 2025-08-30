@@ -42,11 +42,11 @@ export fn load() *config = {
 
 	match (parse(&cache, file)) {
 	case let err: error =>
-		fmt::errorfln("Error parsing /etc/resolv.conf: {}",
-			strerror(err)): void;
+		_ = fmt::errorfln("Error parsing /etc/resolv.conf: {}",
+			strerror(err));
 		return &cache;
 	case nomem =>
-		fmt::errorfln("Error parsing /etc/resolv.conf: out of memory"): void;
+		_ = fmt::errorfln("Error parsing /etc/resolv.conf: out of memory");
 		return &cache;
 	case void =>
 		cache_valid = true;

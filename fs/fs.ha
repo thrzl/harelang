@@ -129,13 +129,13 @@ export fn move(fs: *fs, oldpath: str, newpath: str) (void | error) = {
 	case let h: io::handle =>
 		yield h;
 	case let err: error =>
-		io::close(old): void;
+		_ = io::close(old);
 		return err;
 	};
 	match (io::copy(new, old)) {
 	case let err: io::error =>
-		io::close(new): void;
-		io::close(old): void;
+		_ = io::close(new);
+		_ = io::close(old);
 		remove(fs, newpath)?;
 		return err;
 	case size => void;

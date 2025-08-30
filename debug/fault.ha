@@ -36,19 +36,19 @@ fn signal_handler(sig: sig, info: *signal::siginfo, uctx: *opaque) void = {
 	switch (sig) {
 	case sig::SEGV =>
 		const is_overflow = addr & ~0xFFFF == sp & ~0xFFFF;
-		fmt::errorfln("{} ({}) at address 0x{:x}",
+		_ = fmt::errorfln("{} ({}) at address 0x{:x}",
 			if (is_overflow) "Stack overflow"
 			else "Illegal pointer access",
-			errcode_str(sig, info.code), addr): void;
+			errcode_str(sig, info.code), addr);
 	case sig::BUS =>
-		fmt::errorfln("Bus error ({}) at address 0x{:x}",
-			errcode_str(sig, info.code), addr): void;
+		_ = fmt::errorfln("Bus error ({}) at address 0x{:x}",
+			errcode_str(sig, info.code), addr);
 	case sig::FPE =>
 		// addr is the location of the faulting instruction, construct
 		// an additional synethetic stack frame
 		let copy = frame; frame = mkframe(&copy, addr);
-		fmt::errorfln("Arithmetic exception ({})",
-			errcode_str(sig, info.code)): void;
+		_ = fmt::errorfln("Arithmetic exception ({})",
+			errcode_str(sig, info.code));
 	case => void;
 	};
 
@@ -59,7 +59,7 @@ fn signal_handler(sig: sig, info: *signal::siginfo, uctx: *opaque) void = {
 	};
 	defer image::close(&self);
 
-	fmt::errorln("Backtrace:"): void;
+	_ = fmt::errorln("Backtrace:");
 	backtrace(&self, frame);
 
 	halt();

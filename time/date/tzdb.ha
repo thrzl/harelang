@@ -61,12 +61,12 @@ export fn tzdb(tzid: str) (locality | tzdberror | nomem) = {
 		ok = true;
 		return loc;
 	case invalidtzif =>
-		io::close(&bufstrm): void;
-		io::close(file): void;
+		_ = io::close(&bufstrm);
+		_ = io::close(file);
 		return invalidtzif;
 	case let err: io::error =>
-		io::close(&bufstrm): void;
-		io::close(file): void;
+		_ = io::close(&bufstrm);
+		_ = io::close(file);
 		return err;
 	};
 };

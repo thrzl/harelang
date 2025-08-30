@@ -21,13 +21,13 @@ fn print_context(
 	case let file: io::file =>
 		yield file;
 	};
-	defer io::close(file): void;
+	defer _ = io::close(file);
 
 	match (os::fstat(file)) {
 	case let st: fs::filestat =>
 		if (st.mask & fs::stat_mask::MTIME == 0) yield;
 		if (time::compare(st.mtime, age) == 1) {
-			fmt::errorln("* Warning: file was modified after executable was built"): void;
+			_ = fmt::errorln("* Warning: file was modified after executable was built");
 		};
 	case => void;
 	};
@@ -45,15 +45,15 @@ fn print_context(
 		};
 	};
 
-	fmt::errorfln("| {}", context): void;
+	_ = fmt::errorfln("| {}", context);
 
 	if (col != 0) {
-		fmt::errorf("  "): void;
+		_ = fmt::errorf("  ");
 		for (let i = 1u; i < col - 1; i += 1) {
-			fmt::errorf(" "): void;
+			_ = fmt::errorf(" ");
 		};
-		fmt::errorf("^"): void;
+		_ = fmt::errorf("^");
 	};
 
-	fmt::errorln(): void;
+	_ = fmt::errorln();
 };

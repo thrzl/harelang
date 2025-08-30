@@ -41,8 +41,8 @@ export fn backtrace(self: *image::image, frame: stackframe) void = {
 			printframe(self, &seen, &st, frame);
 		};
 		if (i == MAX_FRAMES_TOP && nframe > MAX_FRAMES) {
-			fmt::errorfln("\t({} additional frames omitted)",
-				nframe - MAX_FRAMES): void;
+			_ = fmt::errorfln("\t({} additional frames omitted)",
+				nframe - MAX_FRAMES);
 		};
 
 		match (next(frame)) {
@@ -74,14 +74,14 @@ fn printframe(
 	case let sym: elf::sym64 =>
 		yield sym;
 	case =>
-		fmt::errorfln("(unknown) [0x{:x}]", pc): void;
+		_ = fmt::errorfln("(unknown) [0x{:x}]", pc);
 		return;
 	};
 	const name = match (symbol_name(self, &sym)) {
 	case let name: const str =>
 		yield name;
 	case =>
-		fmt::errorfln("(unknown) [0x{:x}]", pc): void;
+		_ = fmt::errorfln("(unknown) [0x{:x}]", pc);
 		return;
 	};
 
@@ -89,26 +89,26 @@ fn printframe(
 	const (path, line, col) = match (dwarf::addr_to_line(self, pc)) {
 	case (void | io::error) =>
 		// No line number available, print what we've got
-		fmt::errorfln("{}+0x{:x} [0x{:x}]", symname_to_ident(name),
-			pc - sym.st_value: uintptr, pc): void;
+		_ = fmt::errorfln("{}+0x{:x} [0x{:x}]", symname_to_ident(name),
+			pc - sym.st_value: uintptr, pc);
 		return;
 	case let tuple: (const str, uint, uint) =>
 		yield tuple;
 	};
 
-	fmt::errorf("{}:{}:{} {}+0x{:x} [0x{:x}]",
+	_ = fmt::errorf("{}:{}:{} {}+0x{:x} [0x{:x}]",
 		path, line, col, symname_to_ident(name),
-		pc - sym.st_value: uintptr, pc): void;
+		pc - sym.st_value: uintptr, pc);
 
 	// Skip context on frames we've already printed
 	for (let i = 0z; i < len(seen); i += 1) {
 		if (seen[i] == pc) {
-			fmt::errorfln(" (already shown)"): void;
+			_ = fmt::errorfln(" (already shown)");
 			return;
 		};
 	};
 	static append(seen, pc)!;
-	fmt::errorln(): void;
+	_ = fmt::errorln();
 
 	print_context(path, line, col, imgstat.mtime);
 };
@@ -120,8 +120,8 @@ fn printframe_with_symbol(
 	loc: (uint, uint),
 	pc: uintptr,
 ) void = {
-	fmt::errorfln("{}:{}:{} {}+0x{:x} [0x{:x}]",
+	_ = fmt::errorfln("{}:{}:{} {}+0x{:x} [0x{:x}]",
 		path, loc.0, loc.1, symname_to_ident(name),
-		pc - sym.st_value: uintptr, pc): void;
-	fmt::errorln(): void;
+		pc - sym.st_value: uintptr, pc);
+	_ = fmt::errorln();
 };
