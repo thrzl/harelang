@@ -92,7 +92,7 @@ export type assert_expr = struct {
 // 	foo = bar
 export type assign_expr = struct {
 	op: (binarithm_op | void),
-	object: *expr,
+	object: nullable *expr, // null for _
 	value: *expr,
 };
 
@@ -133,17 +133,13 @@ export type binarithm_expr = struct {
 // A single variable biding.
 //
 // 	foo: int = bar
-// 	(foo, foo2): int = bar
+// 	(foo, _, foo2): int = bar
+// 	_ = bar
 export type binding = struct {
-	name: (str | binding_unpack),
+	names: []str, // empty slice for _
 	_type: nullable *_type,
 	init: *expr,
 };
-
-// Tuple unpacking binding.
-//
-// 	(foo, _, bar)
-export type binding_unpack = []str;
 
 // The kind of binding expression being used.
 export type binding_kind = enum {
@@ -514,17 +510,12 @@ export fn expr_finish(e: nullable *expr) void = {
 			expr_finish(b.rvalue);
 			free(b.rvalue);
 		case let b: binding_expr =>
-			for (let i = 0z; i < len(b.bindings); i += 1) {
-				match (b.bindings[i].name) {
-				case let s: str =>
-					free(s);
-				case let u: binding_unpack =>
-					strings::freeall(u);
-				};
-				type_finish(b.bindings[i]._type);
-				free(b.bindings[i]._type);
-				expr_finish(b.bindings[i].init);
-				free(b.bindings[i].init);
+			for (const bind .. b.bindings) {
+				strings::freeall(bind.names);
+				type_finish(bind._type);
+				free(bind._type);
+				expr_finish(bind.init);
+				free(bind.init);
 			};
 			free(b.bindings);
 		case let b: break_expr =>

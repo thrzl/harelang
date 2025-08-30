@@ -111,7 +111,12 @@ fn _expr(ctx: *context, syn: *synfunc, e: *ast::expr) (size | io::error) = {
 		return assert_expr(ctx, syn, &e);
 	case let e: ast::assign_expr =>
 		let z = 0z;
-		z += _expr(ctx, syn, e.object)?;
+		match (e.object) {
+		case null =>
+			z += syn(ctx, "_", synkind::OPERATOR)?;
+		case let e: *ast::expr =>
+			z += _expr(ctx, syn, e)?;
+		};
 		const op = match (e.op) {
 		case void =>
 			yield "=";
@@ -713,20 +718,21 @@ fn binding_expr(
 	for (let i = 0z; i < len(e.bindings); i += 1) {
 		let binding = e.bindings[i];
 
-		match (binding.name) {
-		case let s: str =>
-			z += syn(ctx, s, synkind::IDENT)?;
-		case let u: ast::binding_unpack =>
+		switch (len(binding.names)) {
+		case 0 =>
+			z += syn(ctx, "_", synkind::OPERATOR)?;
+		case 1 =>
+			z += syn(ctx, binding.names[0], synkind::IDENT)?;
+		case =>
 			z += syn(ctx, "(", synkind::PUNCTUATION)?;
-			for (let i = 0z; i < len(u); i += 1) {
-				if (u[i] != "") {
-					z += syn(ctx, u[i],
-						synkind::IDENT)?;
+			for (let i = 0z; i < len(binding.names); i += 1) {
+				let name = binding.names[i];
+				if (name != "") {
+					z += syn(ctx, name, synkind::IDENT)?;
 				} else {
-					z += syn(ctx, "_",
-						synkind::OPERATOR)?;
+					z += syn(ctx, "_", synkind::OPERATOR)?;
 				};
-				if (i + 1 < len(u)) {
+				if (i + 1 < len(binding.names)) {
 					z += syn(ctx, ",",
 						synkind::PUNCTUATION)?;
 					z += space(ctx)?;

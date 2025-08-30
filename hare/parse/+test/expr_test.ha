@@ -26,6 +26,7 @@
 	x &&= true;
 	x ||= true;
 	x ^^= true;
+	_ = void;
 };
 ");
 };
@@ -43,6 +44,9 @@
 	def X: int = 1337, y = 7331;
 	static let p: int = 62893, o = 39826;
 	static const w: int = 62893, t = 39826;
+	let _ = 0, x = 1;
+	let x = 1, _: int = 0;
+	static let _ = 0;
 };
 ");
 };
@@ -232,6 +236,15 @@ export fn main() void = {
 		x;
 	};
 	for (let x &.. [1, 2, 3]) {
+		x;
+	};
+	for (let _ => next()) {
+		x;
+	};
+	for (let _ .. [1, 2, 3]) {
+		x;
+	};
+	for (let _ &.. [1, 2, 3]) {
 		x;
 	};
 };

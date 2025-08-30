@@ -188,14 +188,19 @@ fn process_binding(ctx: *context, aexpr: *ast::expr) (*expr | error) = {
 		case let ty: *ast::_type =>
 			yield types::lookup(ctx.store, ty)!;
 		};
-		const object = scope_insert(ctx, object {
-			kind = object_kind::BIND,
-			// TODO: tuple unpacking
-			ident = ast::ident_dup([item.name as str]),
-			name = ast::ident_dup([item.name as str]),
-			_type = _type,
-			...
-		});
+		const object = switch (len(item.names)) {
+		case 0 =>
+			yield null;
+		case 1 =>
+			yield scope_insert(ctx, object {
+				kind = object_kind::BIND,
+				ident = ast::ident_dup([item.names[0]]),
+				name = ast::ident_dup([item.names[0]]),
+				_type = _type,
+				...
+			});
+		case => abort(); // TODO: tuple unpacking
+		};
 		append(bindings, binding {
 			object = object,
 			init = init,

@@ -21,7 +21,7 @@ export fn expr(lexer: *lex::lexer) (ast::expr | error) = {
 	];
 
 	const ex = match (peek(lexer, ltok::IF, ltok::FOR, ltok::BREAK,
-		ltok::CONTINUE, ltok::RETURN, ltok::YIELD)?) {
+		ltok::CONTINUE, ltok::RETURN, ltok::YIELD, ltok::UNDERSCORE)?) {
 	case void =>
 		yield binarithm(lexer, void, 0)?;
 	case let tok: lex::token =>
@@ -34,6 +34,19 @@ export fn expr(lexer: *lex::lexer) (ast::expr | error) = {
 			yield control(lexer)?;
 		case ltok::YIELD =>
 			yield yield_expr(lexer)?;
+		case ltok::UNDERSCORE =>
+			want(lexer, ltok::UNDERSCORE)!;
+			want(lexer, ltok::EQUAL)?;
+			let value = alloc(expr(lexer)?)!;
+			return ast::expr {
+				start = loc,
+				end = lex::prevloc(lexer),
+				expr = ast::assign_expr {
+					op = void,
+					object = null,
+					value = value,
+				},
+			};
 		case => abort(); // Invariant
 		};
 	};
@@ -295,17 +308,17 @@ fn binarithm(
 	return lvalue;
 };
 
-fn binding_unpack(lexer: *lex::lexer) (ast::binding_unpack | error) = {
-	let fields: ast::binding_unpack = [];
+fn binding_unpack(lexer: *lex::lexer) ([]str | error) = {
+	let names: []str = [];
 	for (true) {
 		const (tok, value, _) = want(lexer, ltok::NAME,
 			ltok::UNDERSCORE)?;
 		if (tok == ltok::UNDERSCORE) {
-			append(fields, "")!;
+			append(names, "")!;
 		} else {
-			append(fields, value as str)!;
+			append(names, value as str)!;
 		};
-		if (len(fields) == 1) {
+		if (len(names) == 1) {
 			want(lexer, ltok::COMMA)?;
 		} else {
 			match (try(lexer, ltok::COMMA)?) {
@@ -315,7 +328,7 @@ fn binding_unpack(lexer: *lex::lexer) (ast::binding_unpack | error) = {
 		};
 	};
 	want(lexer, ltok::RPAREN)?;
-	return fields;
+	return names;
 };
 
 fn binding(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
@@ -334,10 +347,13 @@ fn binding(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
 
 	let bindings: []ast::binding = [];
 	for (true) {
-		const (tok, value, _) = want(lexer, ltok::NAME, ltok::LPAREN)?;
-		const name = switch (tok) {
+		const (tok, value, _) = want(lexer, ltok::NAME,
+			ltok::LPAREN, ltok::UNDERSCORE)?;
+		const names: []str = switch (tok) {
 		case ltok::NAME =>
-			yield value as str;
+			yield alloc([value as str])!;
+		case ltok::UNDERSCORE =>
+			yield [];
 		case ltok::LPAREN =>
 			if (kind == ast::binding_kind::DEF) {
 				return syntaxerr(lex::mkloc(lexer),
@@ -353,7 +369,7 @@ fn binding(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
 		want(lexer, ltok::EQUAL)?;
 		const init = alloc(expr(lexer)?)!;
 		append(bindings, ast::binding {
-			name = name,
+			names = names,
 			_type = btype,
 			init = init,
 		})!;
@@ -710,10 +726,12 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 
 		for (true) {
 			const (tok, value, _) = want(lexer,
-				ltok::NAME, ltok::LPAREN)?;
-			const binding_name = switch (tok) {
+				ltok::NAME, ltok::LPAREN, ltok::UNDERSCORE)?;
+			const binding_names: []str = switch (tok) {
 			case ltok::NAME =>
-				yield value as str;
+				yield alloc([value as str])!;
+			case ltok::UNDERSCORE =>
+				yield [];
 			case ltok::LPAREN =>
 				yield binding_unpack(lexer)?;
 			case => abort(); // unreachable
@@ -749,7 +767,7 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 			const init_expr = alloc(expr(lexer)?)!;
 
 			append(bindings, ast::binding {
-				name = binding_name,
+				names = binding_names,
 				_type = btype,
 				init = init_expr,
 			})!;

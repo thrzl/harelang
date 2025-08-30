@@ -42,7 +42,7 @@ export type access_tuple = struct {
 //
 // 	foo: int = bar
 export type binding = struct {
-	object: *object,
+	object: nullable *object,
 	init: *expr,
 };
 
