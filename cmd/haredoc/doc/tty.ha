@@ -9,16 +9,20 @@ use hare::unparse;
 use io;
 use os;
 use strings;
+use unix::tty;
 
 let no_color: bool = false;
 
 // Formats output as Hare source code (prototypes) with syntax highlighting
 export fn emit_tty(ctx: *context) (void | error) = {
-	if (os::tryenv("NO_COLOR", "") == "") {
+	if (os::tryenv("FORCE_COLOR", "") != "" ||
+		(os::tryenv("NO_COLOR", "") == "" &&
+		tty::isatty(os::stdout_file))) {
 		init_colors()?;
 	} else {
 		no_color = true;
 	};
+
 	const summary = ctx.summary;
 
 	if (ctx.ambiguous) {
