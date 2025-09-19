@@ -168,6 +168,7 @@ fn fs_open_file(
 	path: str,
 	flags: fs::flag,
 ) (io::file | fs::error) = {
+	let fs = fs: *os_filesystem;
 	flags ^= fs::flag::CTTY | fs::flag::NOCLOEXEC; // invert NOCTTY/CLOEXEC
 
 	if ((flags & fs::flag::DIRECTORY) == fs::flag::DIRECTORY) {
@@ -178,6 +179,7 @@ fn fs_open_file(
 
 	let oh = rt::open_how {
 		flags = flags: u64,
+		resolve = fs.resolve,
 		...
 	};
 	return _fs_open(fs, path, &oh);
