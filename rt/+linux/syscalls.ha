@@ -88,6 +88,23 @@ export fn openat2(
 	how_sz: size,
 ) (int | errno) = {
 	let path = kpath(path)?;
+	match (wrap_return(syscall4(SYS_openat2,
+		dirfd: u64,
+		path: uintptr: u64,
+		how: uintptr: u64,
+		how_sz: u64))) {
+	case let i: u64 =>
+		return i: int;
+	case let err: errno =>
+		if (err != ENOSYS) {
+			return err;
+		};
+	};
+
+	// Fallback if the requested behavior is compatible with openat(2)
+	if (how.resolve != 0) {
+		return ENOSYS;
+	};
 	return openat(dirfd, path, how.flags: int, how.mode: uint);
 };
 

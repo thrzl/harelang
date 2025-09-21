@@ -100,8 +100,8 @@ export fn dirfs_clone(
 	assert(fs.open == &fs_open);
 	let fs = fs: *os_filesystem;
 	let new = alloc(*fs)!;
-	fs.resolve |= resolve_flags;
-	new.dirfd = rt::fcntl(new.dirfd, rt::F_DUPFD_CLOEXEC, 0) as int;
+	new.resolve |= resolve_flags;
+	new.dirfd = io::dup(new.dirfd)!;
 	return &new.fs;
 };
 
@@ -150,7 +150,6 @@ fn _fs_open(
 	oh: *rt::open_how,
 ) (io::file | fs::error) = {
 	let fs = fs: *os_filesystem;
-
 	oh.resolve = fs.resolve;
 
 	let fd = match (rt::openat2(fs.dirfd, path, oh, size(rt::open_how))) {
@@ -179,7 +178,6 @@ fn fs_open_file(
 
 	let oh = rt::open_how {
 		flags = flags: u64,
-		resolve = fs.resolve,
 		...
 	};
 	return _fs_open(fs, path, &oh);
