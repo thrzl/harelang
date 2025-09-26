@@ -249,7 +249,12 @@ export fn compile(expr: str) (regex | error | nomem) = {
 	let r_idx = 0z;
 	let jump_idxs: [][]size = [];
 	append(jump_idxs, [])?;
-	defer free(jump_idxs);
+	defer {
+		for (let j .. jump_idxs) {
+			free(j);
+		};
+		free(jump_idxs);
+	};
 	defer if (!ok) {
 		for (let j .. jump_idxs) free(j);
 	};
