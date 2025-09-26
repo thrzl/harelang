@@ -184,7 +184,9 @@ use types;
 
 @test fn scan_uncomplete_line() void = {
 	let buf = memio::dynamic();
+	defer io::close(&buf)!;
 	let scan = newscanner(&buf);
+	defer finish(&scan);
 
 	assert(scan_line(&scan) is io::EOF);
 
@@ -202,7 +204,9 @@ use types;
 
 @test fn greedy_scan_uncomplete_line() void = {
 	let buf = memio::dynamic();
+	defer io::close(&buf)!;
 	let scan = newscanner(&buf, types::SIZE_MAX, scan_options::EOF_GREEDY);
+	defer finish(&scan);
 
 	assert(scan_line(&scan) is io::EOF);
 
@@ -219,6 +223,7 @@ Line 2
 Line 3
 `));
 	let scan = newscanner(&buf);
+	defer finish(&scan);
 	assert(scan_line(&scan) as const str == "Line 1");
 
 	// Test whence::SET / io::tell
