@@ -42,10 +42,11 @@ export fn require(keywords: str...) void = {
 					continue :keywords;
 				};
 			case done =>
-				skip(fmt::asprintf(
-					"Requires HARETEST_INCLUDE='{}'",
-					strings::join(" ", keywords...)!,
-				)!);
+				let joined = strings::join(" ", keywords...)!;
+				let msg = fmt::asprintf(
+					"Requires HARETEST_INCLUDE='{}'", joined)!;
+				free(joined);
+				skip(msg);
 			};
 		};
 	};
