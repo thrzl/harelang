@@ -255,9 +255,6 @@ export fn compile(expr: str) (regex | error | nomem) = {
 		};
 		free(jump_idxs);
 	};
-	defer if (!ok) {
-		for (let j .. jump_idxs) free(j);
-	};
 	let in_bracket = false;
 	let skip_charclass_rest = false;
 	let bracket_idx = -1;
