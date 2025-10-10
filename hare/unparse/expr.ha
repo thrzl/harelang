@@ -490,6 +490,8 @@ fn _expr(ctx: *context, syn: *synfunc, e: *ast::expr) (size | io::error) = {
 			z += _expr(ctx, syn, v)?;
 		};
 		return z;
+	case ast::undefined_expr =>
+		return syn(ctx, "@undefined", synkind::ATTRIBUTE)?;
 	};
 };
 
@@ -694,7 +696,10 @@ fn struct_literal(
 		};
 		z += syn(ctx, ",", synkind::PUNCTUATION)?;
 	};
-	if (sc.autofill) {
+	if (sc.undefined) {
+		z += newline(ctx)?;
+		z += syn(ctx, "@undefined...", synkind::ATTRIBUTE)?;
+	} else if (sc.autofill) {
 		z += newline(ctx)?;
 		z += syn(ctx, "...", synkind::OPERATOR)?;
 	};

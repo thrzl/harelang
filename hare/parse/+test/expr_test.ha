@@ -47,6 +47,7 @@
 	let _ = 0, x = 1;
 	let x = 1, _: int = 0;
 	static let _ = 0;
+	let x: int = @undefined;
 };
 ");
 };
@@ -124,6 +125,8 @@
 	[1, 2, 3, 4];
 	[1, 2, 3, 4...];
 	(1, 2, 3);
+	(1, 2, @undefined);
+	[1, 2, @undefined...];
 	struct {
 		x: int = 10,
 		y: int = 20,
@@ -157,6 +160,13 @@
 	};
 	coords {
 		...
+	};
+	coords {
+		@undefined...
+	};
+	coords {
+		x = 10,
+		@undefined...
 	};
 	0.0;
 	0f32;

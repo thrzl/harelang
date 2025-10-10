@@ -6,7 +6,7 @@ use io;
 use time;
 
 // Provides an implementation of [[fs::fs]] for the current working directory.
-export let cwd: *fs::fs = null: *fs::fs;
+export let cwd: *fs::fs = @undefined;
 
 // Removes a file.
 export fn remove(path: str) (void | fs::error) = fs::remove(cwd, path);

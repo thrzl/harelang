@@ -86,7 +86,7 @@ fn decl_global(
 		const init: nullable *ast::expr =
 			match (try(lexer, ltok::EQUAL)?) {
 			case lex::token =>
-				yield alloc(expr(lexer)?)!;
+				yield alloc(initializer(lexer)?)!;
 			case void =>
 				yield null;
 			};

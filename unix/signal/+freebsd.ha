@@ -30,16 +30,11 @@ export fn handle(
 	};
 
 	let new = rt::sigact {
-		sa_sigaction = handler: *fn(_: int,
-			_: *rt::siginfo, _: *opaque) void,
+		sa_sigaction = handler: *fn(_: int, _: *rt::siginfo, _: *opaque) void,
 		sa_mask = mask,
 		sa_flags = flags,
 	};
-	let old = rt::sigact {
-		sa_sigaction = null: *fn(_: int,
-			_: *rt::siginfo, _: *opaque) void,
-		...
-	};
+	let old = rt::sigact { @undefined... };
 	match (rt::sigaction(signum, &new, &old)) {
 	case rt::errno =>
 		abort("sigaction failed (invalid signal?)");

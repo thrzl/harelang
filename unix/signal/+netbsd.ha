@@ -35,11 +35,7 @@ export fn handle(
 		sa_mask = mask,
 		sa_flags = flags,
 	};
-	let old = rt::sigact {
-		sa_sigaction = null: *fn(_: int,
-			_: *rt::siginfo, _: *opaque) void,
-		...
-	};
+	let old = rt::sigact { @undefined... };
 	match (rt::sigaction(signum, &new, &old)) {
 	case rt::errno =>
 		abort("sigaction failed (invalid signal?)");

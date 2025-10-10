@@ -231,6 +231,7 @@ export type struct_value = struct {
 // 	struct { foo: int = bar, struct { baz = quux }, ... }
 export type struct_literal = struct {
 	autofill: bool,
+	undefined: bool,
 	alias: ident, // [] for anonymous
 	fields: [](struct_value | *struct_literal),
 };
@@ -418,6 +419,9 @@ export type unarithm_expr = struct {
 	operand: *expr,
 };
 
+// An expression with an undefined result (@undefined).
+export type undefined_expr = void;
+
 // A vastart expression.
 //
 // 	vastart()
@@ -455,7 +459,8 @@ export type expr = struct {
 		free_expr | error_assert_expr | if_expr | insert_expr |
 		compound_expr | match_expr | len_expr | size_expr |
 		offset_expr | propagate_expr | return_expr | slice_expr |
-		switch_expr | unarithm_expr | variadic_expr | yield_expr),
+		switch_expr | unarithm_expr | undefined_expr | variadic_expr |
+		yield_expr),
 };
 
 // Frees resources associated with a Hare [[expr]]ession.
@@ -681,6 +686,8 @@ export fn expr_finish(e: nullable *expr) void = {
 			free(y.label);
 			expr_finish(y.value);
 			free(y.value);
+		case undefined_expr =>
+			void;
 		};
 	};
 };

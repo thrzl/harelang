@@ -8,6 +8,19 @@ use math;
 use strings;
 use types;
 
+// Parses an initializer.
+export fn initializer(lexer: *lex::lexer) (ast::expr | error) = {
+	const loc = lex::mkloc(lexer);
+	if (try(lexer, ltok::ATTR_UNDEFINED)? is lex::token) {
+		return ast::expr {
+			start = loc,
+			end = lex::prevloc(lexer),
+			expr = ast::undefined_expr,
+		};
+	};
+	return expr(lexer)?;
+};
+
 // Parses an expression.
 export fn expr(lexer: *lex::lexer) (ast::expr | error) = {
 	const loc = lex::mkloc(lexer);
@@ -163,7 +176,7 @@ fn alloc_expr(lexer: *lex::lexer) (ast::expr | error) = {
 	const start = want(lexer, ltok::ALLOC)?;
 	want(lexer, ltok::LPAREN)?;
 
-	const init = alloc(expr(lexer)?)!;
+	const init = alloc(initializer(lexer)?)!;
 	const expr =
 		switch (want(lexer, ltok::COMMA, ltok::ELLIPSIS, ltok::RPAREN)?.0) {
 		case ltok::COMMA =>
@@ -207,7 +220,7 @@ fn append_insert_expr(
 	const object = if (tok.0 == ltok::APPEND) objsel(lexer)?
 		else idxexpr(lexer)?;
 	want(lexer, ltok::COMMA)?;
-	const value = expr(lexer)?;
+	const value = initializer(lexer)?;
 
 	let length: nullable *ast::expr = null;
 	let variadic = false;
@@ -367,7 +380,7 @@ fn binding(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
 				yield alloc(_type(lexer)?)!;
 			} else null;
 		want(lexer, ltok::EQUAL)?;
-		const init = alloc(expr(lexer)?)!;
+		const init = alloc(initializer(lexer)?)!;
 		append(bindings, ast::binding {
 			names = names,
 			_type = btype,
@@ -980,7 +993,7 @@ fn plain_array(lexer: *lex::lexer) (ast::expr | error) = {
 		case void => void;
 		};
 
-		append(values, alloc(expr(lexer)?)!)!;
+		append(values, alloc(initializer(lexer)?)!)!;
 
 		match (try(lexer, ltok::COMMA, ltok::ELLIPSIS)?) {
 		case void =>
@@ -1016,12 +1029,21 @@ fn plain_struct(
 	};
 	want(lexer, ltok::LBRACE)?;
 
-	let autofill = false;
+	let autofill = false, undefined = false;
 	let fields: [](ast::struct_value | *ast::struct_literal) = [];
 	for (true) {
 		const tok = want(lexer, ltok::ELLIPSIS,
-			ltok::NAME, ltok::STRUCT)?;
+			ltok::NAME, ltok::STRUCT,
+			ltok::ATTR_UNDEFINED)?;
 		switch (tok.0) {
+		case ltok::ATTR_UNDEFINED =>
+			undefined = true;
+			// The rest of the autofill bits will run on the next
+			// pass after peek'ing the ...
+			synassert(lex::mkloc(lexer),
+				peek(lexer, ltok::ELLIPSIS)? is lex::token,
+				"Expected ... after @undefined struct initializer")?;
+			continue;
 		case ltok::ELLIPSIS =>
 			synassert(lex::mkloc(lexer), len(alias) != 0,
 				"Cannot use auto-fill with anonymous struct")?;
@@ -1046,6 +1068,7 @@ fn plain_struct(
 
 	return ast::struct_literal {
 		autofill = autofill,
+		undefined = undefined,
 		alias = alias,
 		fields = fields,
 	};
@@ -1071,7 +1094,7 @@ fn struct_field(
 		case ltok::COLON =>
 			const _type = alloc(_type(lexer)?)!;
 			want(lexer, ltok::EQUAL)?;
-			const init = alloc(expr(lexer)?)!;
+			const init = alloc(initializer(lexer)?)!;
 			return ast::struct_value {
 				name = name,
 				_type = _type,
@@ -1106,7 +1129,7 @@ fn plain_tuple(
 	append(values, alloc(ex)!)!;
 
 	for (true) {
-		append(values, alloc(expr(lexer)?)!)!;
+		append(values, alloc(initializer(lexer)?)!)!;
 
 		match (try(lexer, ltok::COMMA)?) {
 		case lex::token =>

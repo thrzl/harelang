@@ -322,8 +322,8 @@ fn resolve(
 	assert(htype._align == st.arch._int);
 	let t = htype.repr as tagged;
 	assert(len(t) == 2);
-	assert(t[0].repr as builtin == builtin::VOID);
-	assert(t[1].repr as builtin == builtin::INT);
+	assert(t[0].repr as builtin == builtin::INT);
+	assert(t[1].repr as builtin == builtin::VOID);
 
 	let atype = parse_type("(int | (int | str | void))");
 	defer ast::type_finish(&atype);
@@ -332,9 +332,9 @@ fn resolve(
 	assert(htype._align == 8);
 	let t = htype.repr as tagged;
 	assert(len(t) == 3);
-	assert(t[0].repr as builtin == builtin::VOID);
-	assert(t[1].repr as builtin == builtin::INT);
-	assert(t[2].repr as builtin == builtin::STR);
+	assert(t[0].repr as builtin == builtin::INT);
+	assert(t[1].repr as builtin == builtin::STR);
+	assert(t[2].repr as builtin == builtin::VOID);
 };
 
 @test fn alias() void = {
@@ -388,6 +388,7 @@ fn resolve(
 		(&builtin_u16, "u16"),
 		(&builtin_u32, "u32"),
 		(&builtin_u64, "u64"),
+		(&builtin_undefined, "undefined"),
 		(&builtin_void, "void"),
 	];
 	for (let i = 0z; i < len(builtins); i += 1) {

@@ -133,10 +133,18 @@ export const builtin_u64: _type = _type {
 	...
 };
 
+// [[_type]] representation of @undefined.
+export const builtin_undefined: _type = _type {
+	repr = builtin::UNDEFINED,
+	sz = SIZE_UNDEFINED, _align = SIZE_UNDEFINED,
+	id = 630802827,
+	...
+};
+
 // [[_type]] representation of void.
 export const builtin_void: _type = _type {
 	repr = builtin::VOID,
 	sz = 0, _align = 0,
-	id = 630802827,
+	id = 4288073506,
 	...
 };

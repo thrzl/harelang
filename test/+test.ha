@@ -402,7 +402,7 @@ let jmp_buf = rt::jmp_buf { ... };
 let jmp: nullable *rt::jmp_buf = null;
 let reason: abort_reason = abort_reason { ... };
 let trace = 0u64;
-let default_abort = null: *rt::abort_handler;
+let default_abort: *rt::abort_handler = @undefined;
 
 fn onabort(
 	path: *str,

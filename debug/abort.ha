@@ -7,7 +7,7 @@ use fs;
 use os;
 use rt;
 
-let default_abort = null: *rt::abort_handler;
+let default_abort: *rt::abort_handler = @undefined;
 
 @init fn init_abort() void = {
 	default_abort = rt::onabort(&debug_abort);

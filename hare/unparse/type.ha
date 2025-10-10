@@ -58,6 +58,8 @@ case ast::builtin_type::UINT =>
 	yield "uint";
 case ast::builtin_type::UINTPTR =>
 	yield "uintptr";
+case ast::builtin_type::UNDEFINED =>
+	yield "@undefined";
 case ast::builtin_type::VALIST =>
 	yield "valist";
 case ast::builtin_type::VOID =>
