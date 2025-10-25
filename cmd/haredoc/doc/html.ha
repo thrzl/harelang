@@ -514,11 +514,18 @@ fn breadcrumb(ident: ast::ident) str = {
 		return "";
 	};
 	let buf = memio::dynamic();
-	fmt::fprintf(&buf, "<a href='/'>stdlib</a> » ")!;
+	let root_parts: []str = [];
+	for (let i = 0z; i < len(ident); i += 1) {
+		append(root_parts, "..")!;
+	};
+	let root_path = strings::join("/", root_parts...)!;
+	defer free(root_path);
+	fmt::fprintf(&buf, "<a href='{}'>stdlib</a> » ", root_path)!;
+
 	for (let i = 0z; i < len(ident) - 1; i += 1) {
-		let ipath = strings::join("/", ident[..i+1]...)!;
-		defer free(ipath);
-		fmt::fprintf(&buf, "<a href='/{}'>{}</a>::", ipath, ident[i])!;
+		let rpath = relpath(ident, ident[..i+1]);
+		defer free(rpath);
+		fmt::fprintf(&buf, "<a href='{}'>{}</a>::", rpath, ident[i])!;
 	};
 	fmt::fprint(&buf, ident[len(ident) - 1])!;
 	return memio::string(&buf)!;
