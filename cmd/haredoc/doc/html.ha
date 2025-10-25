@@ -101,10 +101,8 @@ export fn emit_html(ctx: *context) (void | error) = {
 		};
 		fmt::fprintln(ctx.out, "<ul class='submodules'>")?;
 		for (let submodule .. ctx.submods) {
-			let path = path::init("/", identpath, submodule.name)!;
-
 			fmt::fprintf(ctx.out, "<li><a href='")?;
-			html_escape(ctx.out, path::string(&path))?;
+			html_escape(ctx.out, submodule.name)?;
 			fmt::fprintf(ctx.out, "'>")?;
 			html_escape(ctx.out, submodule.name)?;
 			if (submodule.desc != "") {
@@ -276,6 +274,63 @@ fn details(ctx: *context, decl: *ast::decl) (void | error) = {
 	return;
 };
 
+// Returns the relative path from the current module to a target module path.
+// The caller is responsible for freeing the allocated string.
+fn relpath(from: ast::ident, to: []str) str = {
+	let common = 0z; // Length of common prefix.
+	for (common < len(from) && common < len(to); common += 1) {
+		if (from[common] != to[common]) {
+			break;
+		};
+	};
+
+	let parts: []str = [];
+	for (let i = common; i < len(from); i += 1) {
+		append(parts, "..")!;
+	};
+	for (let i = common; i < len(to); i += 1) {
+		append(parts, to[i])!;
+	};
+
+	if (len(parts) == 0) {
+		return strings::dup(".")!;
+	};
+
+	return strings::join("/", parts...)!;
+};
+
+@test fn relpath_sibling() void = {
+	const from1: []str = ["strings"];
+	const to1: []str = ["strconv"];
+	const result1 = relpath(from1, to1);
+	defer free(result1);
+	assert(result1 == "../strconv");
+};
+
+@test fn relpath_shared_prefix() void = {
+	const from2: []str = ["fakeone"];
+	const to2: []str = ["faketwo"];
+	const result2 = relpath(from2, to2);
+	defer free(result2);
+	assert(result2 == "../faketwo");
+};
+
+@test fn relpath_nested_to_top() void = {
+	const from3: []str = ["encoding", "base64"];
+	const to3: []str = ["strings"];
+	const result3 = relpath(from3, to3);
+	defer free(result3);
+	assert(result3 == "../../strings");
+};
+
+@test fn relpath_top_to_nested() void = {
+	const from4: []str = ["strings"];
+	const to4: []str = ["encoding", "base64"];
+	const result4 = relpath(from4, to4);
+	defer free(result4);
+	assert(result4 == "../encoding/base64");
+};
+
 fn html_decl_ref(ctx: *context, ref: ast::ident) (void | error) = {
 	const ik =
 		match (resolve(ctx, ref)?) {
@@ -299,23 +354,23 @@ fn html_decl_ref(ctx: *context, ref: ast::ident) (void | error) = {
 	case symkind::LOCAL =>
 		fmt::fprintf(ctx.out, "<a href='#{0}' class='ref'>{0}</a>", ident)?;
 	case symkind::MODULE =>
-		let ipath = strings::join("/", id...)!;
-		defer free(ipath);
-		fmt::fprintf(ctx.out, "<a href='/{}' class='ref'>{}::</a>",
-			ipath, ident)?;
+		let rpath = relpath(ctx.ident, id);
+		defer free(rpath);
+		fmt::fprintf(ctx.out, "<a href='{}' class='ref'>{}::</a>",
+			rpath, ident)?;
 	case symkind::SYMBOL =>
-		let ipath = strings::join("/", id[..len(id) - 1]...)!;
-		defer free(ipath);
-		fmt::fprintf(ctx.out, "<a href='/{}#{}' class='ref'>{}</a>",
-			ipath, id[len(id) - 1], ident)?;
+		let rpath = relpath(ctx.ident, id[..len(id) - 1]);
+		defer free(rpath);
+		fmt::fprintf(ctx.out, "<a href='{}#{}' class='ref'>{}</a>",
+			rpath, id[len(id) - 1], ident)?;
 	case symkind::ENUM_LOCAL =>
 		fmt::fprintf(ctx.out, "<a href='#{}' class='ref'>{}</a>",
 			id[len(id) - 2], ident)?;
 	case symkind::ENUM_REMOTE =>
-		let ipath = strings::join("/", id[..len(id) - 2]...)!;
-		defer free(ipath);
-		fmt::fprintf(ctx.out, "<a href='/{}#{}' class='ref'>{}</a>",
-			ipath, id[len(id) - 2], ident)?;
+		let rpath = relpath(ctx.ident, id[..len(id) - 2]);
+		defer free(rpath);
+		fmt::fprintf(ctx.out, "<a href='{}#{}' class='ref'>{}</a>",
+			rpath, id[len(id) - 2], ident)?;
 	};
 	free(ident);
 };
@@ -323,10 +378,10 @@ fn html_decl_ref(ctx: *context, ref: ast::ident) (void | error) = {
 fn html_mod_ref(ctx: *context, ref: ast::ident) (void | error) = {
 	const ident = unparse::identstr(ref);
 	defer free(ident);
-	let ipath = strings::join("/", ref...)!;
-	defer free(ipath);
-	fmt::fprintf(ctx.out, "<a href='/{}' class='ref'>{}::</a>",
-		ipath, ident)?;
+	let rpath = relpath(ctx.ident, ref);
+	defer free(rpath);
+	fmt::fprintf(ctx.out, "<a href='{}' class='ref'>{}::</a>",
+		rpath, ident)?;
 };
 
 
