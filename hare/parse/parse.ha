@@ -88,7 +88,7 @@ export fn peek(
 };
 
 // Returns a syntax error if cond is false and void otherwise
-fn synassert(loc: lex::location, cond: bool, msg: str) (void | error) = {
+export fn synassert(loc: lex::location, cond: bool, msg: str) (void | error) = {
 	if (!cond) {
 		return syntaxerr(loc, "{}", msg);
 	};
