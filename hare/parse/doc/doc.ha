@@ -260,6 +260,7 @@ fn scan_paragraph(
 		};
 
 		let lexer = lex::init(sc, loc.path);
+		defer lex::finish(&lexer);
 		const (ident, mod) = match (parse::ident_trailing(&lexer)) {
 		case let id: (ast::ident, bool) =>
 			yield id;

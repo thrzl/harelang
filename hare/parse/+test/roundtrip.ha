@@ -32,6 +32,7 @@ fn _roundtrip(src: str) str = {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>", lex::flag::COMMENTS);
+	defer lex::finish(&lexer);
 	let u = ast::subunit {
 		imports = [],
 		decls: []ast::decl = match (decls(&lexer)) {

@@ -66,7 +66,8 @@ export fn strerror(err: error) const str = {
 };
 
 // Initializes a new lexer for the given [[bufio::scanner]]. The path is
-// borrowed and must remain valid for the lifetime of the lexer.
+// borrowed and must remain valid for the lifetime of the lexer. The user must
+// free resources associated with the lexer using [[finish]] after use.
 export fn init(
 	in: *bufio::scanner,
 	path: str,
@@ -88,6 +89,11 @@ export fn init(
 		flags = flags,
 		...
 	};
+};
+
+// Frees resources associated with a [[lexer]]
+export fn finish(lex: *lexer) void = {
+	free(lex.annotations);
 };
 
 // A restore point for a lexer.

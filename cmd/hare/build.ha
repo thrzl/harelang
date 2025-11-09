@@ -63,6 +63,7 @@ fn build(name: str, cmd: *getopt::command) (void | error) = {
 			let sc = bufio::newscanner(&buf, len(opt.1));
 			defer bufio::finish(&sc);
 			let lexer = lex::init(&sc, "<-D argument>");
+			defer lex::finish(&lexer);
 			append(ctx.defines, parse::define(&lexer)?)!;
 		case 'F' =>
 			ctx.freestanding = true;

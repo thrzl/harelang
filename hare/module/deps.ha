@@ -43,6 +43,7 @@ export fn parse_deps(files: str...) ([]ast::ident | error) = {
 		let sc = bufio::newscanner(handle);
 		defer bufio::finish(&sc);
 		let lexer = lex::init(&sc, file);
+		defer lex::finish(&lexer);
 		let imports = parse::imports(&lexer)?;
 		defer ast::imports_finish(imports);
 

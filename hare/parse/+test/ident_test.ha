@@ -14,6 +14,7 @@ fn ident_test(in: str, expected: ast::ident, extra: ltok...) void = {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>");
+	defer lex::finish(&lexer);
 
 	match (ident(&lexer)) {
 	case let id: ast::ident =>

@@ -28,6 +28,7 @@ fn typeinfo(
 		let sc = bufio::newscanner(&stream);
 		defer bufio::finish(&sc);
 		let lexer = lex::init(&sc, "-");
+		defer lex::finish(&lexer);
 		const atype = parse::_type(&lexer)?;
 		defer ast::type_finish(&atype);
 		const typ = types::lookup(store, &atype)?;

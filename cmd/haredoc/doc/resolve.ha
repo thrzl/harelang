@@ -188,6 +188,7 @@ export fn scan(path: str) ([]ast::decl | parse::error) = {
 	let sc = bufio::newscanner(input);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, path, lex::flag::COMMENTS);
+	defer lex::finish(&lexer);
 	let su = parse::subunit(&lexer)?;
 	ast::imports_finish(su.imports);
 	return su.decls;

@@ -45,6 +45,7 @@ fn parse(path: str, status: *int) void = {
 	let sc = bufio::newscanner(f);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, path);
+	defer lex::finish(&lexer);
 	match (parse::subunit(&lexer)) {
 	case let su: ast::subunit =>
 		ast::subunit_finish(su);

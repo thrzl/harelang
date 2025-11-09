@@ -14,6 +14,7 @@ fn parse_expr(src: str) *ast::expr = {
 	let sc = bufio::newscanner(&stream);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>");
+	defer lex::finish(&lexer);
 	return alloc(parse::expr(&lexer)!)!;
 };
 

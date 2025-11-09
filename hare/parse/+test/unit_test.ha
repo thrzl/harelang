@@ -76,6 +76,7 @@ fn tup_to_import(tup: import_tuple) ast::import = ast::import {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>");
+	defer lex::finish(&lexer);
 	let mods = imports(&lexer)!;
 	defer ast::imports_finish(mods);
 

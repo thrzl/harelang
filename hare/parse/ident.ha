@@ -54,6 +54,7 @@ export fn identstr(in: str) (ast::ident | error) = {
 	let sc = bufio::newscanner(&in);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<string>");
+	defer lex::finish(&lexer);
 	let ret = ident(&lexer);
 	want(&lexer, ltok::EOF)?;
 	return ret;

@@ -123,6 +123,7 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 		const scan = bufio::newscanner(&buf);
 		defer bufio::finish(&scan);
 		const lex = lex::init(&scan, "<argv>");
+		defer lex::finish(&lex);
 		match (parse::ident_trailing(&lex)) {
 		case let ident: (ast::ident, bool) =>
 			id = ident.0;

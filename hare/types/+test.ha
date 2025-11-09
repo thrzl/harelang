@@ -14,6 +14,7 @@ fn parse_type(in: str) ast::_type = {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lex = lex::init(&sc, "<test>");
+	defer lex::finish(&lex);
 	return parse::_type(&lex)!;
 };
 
