@@ -30,10 +30,10 @@ export fn expr(lexer: *lex::lexer) (ast::expr | error) = {
 			yield if_expr(lexer)?;
 		case ltok::FOR =>
 			yield for_expr(lexer)?;
-		case ltok::BREAK, ltok::CONTINUE, ltok::RETURN =>
+		case ltok::CONTINUE, ltok::RETURN =>
 			yield control(lexer)?;
-		case ltok::YIELD =>
-			yield yield_expr(lexer)?;
+		case ltok::BREAK, ltok::YIELD =>
+			yield break_yield_expr(lexer)?;
 		case ltok::UNDERSCORE =>
 			want(lexer, ltok::UNDERSCORE)!;
 			want(lexer, ltok::EQUAL)?;
@@ -601,8 +601,6 @@ fn control(lexer: *lex::lexer) (ast::expr | error) = {
 		};
 	} else "";
 	const expr = switch (tok.0) {
-	case ltok::BREAK =>
-		yield label: ast::break_expr;
 	case ltok::CONTINUE =>
 		yield label: ast::continue_expr;
 	case ltok::RETURN =>
@@ -813,6 +811,14 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 	want(lexer, ltok::RPAREN)?;
 
 	const body = alloc(expr(lexer)?)!;
+
+	const else_branch = match (try(lexer, ltok::ELSE)?) {
+	case void =>
+		yield null;
+	case lex::token =>
+		yield alloc(expr(lexer)?)!;
+	};
+
 	return ast::expr {
 		start = tok.2,
 		end = lex::prevloc(lexer),
@@ -822,6 +828,7 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 			cond = cond,
 			afterthought = afterthought,
 			body = body,
+			else_branch = else_branch,
 			label = label,
 		},
 	};
@@ -1417,8 +1424,8 @@ fn unarithm(lexer: *lex::lexer) (ast::expr | error) = {
 	};
 };
 
-fn yield_expr(lexer: *lex::lexer) (ast::expr | error) = {
-	const start = want(lexer, ltok::YIELD)?;
+fn break_yield_expr(lexer: *lex::lexer) (ast::expr | error) = {
+	const start = want(lexer, ltok::YIELD, ltok::BREAK)?;
 	let label = "";
 	let value: nullable *ast::expr = null;
 	match (try(lexer, ltok::COLON, ltok::COMMA, ltok::ELSE, ltok::RBRACE,
@@ -1437,13 +1444,15 @@ fn yield_expr(lexer: *lex::lexer) (ast::expr | error) = {
 			lex::unlex(lexer, t);
 		};
 	};
+	const bye = ast::break_yield {
+		label = label,
+		value = value,
+	};
 	return ast::expr {
 		start = start.2,
 		end = lex::prevloc(lexer),
-		expr = ast::yield_expr {
-			label = label,
-			value = value,
-		},
+		expr = if (start.0 == ltok::YIELD) bye: ast::yield_expr
+		else bye: ast::break_expr,
 	};
 };
 

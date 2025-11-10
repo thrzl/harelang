@@ -33,12 +33,11 @@ export fn main() void = {
 		free(ids[i].1);
 	};
 
-	let with_libc = false;
-	for (let i = 0z; i < len(ctx.tags); i += 1) {
+	let with_libc = for (let i = 0z; i < len(ctx.tags); i += 1) {
 		if (ctx.tags[i] == "libc") {
-			with_libc = true;
+			break true;
 		};
-	};
+	} else false;
 
 	let tds = memio::dynamic();
 	defer io::close(&tds)!;

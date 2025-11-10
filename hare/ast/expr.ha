@@ -157,10 +157,16 @@ export type binding_expr = struct {
 	bindings: []binding,
 };
 
+// Structure common to breaks and yields.
+export type break_yield = struct {
+	label: label,
+	value: nullable *expr,
+};
+
 // A break expression. The label is set to empty string if absent.
 //
-// 	break :label
-export type break_expr = label;
+// 	break :label, expr
+export type break_expr = break_yield;
 
 // A function call expression.
 //
@@ -290,6 +296,7 @@ export type for_expr = struct {
 	cond: nullable *expr,
 	afterthought: nullable *expr,
 	body: *expr,
+	else_branch: nullable *expr,
 	label: label,
 };
 
@@ -435,10 +442,7 @@ export type variadic_expr = (vastart_expr | vaarg_expr | vaend_expr);
 // A yield expression.
 //
 // 	yield foo
-export type yield_expr = struct {
-	label: label,
-	value: nullable *expr,
-};
+export type yield_expr = break_yield;
 
 // A Hare expression.
 export type expr = struct {
@@ -519,7 +523,9 @@ export fn expr_finish(e: nullable *expr) void = {
 			};
 			free(b.bindings);
 		case let b: break_expr =>
-			free(b);
+			free(b.label);
+			expr_finish(b.value);
+			free(b.value);
 		case let c: call_expr =>
 			expr_finish(c.lvalue);
 			free(c.lvalue);

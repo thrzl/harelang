@@ -337,14 +337,11 @@ export fn parse_tags(s: str) ([]tag | error) = {
 // Checks if a set of tags are compatible with a tag requirement.
 export fn tags_compat(have: []str, want: []tag) bool = {
 	for (let t .. want) {
-		let found = false;
-
-		for (let ht .. have) {
+		let found = for (let ht .. have) {
 			if (ht == t.name) {
-				found = true;
-				break;
+				break true;
 			};
-		};
+		} else false;
 
 		if (t.include ^^ found) {
 			return false;
@@ -357,15 +354,12 @@ export fn tags_compat(have: []str, want: []tag) bool = {
 // for use in _findsrcs.
 fn seentags_compat(have: []str, want: []tag, seen: *[]str) bool = {
 	for (let t .. want) {
-		let found = false;
-
-		for (let ht .. have) {
+		let found = for (let ht .. have) {
 			if (ht == t.name) {
 				insert_uniq(seen, t.name);
-				found = true;
-				break;
+				break true;
 			};
-		};
+		} else false;
 
 		if (t.include ^^ found) {
 			return false;

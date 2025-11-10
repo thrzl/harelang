@@ -210,10 +210,19 @@ fn _expr(ctx: *context, syn: *synfunc, e: *ast::expr) (size | io::error) = {
 		return binding_expr(ctx, syn, &e, "=")?;
 	case let e: ast::break_expr =>
 		let z = syn(ctx, "break", synkind::KEYWORD)?;
-		if (e != "") {
+		if (e.label != "") {
 			z += space(ctx)?;
 			z += syn(ctx, ":", synkind::LABEL)?;
-			z += syn(ctx, e, synkind::LABEL)?;
+			z += syn(ctx, e.label, synkind::LABEL)?;
+		};
+		match (e.value) {
+		case null => void;
+		case let v: *ast::expr =>
+			if (e.label != "") {
+				z += syn(ctx, ",", synkind::PUNCTUATION)?;
+			};
+			z += space(ctx)?;
+			z += _expr(ctx, syn, v)?;
 		};
 		return z;
 	case let e: ast::call_expr =>
@@ -811,6 +820,17 @@ fn for_expr(
 	z += syn(ctx, ")", synkind::PUNCTUATION)?;
 	z += space(ctx)?;
 	z += _expr(ctx, syn, e.body)?;
+
+	match (e.else_branch) {
+	case let e: *ast::expr =>
+		z += space(ctx)?;
+		z += syn(ctx, "else", synkind::KEYWORD)?;
+		z += space(ctx)?;
+		z += _expr(ctx, syn, e)?;
+	case =>
+		yield;
+	};
+
 	return z;
 };
 

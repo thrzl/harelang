@@ -195,6 +195,8 @@
 	roundtrip("export fn main() void = {
 	break;
 	break :foo;
+	break :foo, 2;
+	break 2;
 	continue;
 	continue :foo;
 	return;
@@ -247,6 +249,9 @@ export fn main() void = {
 	for (let _ &.. [1, 2, 3]) {
 		x;
 	};
+	for (true) {
+		x;
+	} else y;
 };
 ");
 };

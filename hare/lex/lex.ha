@@ -416,18 +416,18 @@ fn lex_rune(lex: *lexer, loc: location) (rune | error) = {
 fn lex_string(lex: *lexer, loc: location, delim: rune) (token | error) = {
 	let ret: token = (ltok::LIT_STR, "", loc);
 	let buf = memio::dynamic();
-	for (true) match (next(lex)?) {
-	case io::EOF =>
-		return syntaxerr(loc, "unexpected EOF scanning string literal");
-	case let r: (rune, location) =>
-		if (r.0 == delim) break
-		else if (delim == '"' && r.0 == '\\') {
+	for (let r => next(lex)?) {
+		if (r.0 == delim) {
+			break;
+		} else if (delim == '"' && r.0 == '\\') {
 			unget(lex, r.0);
 			let r = lex_rune(lex, loc)?;
 			memio::appendrune(&buf, r)?;
 		} else {
 			memio::appendrune(&buf, r.0)?;
 		};
+	} else {
+		return syntaxerr(loc, "unexpected EOF scanning string literal");
 	};
 	for (let r => nextw(lex)?) {
 		switch (r.0) {

@@ -9,13 +9,11 @@ use strings;
 
 fn c_checkrange(chars: []u8, f: *fn (c: u8) bool) void = {
 	for (let i = 0z; i < 256; i += 1) {
-		let expected = false;
-		for (let j = 0z; j < len(chars); j += 1) {
+		let expected = for (let j = 0z; j < len(chars); j += 1) {
 			if (chars[j] == i: u8) {
-				expected = true;
-				break;
+				break true;
 			};
-		};
+		} else false;
 
 		if (f(i: u8) != expected) {
 			fmt::println(i, expected, f(i: u8))!;

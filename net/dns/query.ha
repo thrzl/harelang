@@ -78,16 +78,11 @@ export fn query(query: *message, servers: ip::addr...) (*message | error | nomem
 			z = udp::recvfrom(socket6, buf, &src, null)?;
 		};
 
-		let expected = false;
-		for (let i = 0z; i < len(servers); i += 1) {
-			if (ip::equal(src, servers[i])) {
-				expected = true;
+		for (let s .. servers) {
+			if (ip::equal(src, s)) {
 				break;
 			};
-		};
-		if (!expected) {
-			continue;
-		};
+		} else continue;
 
 		const dec = decoder_init(buf[..z]);
 		decode_header(&dec, &header)?;

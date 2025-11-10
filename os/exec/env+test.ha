@@ -14,14 +14,12 @@ use bufio;
 	let proc = start(&cmd)!;
 	io::close(wr)!;
 
-	let found = false;
 	let sc = bufio::newscanner(rd);
-	for (let l => bufio::scan_line(&sc)!) {
+	let found = for (let l => bufio::scan_line(&sc)!) {
 		if (l == "HARETEST=vval") {
-			found = true;
-			break;
+			break true;
 		};
-	};
+	} else false;
 
 	io::close(rd)!;
 	wait(&proc)!;
