@@ -695,3 +695,15 @@ export fn sched_setscheduler(pid: pid_t, policy: int, params: *sched_param) (int
 export fn sched_yield() void = {
 	syscall0(SYS_sched_yield);
 };
+
+export fn kqueue() (int | errno) = {
+	return wrap_return(syscall0(SYS_kqueue))?: int;
+};
+
+export fn kqueuex(flags: uint) (int | errno) = {
+	return wrap_return(syscall1(SYS_kqueuex, flags: u64))?: int;
+};
+
+export fn kevent(kq: int, changelist: const *kevent_t, nchanges: int, eventlist: *kevent_t, nevents: int, timeout: const nullable *timespec) (int | errno) = {
+	return wrap_return(syscall6(SYS_kevent, kq: u64, changelist: uintptr, nchanges: u64, eventlist: uintptr, nevents: u64, timeout: uintptr))?: int;
+};

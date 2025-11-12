@@ -49,6 +49,16 @@ export type sigact = struct {
 	sa_mask: sigset,
 };
 
+export type kevent_t = struct {
+	ident: uintptr,
+	filter: i16,
+	flags: i16,
+	fflags: uint,
+	data: i64,
+	udata: *opaque,
+	ext: [4]u64,
+};
+
 export def SIG_BLOCK: int = 1;
 export def SIG_UNBLOCK: int = 2;
 export def SIG_SETMASK: int = 3;
@@ -511,3 +521,80 @@ export def SCHED_RR: int       = 3;
 export type sched_param = struct {
 	sched_priority: int
 };
+
+export def EVFILT_READ: int = (-1);
+export def EVFILT_WRITE: int = (-2);
+export def EVFILT_AIO: int = (-3);
+export def EVFILT_VNODE: int = (-4);
+export def EVFILT_PROC: int = (-5);
+export def EVFILT_SIGNAL: int = (-6);
+export def EVFILT_TIMER: int = (-7);
+export def EVFILT_PROCDESC: int = (-8);
+export def EVFILT_FS: int = (-9);
+export def EVFILT_LIO: int = (-10);
+export def EVFILT_USER: int = (-11);
+export def EVFILT_SENDFILE: int = (-12);
+export def EVFILT_EMPTY: int = (-13);
+export def EVFILT_SYSCOUNT: int = 13;
+
+export def EV_ADD: u16 = 0x0001;
+export def EV_DELETE: u16 = 0x0002;
+export def EV_ENABLE: u16 = 0x0004;
+export def EV_DISABLE: u16 = 0x0008;
+export def EV_FORCEONESHOT: u16 = 0x0100;
+export def EV_KEEPUDATA: u16 = 0x0200;
+
+export def EV_ONESHOT: u16 = 0x0010;
+export def EV_CLEAR: u16 = 0x0020;
+export def EV_RECEIPT: u16 = 0x0040;
+export def EV_DISPATCH: u16 = 0x0080;
+
+export def EV_SYSFLAGS: u16 = 0xF000;
+export def EV_DROP: u16 = 0x1000;
+export def EV_FLAG1: u16 = 0x2000;
+export def EV_FLAG2: u16 = 0x4000;
+
+export def EV_EOF: u16 = 0x8000;
+export def EV_ERROR: u16 = 0x4000;
+
+export def NOTE_FFNOP: u32 = 0x00000000;
+export def NOTE_FFAND: u32 = 0x40000000;
+export def NOTE_FFOR: u32 = 0x80000000;
+export def NOTE_FFCOPY: u32 = 0xc0000000;
+export def NOTE_FFCTRLMASK: u32 = 0xc0000000;
+export def NOTE_FFLAGSMASK: u32 = 0x00ffffff;
+
+export def NOTE_TRIGGER: u32 = 0x01000000;
+
+export def NOTE_LOWAT: u16 = 0x0001;
+export def NOTE_FILE_POLL: u16 = 0x0002;
+
+export def NOTE_DELETE: u16 = 0x0001;
+export def NOTE_WRITE: u16 = 0x0002;
+export def NOTE_EXTEND: u16 = 0x0004;
+export def NOTE_ATTRIB: u16 = 0x0008;
+export def NOTE_LINK: u16 = 0x0010;
+export def NOTE_RENAME: u16 = 0x0020;
+export def NOTE_REVOKE: u16 = 0x0040;
+export def NOTE_OPEN: u16 = 0x0080;
+export def NOTE_CLOSE: u16 = 0x0100;
+export def NOTE_CLOSE_WRITE: u16 = 0x0200;
+export def NOTE_READ: u16 = 0x0400;
+
+export def NOTE_EXIT: u32 = 0x80000000;
+export def NOTE_FORK: u32 = 0x40000000;
+export def NOTE_EXEC: u32 = 0x20000000;
+export def NOTE_PCTRLMASK: u32 = 0xf0000000;
+export def NOTE_PDATAMASK: u32 = 0x000fffff;
+
+export def NOTE_TRACK: u32 = 0x00000001;
+export def NOTE_TRACKERR: u32 = 0x00000002;
+export def NOTE_CHILD: u32 = 0x00000004;
+
+export def NOTE_SECONDS: u32 = 0x00000001;
+export def NOTE_MSECONDS: u32 = 0x00000002;
+export def NOTE_USECONDS: u32 = 0x00000004;
+export def NOTE_NSECONDS: u32 = 0x00000008;
+export def NOTE_ABSTIME: u32 = 0x00000010;
+
+export def KQUEUE_CLOEXEC: u32 = 0x00000001;

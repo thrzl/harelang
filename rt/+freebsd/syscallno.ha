@@ -420,3 +420,4 @@ export def SYS_rpctls_syscall: u64 = 576;
 export def SYS___specialfd: u64 = 577;
 export def SYS_aio_writev: u64 = 578;
 export def SYS_aio_readv: u64 = 579;
+export def SYS_kqueuex: u64 = 583;
