@@ -28,13 +28,13 @@ export fn main() void = {
 
 	let ids: [](str, str) = [];
 	defer free(ids);
-	defer for (let i = 0z; i < len(ids); i += 1) {
-		free(ids[i].0);
-		free(ids[i].1);
+	defer for (let id .. ids) {
+		free(id.0);
+		free(id.1);
 	};
 
-	let with_libc = for (let i = 0z; i < len(ctx.tags); i += 1) {
-		if (ctx.tags[i] == "libc") {
+	let with_libc = for (let tag .. ctx.tags) {
+		if (tag == "libc") {
 			break true;
 		};
 	} else false;
@@ -91,8 +91,8 @@ export fn main() void = {
 		};
 
 		memio::reset(&sources);
-		for (let j = 0z; j < len(mods[i].srcs.s); j += 1) {
-			path::set(&buf, mods[i].srcs.s[j])!;
+		for (let s .. mods[i].srcs.s) {
+			path::set(&buf, s)!;
 			fmt::fprint(&sources, "", path::trimprefix(&buf, cwd)!)!;
 		};
 
