@@ -1109,7 +1109,7 @@ fn struct_field(
 			return ast::struct_value {
 				name = name,
 				_type = null,
-				init = alloc(expr(lexer)?)!,
+				init = alloc(initializer(lexer)?)!,
 			};
 		case => abort(); // Invariant
 		};
