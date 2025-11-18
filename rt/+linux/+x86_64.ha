@@ -34,7 +34,7 @@ export def O_DIRECT: int = 0o40000;
 
 export type cmsghdr = struct {
 	cmsg_len: socklen_t,
-	_padding: int,
+	_: int, // padding
 	cmsg_level: int,
 	cmsg_type: int,
 };
@@ -87,5 +87,5 @@ export type sigcontext = struct {
 	oldmask: u64,
 	cr2: u64,
 	fpstate: u64,
-	reserved1: [8]u64,
+	_: [8]u64, // reserved
 };

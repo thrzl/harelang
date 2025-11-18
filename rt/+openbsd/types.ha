@@ -222,7 +222,7 @@ export type dirent = struct {
 	d_reclen: u16,
 	d_type: u8,
 	d_namlen: u8,
-	__d_padding: [4]u8,
+	_: [4]u8, // padding
 	d_name: [*]u8,
 };
 
@@ -277,7 +277,7 @@ export type siginfo = struct {
 	si_code: int,
 	si_errno: int,
 	_data: union {
-		_pad: [128/4 - 3]int,
+		_: [128/4 - 3]int, // padding
 		_proc: struct {
 			_pid: pid_t,
 			_uid: uid_t,

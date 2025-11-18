@@ -34,7 +34,7 @@ export def O_DIRECT: int = 0o40000;
 
 export type cmsghdr = struct {
 	cmsg_len: socklen_t,
-	_padding: int,
+	_: int, // padding
 	cmsg_level: int,
 	cmsg_type: int,
 };
@@ -55,7 +55,7 @@ export type ucontext_t = struct {
 	uc_link: *ucontext_t,
 	uc_stack: stack_t,
 	uc_sigmask: sigset,
-	_u8: [1024 / 8 - size(sigset)]u8,
+	_: [1024 / 8 - size(sigset)]u8, // padding
 	uc_mcontext: sigcontext,
 };
 
@@ -119,5 +119,5 @@ export type d_ext_state = struct {
 export type q_ext_state = struct {
 	f: [64]u64,
 	fcsr: u32,
-	reserved: [3]u32,
+	_: [3]u32, // reserved
 };

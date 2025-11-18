@@ -30,7 +30,7 @@ export type sigcontext = struct {
 	sc_ss: u64,
 
 	sc_fpstate: *fxsave64,
-	__sc_unused: int,
+	_: int, // unused
 	sc_mask: int,
 	sc_cookie: i64,
 };
@@ -39,7 +39,7 @@ export type fxsave64 = struct {
 	fx_fcw: u16,
 	fx_fsw: u16,
 	fx_ftw: u8,
-	fx_unused1: u8,
+	_: u8, // unused
 	fx_fop: u16,
 	fx_rip: u64,
 	fx_rdp: u64,
@@ -47,7 +47,7 @@ export type fxsave64 = struct {
 	fx_mxcsr_mask: u32,
 	fx_st: [8][2]u64,
 	fx_xmm: [16][2]u64,
-	fx_unused3: [96]u8,
+	_: [96]u8, // unused
 };
 
 export type ucontext_t = sigcontext;

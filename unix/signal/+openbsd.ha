@@ -222,8 +222,7 @@ export type siginfo = struct {
 				addr: *opaque,
 			},
 		},
-		// Pads the structure out to the length used by the kernel; do not use.
-		_si_pad: [29]int,
+		_: [29]int, // padding
 	},
 };
 

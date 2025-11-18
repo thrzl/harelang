@@ -108,7 +108,7 @@ type stx = struct {
 	rdev_minor: u32,
 	dev_major:  u32,
 	dev_minor:  u32,
-	__reserved: [14]u64,
+	_: [14]u64, // reserved
 };
 
 // Note: the st type does not match the kernel API. The kernel API has a stat
@@ -335,7 +335,7 @@ export type rusage = struct {
 	ru_nsignals: u64,
 	ru_nvcsw: u64,
 	ru_nivcsw: u64,
-	__reserved: [16]u64,
+	_: [16]u64, // reserved
 };
 
 export type utsname = struct {
@@ -537,7 +537,7 @@ export type siginfo = union {
 			},
 		},
 	},
-	_si_pad: [SI_MAX_SIZE]u8,
+	_: [SI_MAX_SIZE]u8,
 };
 static assert(size(siginfo) == SI_MAX_SIZE);
 
@@ -595,12 +595,12 @@ export type signalfd_siginfo = struct {
 	ssi_stime: u64,
 	ssi_addr: u64,
 	ssi_addr_lsb: u16,
-	__pad2: u16,
+	_: u16, // padding
 	ssi_syscall: i32,
 	ssi_call_addr: u64,
 	ssi_arch: u32,
 
-	__pad: [28]u8, // pad to 128 bytes
+	_: [28]u8, // pad to 128 bytes
 };
 
 export type iovec = struct {
@@ -974,7 +974,7 @@ export type io_uring_sqe = struct {
 		addr2: u64,
 		struct {
 			cmd_op: u32,
-			__pad1: u32,
+			_: u32, // padding
 		},
 	},
 	union {
@@ -1015,13 +1015,13 @@ export type io_uring_sqe = struct {
 		file_index: u32,
 		struct {
 			addr_len: u16,
-			__pad3: [1]u16,
+			_: [1]u16, // padding
 		},
 	},
 	union {
 		struct {
 			addr3: u64,
-			__pad2: [1]u64,
+			_: [1]u64, // padding
 		},
 		cmd: [*]u8,
 	},

@@ -286,8 +286,7 @@ export type siginfo = union {
 		// Address of the faulting instruction.
 		addr: *opaque,
 	},
-	// Pads the structure out to the length used by the kernel; do not use.
-	_si_pad: [128 - 3 * size(int)]u8,
+	_: [128 - 3 * size(int)]u8, // padding
 };
 
 // A code indicating why a signal was sent.

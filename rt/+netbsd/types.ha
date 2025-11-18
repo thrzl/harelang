@@ -121,12 +121,12 @@ export type st = struct {
 export type stat = struct {
 	st_dev: u64,
 	st_mode: mode_t,
-	__pad0: u32,
+	_: u32, // padding
 	st_ino: u64,
 	st_nlink: u32,
 	st_uid: uid_t,
 	st_gid: gid_t,
-	__pad1: u32,
+	_: u32, // padding
 	st_rdev: u64,
 	st_atim: timespec,
 	st_mtim: timespec,
@@ -195,7 +195,7 @@ export type statvfs = struct {
 	f_namemax:	u64,
 	// user that mounted the file system
 	f_owner:	uid_t,
-	__pad0:		u32,
+	_:		u32, // padding
 
 	// spare space
 	f_spare:	[4]u64,
