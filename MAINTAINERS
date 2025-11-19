@@ -61,6 +61,10 @@ DNS SUPPORT
 M:	Conrad Hoffmann <ch@bitfehler.net>
 F:	net/dns/
 
+DRAGONFLY SUPPORT
+M:	Michael Neumann <mneumann@ntecs.de>
+F:	*dragonfly*
+
 MATHEMATICAL LIBRARY
 M:	Bor Grošelj Simić <bgs@turminal.net>
 F:	math/

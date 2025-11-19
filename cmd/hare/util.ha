@@ -44,8 +44,10 @@ fn harecache() str = {
 // contents of slice shouldn't be freed
 fn default_tags() []str = {
 	let arch = os::arch_name(os::architecture());
-	static let platform: [7]u8 = [0...];
+	// len("DragonFly") == 9
+	static let platform: [9]u8 = [0...];
 	let platform = ascii::strlower_buf(os::sysname(), platform[..0])!;
+
 	let tags: []str = alloc([arch, platform])!;
 	return tags;
 };
