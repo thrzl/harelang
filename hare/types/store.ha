@@ -416,7 +416,7 @@ fn list_from_ast(
 	case let ex: *ast::expr =>
 		const resolv = match (store.resolve) {
 		case null =>
-			return noresolver;
+			return noresolver: error;
 		case let r: *resolver =>
 			yield r;
 		};

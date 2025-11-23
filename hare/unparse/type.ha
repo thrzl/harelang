@@ -354,7 +354,7 @@ fn type_test(t: *ast::_type, expected: str) void = {
 	let expr_void = ast::expr {
 		start = lex::location { ... },
 		end = lex::location { ... },
-		expr = void,
+		expr = void: ast::literal_expr,
 	};
 
 	type_test(&t, "const foo::bar");

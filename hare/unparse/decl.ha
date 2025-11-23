@@ -224,7 +224,7 @@ fn decl_test(d: *ast::decl, expected: str) bool = {
 	let expr_void = ast::expr {
 		start = lex::location { ... },
 		end = lex::location { ... },
-		expr = void,
+		expr = void: ast::literal_expr,
 	};
 
 	let d = ast::decl {
