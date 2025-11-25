@@ -31,78 +31,60 @@ export fn decl(
 		n += space(&ctx)?;
 	};
 	match (d.decl) {
-	case let c: []ast::decl_const =>
+	case let c: ast::decl_const =>
 		n += syn(&ctx, "def", synkind::KEYWORD)?;
 		n += space(&ctx)?;
-		for (let i = 0z; i < len(c); i += 1) {
-			n += _ident(&ctx, syn, c[i].ident, synkind::CONSTANT)?;
-			match (c[i]._type) {
-			case null => void;
-			case let ty: *ast::_type =>
-				n += syn(&ctx, ":", synkind::PUNCTUATION)?;
-				n += space(&ctx)?;
-				n += __type(&ctx, syn, ty)?;
-			};
+		n += _ident(&ctx, syn, c.ident, synkind::CONSTANT)?;
+		match (c._type) {
+		case null => void;
+		case let ty: *ast::_type =>
+			n += syn(&ctx, ":", synkind::PUNCTUATION)?;
 			n += space(&ctx)?;
-			n += syn(&ctx, "=", synkind::OPERATOR)?;
-			n += space(&ctx)?;
-			n += _expr(&ctx, syn, c[i].init)?;
-			if (i + 1 < len(c)) {
-				n += syn(&ctx, ",", synkind::PUNCTUATION)?;
-				n += space(&ctx)?;
-			};
+			n += __type(&ctx, syn, ty)?;
 		};
-	case let g: []ast::decl_global =>
+		n += space(&ctx)?;
+		n += syn(&ctx, "=", synkind::OPERATOR)?;
+		n += space(&ctx)?;
+		n += _expr(&ctx, syn, c.init)?;
+	case let g: ast::decl_global =>
+		if (len(g.symbol) != 0) {
+			n += syn(&ctx, "@symbol(", synkind::ATTRIBUTE)?;
+			n += literal(&ctx, syn, g.symbol)?;
+			n += syn(&ctx, ")", synkind::ATTRIBUTE)?;
+			n += space(&ctx)?;
+		} else if (g.is_threadlocal) {
+			n += syn(&ctx, "@threadlocal",
+				synkind::ATTRIBUTE)?;
+			n += space(&ctx)?;
+		};
 		n += syn(&ctx,
-			if (g[0].is_const) "const" else "let",
+			if (g.is_const) "const" else "let",
 			synkind::KEYWORD)?;
 		n += space(&ctx)?;
-		for (let i = 0z; i < len(g); i += 1) {
-			if (len(g[i].symbol) != 0) {
-				n += syn(&ctx, "@symbol(", synkind::ATTRIBUTE)?;
-				n += literal(&ctx, syn, g[i].symbol)?;
-				n += syn(&ctx, ")", synkind::ATTRIBUTE)?;
-				n += space(&ctx)?;
-			} else if (g[i].is_threadlocal) {
-				n += syn(&ctx, "@threadlocal",
-					synkind::ATTRIBUTE)?;
-				n += space(&ctx)?;
-			};
-			n += _ident(&ctx, syn, g[i].ident, synkind::GLOBAL)?;
-			match (g[i]._type) {
-			case null => void;
-			case let ty: *ast::_type =>
-				n += syn(&ctx, ":", synkind::PUNCTUATION)?;
-				n += space(&ctx)?;
-				n += __type(&ctx, syn, ty)?;
-			};
-			match (g[i].init) {
-			case null => void;
-			case let ex: *ast::expr =>
-				n += space(&ctx)?;
-				n += syn(&ctx, "=", synkind::OPERATOR)?;
-				n += space(&ctx)?;
-				n += _expr(&ctx, syn, ex)?;
-			};
-			if (i + 1 < len(g)) {
-				n += syn(&ctx, ",", synkind::OPERATOR)?;
-				n += space(&ctx)?;
-			};
+		n += _ident(&ctx, syn, g.ident, synkind::GLOBAL)?;
+		match (g._type) {
+		case null => void;
+		case let ty: *ast::_type =>
+			n += syn(&ctx, ":", synkind::PUNCTUATION)?;
+			n += space(&ctx)?;
+			n += __type(&ctx, syn, ty)?;
 		};
-	case let t: []ast::decl_type =>
-		n += syn(&ctx, "type", synkind::KEYWORD)?;
-		n += space(&ctx)?;
-		for (let i = 0z; i < len(t); i += 1) {
-			n += _ident(&ctx, syn, t[i].ident, synkind::TYPEDEF)?;
+		match (g.init) {
+		case null => void;
+		case let ex: *ast::expr =>
 			n += space(&ctx)?;
 			n += syn(&ctx, "=", synkind::OPERATOR)?;
 			n += space(&ctx)?;
-			n += __type(&ctx, syn, t[i]._type)?;
-			if (i + 1 < len(t)) {
-				n += syn(&ctx, ",", synkind::PUNCTUATION)?;
-				n += space(&ctx)?;
-			};
+			n += _expr(&ctx, syn, ex)?;
 		};
+	case let t: ast::decl_type =>
+		n += syn(&ctx, "type", synkind::KEYWORD)?;
+		n += space(&ctx)?;
+		n += _ident(&ctx, syn, t.ident, synkind::TYPEDEF)?;
+		n += space(&ctx)?;
+		n += syn(&ctx, "=", synkind::OPERATOR)?;
+		n += space(&ctx)?;
+		n += __type(&ctx, syn, t._type)?;
 	case let f: ast::decl_func =>
 		ctx.stack = &stack {
 			cur = f.prototype,
@@ -228,58 +210,52 @@ fn decl_test(d: *ast::decl, expected: str) bool = {
 	let d = ast::decl {
 		exported = false,
 		loc = loc,
-		decl = [
-			ast::decl_global {
-				is_const = false,
-				is_threadlocal = false,
-				symbol = "",
-				ident = ["foo", "bar"],
-				_type = &type_int,
-				init = &expr_void,
-			},
-			ast::decl_global {
-				is_const = false,
-				is_threadlocal = true,
-				symbol = "",
-				ident = ["boo"],
-				_type = &type_int,
-				init = &expr_void,
-			},
-			ast::decl_global {
-				is_const = false,
-				is_threadlocal = false,
-				symbol = "foobar",
-				ident = ["baz"],
-				_type = &type_int,
-				init = &expr_void,
-			},
-		],
-		...
-	};
-	assert(decl_test(&d, "let foo::bar: int = void, @threadlocal boo: int = void, @symbol(\"foobar\") baz: int = void;"));
-
-	d.exported = true;
-	d.decl = [
-		ast::decl_const {
-			ident = ["foo"],
+		decl = ast::decl_global {
+			is_const = false,
+			is_threadlocal = false,
+			symbol = "",
+			ident = ["foo", "bar"],
 			_type = &type_int,
 			init = &expr_void,
 		},
-	];
+		...
+	};
+	assert(decl_test(&d, "let foo::bar: int = void;"));
+
+	d.decl = ast::decl_global {
+		is_const = false,
+		is_threadlocal = true,
+		symbol = "",
+		ident = ["boo"],
+		_type = &type_int,
+		init = &expr_void,
+	};
+	assert(decl_test(&d, "@threadlocal let boo: int = void;"));
+
+	d.decl = ast::decl_global {
+		is_const = false,
+		is_threadlocal = false,
+		symbol = "foobar",
+		ident = ["baz"],
+		_type = &type_int,
+		init = &expr_void,
+	};
+	assert(decl_test(&d, "@symbol(\"foobar\") let baz: int = void;"));
+
+	d.exported = true;
+	d.decl = ast::decl_const {
+		ident = ["foo"],
+		_type = &type_int,
+		init = &expr_void,
+	};
 	assert(decl_test(&d, "export def foo: int = void;"));
 
 	d.exported = false;
-	d.decl = [
-		ast::decl_type {
-			ident = ["foo"],
-			_type = &type_int,
-		},
-		ast::decl_type {
-			ident = ["bar"],
-			_type = &type_int,
-		},
-	];
-	assert(decl_test(&d, "type foo = int, bar = int;"));
+	d.decl = ast::decl_type {
+		ident = ["foo"],
+		_type = &type_int,
+	};
+	assert(decl_test(&d, "type foo = int;"));
 
 	d.decl = ast::decl_func {
 		symbol = "foo",

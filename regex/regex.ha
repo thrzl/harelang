@@ -13,21 +13,21 @@ use types;
 // An error string describing a compilation error.
 export type error = !str;
 
-export type inst_lit = rune,
-	inst_charset = struct { idx: size, is_positive: bool },
-	inst_any = void,
-	inst_split = size,
-	inst_jump = size,
-	inst_skip = void,
-	inst_match = bool,
-	inst_groupstart = size,
-	inst_groupend = void,
-	inst_repeat = struct {
-		id: size,
-		origin: size,
-		min: (void | size),
-		max: (void | size),
-	};
+export type inst_lit = rune;
+export type inst_charset = struct { idx: size, is_positive: bool };
+export type inst_any = void;
+export type inst_split = size;
+export type inst_jump = size;
+export type inst_skip = void;
+export type inst_match = bool;
+export type inst_groupstart = size;
+export type inst_groupend = void;
+export type inst_repeat = struct {
+	id: size,
+	origin: size,
+	min: (void | size),
+	max: (void | size),
+};
 
 export type inst = (inst_lit | inst_any | inst_split | inst_jump |
 	inst_skip | inst_match | inst_charset |
@@ -66,10 +66,10 @@ type thread = struct {
 type newmatch = void;
 
 export type charset = [](charset_lit_item | charset_range_item |
-	charset_class_item),
-	charset_lit_item = rune,
-	charset_range_item = (u32, u32),
-	charset_class_item = (str, *fn(c: rune) bool);
+	charset_class_item);
+export type charset_lit_item = rune;
+export type charset_range_item = (u32, u32);
+export type charset_class_item = (str, *fn(c: rune) bool);
 
 const charclass_map: [](str, *fn(c: rune) bool) = [
 	(":alnum:]", &ascii::isalnum),

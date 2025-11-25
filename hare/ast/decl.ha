@@ -56,8 +56,7 @@ export type decl_func = struct {
 export type decl = struct {
 	exported: bool,
 	loc: location,
-	decl: ([]decl_const | []decl_global | []decl_type | decl_func |
-		assert_expr),
+	decl: (decl_const | decl_global | decl_type | decl_func | assert_expr),
 
 	// Only valid if the lexer has comments enabled
 	docs: str,
@@ -67,23 +66,17 @@ export type decl = struct {
 export fn decl_finish(d: decl) void = {
 	free(d.docs);
 	match (d.decl) {
-	case let g: []decl_global =>
-		for (let i = 0z; i < len(g); i += 1) {
-			free(g[i].symbol);
-			ident_free(g[i].ident);
-			type_finish(g[i]._type);
-			free(g[i]._type);
-			expr_finish(g[i].init);
-			free(g[i].init);
-		};
-		free(g);
-	case let t: []decl_type =>
-		for (let i = 0z; i < len(t); i += 1) {
-			ident_free(t[i].ident);
-			type_finish(t[i]._type);
-			free(t[i]._type);
-		};
-		free(t);
+	case let g: decl_global =>
+		free(g.symbol);
+		ident_free(g.ident);
+		type_finish(g._type);
+		free(g._type);
+		expr_finish(g.init);
+		free(g.init);
+	case let t: decl_type =>
+		ident_free(t.ident);
+		type_finish(t._type);
+		free(t._type);
 	case let f: decl_func =>
 		free(f.symbol);
 		ident_free(f.ident);
@@ -91,15 +84,12 @@ export fn decl_finish(d: decl) void = {
 		free(f.prototype);
 		expr_finish(f.body);
 		free(f.body);
-	case let c: []decl_const =>
-		for (let i = 0z; i < len(c); i += 1) {
-			ident_free(c[i].ident);
-			type_finish(c[i]._type);
-			free(c[i]._type);
-			expr_finish(c[i].init);
-			free(c[i].init);
-		};
-		free(c);
+	case let c: decl_const =>
+		ident_free(c.ident);
+		type_finish(c._type);
+		free(c._type);
+		expr_finish(c.init);
+		free(c.init);
 	case let e: assert_expr =>
 		expr_finish(e.cond);
 		free(e.cond);

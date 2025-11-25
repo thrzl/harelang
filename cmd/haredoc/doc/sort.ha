@@ -36,44 +36,38 @@ export fn sort_decls(decls: []ast::decl) summary = {
 				},
 				docs = decl.docs,
 			})!;
-		case let types: []ast::decl_type =>
-			for (let t .. types) {
-				let bucket = &sorted.types;
-				if (t._type.flags & ast::type_flag::ERROR == ast::type_flag::ERROR) {
-					bucket = &sorted.errors;
-				};
-				append(bucket, ast::decl {
-					exported = false,
-					loc = decl.loc,
-					decl = alloc([t])!,
-					docs = decl.docs,
-				})!;
+		case let t: ast::decl_type =>
+			let bucket = &sorted.types;
+			if (t._type.flags & ast::type_flag::ERROR == ast::type_flag::ERROR) {
+				bucket = &sorted.errors;
 			};
-		case let consts: []ast::decl_const =>
-			for (let c .. consts) {
-				append(sorted.constants, ast::decl {
-					exported = false,
-					loc = decl.loc,
-					decl = alloc([c])!,
-					docs = decl.docs,
-				})!;
-			};
-		case let globals: []ast::decl_global =>
-			for (let g .. globals) {
-				append(sorted.globals, ast::decl {
-					exported = false,
-					loc = decl.loc,
-					decl = alloc([ast::decl_global {
-						is_const = g.is_const,
-						is_threadlocal = g.is_threadlocal,
-						symbol = g.symbol,
-						ident = g.ident,
-						_type = g._type,
-						init = null,
-					}])!,
-					docs = decl.docs,
-				})!;
-			};
+			append(bucket, ast::decl {
+				exported = false,
+				loc = decl.loc,
+				decl = t,
+				docs = decl.docs,
+			})!;
+		case let c: ast::decl_const =>
+			append(sorted.constants, ast::decl {
+				exported = false,
+				loc = decl.loc,
+				decl = c,
+				docs = decl.docs,
+			})!;
+		case let g: ast::decl_global =>
+			append(sorted.globals, ast::decl {
+				exported = false,
+				loc = decl.loc,
+				decl = ast::decl_global {
+					is_const = g.is_const,
+					is_threadlocal = g.is_threadlocal,
+					symbol = g.symbol,
+					ident = g.ident,
+					_type = g._type,
+					init = null,
+				},
+				docs = decl.docs,
+			})!;
 		case ast::assert_expr => void;
 		};
 	};
@@ -102,15 +96,12 @@ fn decl_ident(decl: *ast::decl) ast::ident = {
 	match (decl.decl) {
 	case let f: ast::decl_func =>
 		return f.ident;
-	case let t: []ast::decl_type =>
-		assert(len(t) == 1);
-		return t[0].ident;
-	case let c: []ast::decl_const =>
-		assert(len(c) == 1);
-		return c[0].ident;
-	case let g: []ast::decl_global =>
-		assert(len(g) == 1);
-		return g[0].ident;
+	case let t: ast::decl_type =>
+		return t.ident;
+	case let c: ast::decl_const =>
+		return c.ident;
+	case let g: ast::decl_global =>
+		return g.ident;
 	case ast::assert_expr => abort();
 	};
 };

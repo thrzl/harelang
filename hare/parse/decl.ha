@@ -42,115 +42,52 @@ export fn define(lexer: *lex::lexer) (ast::decl_const | error) = {
 	};
 };
 
-fn decl_const(
-	lexer: *lex::lexer,
-	tok: ltok,
-) ([]ast::decl_const | error) = {
-	let decl: []ast::decl_const = [];
-	for (true) {
-		append(decl, define(lexer)?)!;
-
-		if (try(lexer, ltok::COMMA)? is void) {
-			break;
-		};
-	};
-	return decl;
-
-};
-
 fn decl_global(
 	lexer: *lex::lexer,
 	tok: ltok,
-) ([]ast::decl_global | error) = {
-	let decl: []ast::decl_global = [];
-	for (true) {
-		const (symbol, threadlocal) = match (try(lexer,
-			ltok::ATTR_SYMBOL, ltok::ATTR_THREADLOCAL)?) {
+	sym: str,
+	threadlocal: bool,
+) (ast::decl_global | error) = {
+	const ident = ident(lexer)?;
+	const _type: nullable *ast::_type =
+		match (try(lexer, ltok::COLON)?) {
+		case lex::token =>
+			yield alloc(_type(lexer)?)!;
 		case void =>
-			yield ("", false);
-		case let t: lex::token =>
-			yield if (t.0 == ltok::ATTR_SYMBOL) {
-				yield (attr_symbol(lexer)?, false);
-			} else {
-				yield ("", true);
-			};
+			yield null;
 		};
-		const ident = ident(lexer)?;
-		const _type: nullable *ast::_type =
-			match (try(lexer, ltok::COLON)?) {
-			case lex::token =>
-				yield alloc(_type(lexer)?)!;
-			case void =>
-				yield null;
-			};
-		const init: nullable *ast::expr =
-			match (try(lexer, ltok::EQUAL)?) {
-			case lex::token =>
-				yield alloc(initializer(lexer)?)!;
-			case void =>
-				yield null;
-			};
-		const btok = try(lexer, ltok::COMMA)?;
-		append(decl, ast::decl_global {
-			is_const = tok == ltok::CONST,
-			is_threadlocal = threadlocal,
-			symbol = symbol,
-			ident = ident,
-			_type = _type,
-			init = init,
-		})!;
-		if (btok is void) {
-			break;
+	const init: nullable *ast::expr =
+		match (try(lexer, ltok::EQUAL)?) {
+		case lex::token =>
+			yield alloc(initializer(lexer)?)!;
+		case void =>
+			yield null;
 		};
+	return ast::decl_global {
+		is_const = tok == ltok::CONST,
+		is_threadlocal = threadlocal,
+		symbol = sym,
+		ident = ident,
+		_type = _type,
+		init = init,
 	};
-	return decl;
 };
 
-fn decl_type(lexer: *lex::lexer) ([]ast::decl_type | error) = {
-	let decl: []ast::decl_type = [];
-	for (true) {
-		let ident = ident(lexer)?;
-		want(lexer, ltok::EQUAL)?;
-		let _type = _type(lexer)?;
-		let btok = try(lexer, ltok::COMMA)?;
-		append(decl, ast::decl_type {
-			ident = ident,
-			_type = alloc(_type)!,
-		})!;
-		if (btok is void) {
-			break;
-		};
+fn decl_type(lexer: *lex::lexer) (ast::decl_type | error) = {
+	let ident = ident(lexer)?;
+	want(lexer, ltok::EQUAL)?;
+	let _type = _type(lexer)?;
+	return ast::decl_type {
+		ident = ident,
+		_type = alloc(_type)!,
 	};
-	return decl;
 };
 
-fn decl_func(lexer: *lex::lexer) (ast::decl_func | error) = {
-	let attr = ast::fndecl_attr::NONE, sym = "";
-	const attrs = [
-		ltok::ATTR_FINI, ltok::ATTR_INIT, ltok::ATTR_TEST,
-		ltok::ATTR_SYMBOL
-	];
-	for (true) match (try(lexer, attrs...)?) {
-	case void =>
-		break;
-	case let t: lex::token =>
-		synassert(t.2, t.0 == ltok::ATTR_SYMBOL || attr == 0,
-			"Only one of @init, @fini, or @test may be provided")?;
-		switch (t.0) {
-		case ltok::ATTR_FINI =>
-			attr = ast::fndecl_attr::FINI;
-		case ltok::ATTR_INIT =>
-			attr = ast::fndecl_attr::INIT;
-		case ltok::ATTR_TEST =>
-			attr = ast::fndecl_attr::TEST;
-		case ltok::ATTR_SYMBOL =>
-			sym = attr_symbol(lexer)?;
-		case =>
-			abort("unreachable");
-		};
-	};
-
-	want(lexer, ltok::FN)?;
+fn decl_func(
+	lexer: *lex::lexer,
+	sym: str,
+	attr: ast::fndecl_attr,
+) (ast::decl_func | error) = {
 	let ident_loc = lex::mkloc(lexer);
 	let ident = ident(lexer)?;
 	let proto_start = lex::mkloc(lexer);
@@ -213,24 +150,59 @@ export fn decl(lexer: *lex::lexer) (ast::decl | error) = {
 		comment = lex::comment(lexer);
 		yield true;
 	};
-	const toks = [ltok::CONST, ltok::LET, ltok::DEF, ltok::TYPE];
-	const next = try(lexer, toks...)?;
+
+	const attrs = [
+		ltok::ATTR_FINI, ltok::ATTR_INIT, ltok::ATTR_TEST,
+		ltok::ATTR_SYMBOL, ltok::ATTR_THREADLOCAL,
+	];
+	let attr = ast::fndecl_attr::NONE, sym = "", threadlocal = false;
+	for (true) match (try(lexer, attrs...)?) {
+	case void =>
+		break;
+	case let t: lex::token =>
+		synassert(t.2, t.0 == ltok::ATTR_SYMBOL
+				|| t.0 == ltok::ATTR_THREADLOCAL || attr == 0,
+			"Only one of @init, @fini, or @test may be provided")?;
+		switch (t.0) {
+		case ltok::ATTR_FINI =>
+			attr = ast::fndecl_attr::FINI;
+		case ltok::ATTR_INIT =>
+			attr = ast::fndecl_attr::INIT;
+		case ltok::ATTR_TEST =>
+			attr = ast::fndecl_attr::TEST;
+		case ltok::ATTR_SYMBOL =>
+			sym = attr_symbol(lexer)?;
+		case ltok::ATTR_THREADLOCAL =>
+			threadlocal = true;
+		case =>
+			abort("unreachable");
+		};
+	};
+
+	const t = want(lexer, ltok::CONST, ltok::LET,
+		ltok::DEF, ltok::TYPE, ltok::FN)?;
 	if (comment == "") {
 		comment = lex::comment(lexer);
 	};
-	let decl = match (next) {
-	case void =>
-		yield decl_func(lexer)?;
-	case let t: lex::token =>
-		yield switch (t.0) {
-		case ltok::TYPE =>
-			yield decl_type(lexer)?;
-		case ltok::LET, ltok::CONST =>
-			yield decl_global(lexer, t.0)?;
-		case ltok::DEF =>
-			yield decl_const(lexer, t.0)?;
-		case => abort();
-		};
+
+	synassert(t.2, !threadlocal || t.0 == ltok::LET || t.0 == ltok::CONST,
+		"@threadlocal is only valid on globals")?;
+	synassert(t.2, sym == "" || t.0 == ltok::LET
+			|| t.0 == ltok::CONST || t.0 == ltok::FN,
+		"@symbol is only valid on globals and functions")?;
+	synassert(t.2, attr == ast::fndecl_attr::NONE || t.0 == ltok::FN,
+		"@init, @fini, and @test are only valid on functions")?;
+
+	let decl = switch (t.0) {
+	case ltok::FN =>
+		yield decl_func(lexer, sym, attr)?;
+	case ltok::TYPE =>
+		yield decl_type(lexer)?;
+	case ltok::LET, ltok::CONST =>
+		yield decl_global(lexer, t.0, sym, threadlocal)?;
+	case ltok::DEF =>
+		yield define(lexer)?;
+	case => abort();
 	};
 	want(lexer, ltok::SEMICOLON)?;
 	return ast::decl {

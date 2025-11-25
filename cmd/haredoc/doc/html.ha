@@ -200,16 +200,14 @@ fn tocentries(
 
 		const decl = &decls[i];
 		match (decl.decl) {
-		case let t: []ast::decl_type =>
+		case let t: ast::decl_type =>
 			// Print summarized types in the TOC
-			for (const t .. t) {
-				fmt::fprintf(out, "<span class='keyword'>type</span> ")?;
-				fmt::fprintf(out, "<a href='#")?;
-				unparse::ident(out, decl_ident(decl))?;
-				fmt::fprintf(out, "'>")?;
-				unparse::ident(out, decl_ident(decl))?;
-				fmt::fprintf(out, "</a>;")?;
-			};
+			fmt::fprintf(out, "<span class='keyword'>type</span> ")?;
+			fmt::fprintf(out, "<a href='#")?;
+			unparse::ident(out, decl_ident(decl))?;
+			fmt::fprintf(out, "'>")?;
+			unparse::ident(out, decl_ident(decl))?;
+			fmt::fprintf(out, "</a>;")?;
 		case =>
 			unparse::decl(out, &syn_centry, &decls[i])?;
 		};
@@ -228,11 +226,11 @@ fn details(ctx: *context, decl: *ast::decl) (void | error) = {
 	fmt::fprintf(ctx.out, "{} ", match (decl.decl) {
 		case ast::decl_func =>
 			yield "fn";
-		case []ast::decl_type =>
+		case ast::decl_type =>
 			yield "type";
-		case []ast::decl_const =>
+		case ast::decl_const =>
 			yield "def";
-		case []ast::decl_global =>
+		case ast::decl_global =>
 			yield "let";
 		case ast::assert_expr => abort();
 		})?;

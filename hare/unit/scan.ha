@@ -32,11 +32,11 @@ fn scan_decl(
 ) (void | types::deferred | error) = {
 	// TODO: match on &decl.decl
 	match (decl.decl) {
-	case let co: []ast::decl_const =>
+	case let co: ast::decl_const =>
 		abort(); // TODO
-	case let gl: []ast::decl_global =>
+	case let gl: ast::decl_global =>
 		abort(); // TODO
-	case let ty: []ast::decl_type =>
+	case let ty: ast::decl_type =>
 		abort(); // TODO
 	case let fu: ast::decl_func =>
 		return scan_func(ctx, decl, &fu);

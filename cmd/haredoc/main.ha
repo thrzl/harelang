@@ -373,27 +373,21 @@ fn has_decl(decl: ast::decl, name: str) bool = {
 	};
 
 	match (decl.decl) {
-	case let consts: []ast::decl_const =>
-		for (let d .. consts) {
-			if (len(d.ident) == 1 && d.ident[0] == name) {
-				return true;
-			};
+	case let d: ast::decl_const =>
+		if (len(d.ident) == 1 && d.ident[0] == name) {
+			return true;
 		};
 	case let d: ast::decl_func =>
 		if (len(d.ident) == 1 && d.ident[0] == name) {
 			return true;
 		};
-	case let globals: []ast::decl_global =>
-		for (let d .. globals) {
-			if (len(d.ident) == 1 && d.ident[0] == name) {
-				return true;
-			};
+	case let d: ast::decl_global =>
+		if (len(d.ident) == 1 && d.ident[0] == name) {
+			return true;
 		};
-	case let types: []ast::decl_type =>
-		for (let d .. types) {
-			if (len(d.ident) == 1 && d.ident[0] == name) {
-				return true;
-			};
+	case let d: ast::decl_type =>
+		if (len(d.ident) == 1 && d.ident[0] == name) {
+			return true;
 		};
 	case ast::assert_expr => void;
 	};
@@ -405,36 +399,36 @@ fn include_related(matching: *[]ast::decl, notmatching: *[]ast::decl) void = {
 		return;
 	};
 	let decl = match (matching[0].decl) {
-	case let d: []ast::decl_type =>
-		if (len(d) != 1 || len(d[0].ident) != 1) {
+	case let d: ast::decl_type =>
+		if (len(d.ident) != 1) {
 			return;
 		};
-		if (d[0]._type.flags & ast::type_flag::ERROR != 0) {
+		if (d._type.flags & ast::type_flag::ERROR != 0) {
 			return;
 		};
-		match (d[0]._type.repr) {
+		match (d._type.repr) {
 		case let repr: ast::builtin_type =>
 			if (repr == ast::builtin_type::VOID) {
 				return;
 			};
 		case => void;
 		};
-		yield d[0];
+		yield d;
 	case =>
 		return;
 	};
 
 	for (let i = 0z; i < len(notmatching); i += 1) {
 		let _type = match (notmatching[i].decl) {
-		case let d: []ast::decl_const =>
-			yield match (d[0]._type) {
+		case let d: ast::decl_const =>
+			yield match (d._type) {
 			case let t: *ast::_type =>
 				yield t;
 			case null =>
 				continue;
 			};
-		case let d: []ast::decl_global =>
-			yield match (d[0]._type) {
+		case let d: ast::decl_global =>
+			yield match (d._type) {
 			case let t: *ast::_type =>
 				yield t;
 			case null =>

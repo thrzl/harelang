@@ -105,10 +105,13 @@ fn tup_to_import(tup: import_tuple) ast::import = ast::import {
 };
 
 @test fn decls() void = {
-	roundtrip("export type foo::bar = *int, baz = const void;\n\n"
+	roundtrip("export type foo::bar = *int;\n\n"
+		"type baz = const void;\n\n"
 		"type foo = ...bar;\n\n"
 		"type foo = nullable *fn(x: rune, _: int) void;\n\n"
-		"export let @symbol(\"_\") foo::bar: int = void, baz: int = void, bat = void;\n\n"
+		"export @symbol(\"_\") let foo::bar: int = void;\n\n"
+		"@threadlocal let baz: int = void;\n\n"
+		"let bat = void;\n\n"
 		"def foo::bar: int = void;\n\n"
 		"def foo::bar = void;\n\n"
 		"@symbol(\".f9$oo\") fn foo(bar: int, baz: int...) void;\n\n"
