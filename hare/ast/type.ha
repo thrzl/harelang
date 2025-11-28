@@ -4,10 +4,7 @@
 use hare::lex;
 
 // A type alias.
-export type alias_type = struct {
-	unwrap: bool,
-	ident: ident,
-};
+export type alias_type = ident;
 
 // A built-in primitive type (int, bool, str, etc).
 export type builtin_type = enum {
@@ -111,7 +108,7 @@ export type union_type = []struct_member;
 export type struct_union_type = (struct_type | union_type);
 
 // (int | bool)
-export type tagged_type = []*_type;
+export type tagged_type = [](*_type, bool);
 
 // (int, bool, ...)
 export type tuple_type = []*_type;
@@ -157,7 +154,7 @@ export fn type_finish(t: nullable *_type) void = {
 	case let t: *_type =>
 		match (t.repr) {
 		case let a: alias_type =>
-			ident_free(a.ident);
+			ident_free(a);
 		case builtin_type => void;
 		case let e: enum_type =>
 			for (let val .. e.values) {
@@ -197,8 +194,8 @@ export fn type_finish(t: nullable *_type) void = {
 			struct_members_free(s.members);
 		case let t: tagged_type =>
 			for (let i = 0z; i < len(t); i += 1) {
-				type_finish(t[i]);
-				free(t[i]);
+				type_finish(t[i].0);
+				free(t[i].0);
 			};
 			free(t);
 		case let t: tuple_type =>

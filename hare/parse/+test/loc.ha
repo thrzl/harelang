@@ -123,7 +123,7 @@ fn type_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 };
 
 @test fn type_loc() void = {
-	type_testloc("foo", "...foo");
+	type_testloc("foo");
 	type_testloc("int");
 	type_testloc("enum { FOO = bar }");
 	type_testloc("fn(foo: bar) baz");
@@ -131,6 +131,6 @@ fn type_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	type_testloc("*foo", "nullable *int");
 	type_testloc("struct { foo: bar }");
 	type_testloc("union { foo: bar }");
-	type_testloc("(foo | bar)");
+	type_testloc("(foo | bar)", "(foo | ...bar)");
 	type_testloc("(foo, bar)");
 };

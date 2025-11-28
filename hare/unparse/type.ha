@@ -209,10 +209,7 @@ fn __type(ctx: *context, syn: *synfunc, t: *ast::_type) (size | io::error) = {
 	};
 	match (t.repr) {
 	case let a: ast::alias_type =>
-		if (a.unwrap) {
-			n += syn(ctx, "...", synkind::TYPE)?;
-		};
-		n += _ident(ctx, syn, a.ident, synkind::TYPE)?;
+		n += _ident(ctx, syn, a, synkind::TYPE)?;
 	case let b: ast::builtin_type =>
 		n += syn(ctx, builtin_type(b), synkind::TYPE)?;
 	case let e: ast::enum_type =>
@@ -297,7 +294,10 @@ fn __type(ctx: *context, syn: *synfunc, t: *ast::_type) (size | io::error) = {
 	case let t: ast::tagged_type =>
 		n += syn(ctx, "(", synkind::TYPE)?;
 		for (let i = 0z; i < len(t); i += 1) {
-			n += __type(ctx, syn, t[i])?;
+			if (t[i].1) {
+				n += syn(ctx, "...", synkind::TYPE)?;
+			};
+			n += __type(ctx, syn, t[i].0)?;
 			if (i + 1 == len(t)) break;
 			n += space(ctx)?;
 			n += syn(ctx, "|", synkind::TYPE)?;
@@ -340,10 +340,7 @@ fn type_test(t: *ast::_type, expected: str) void = {
 	let t = ast::_type {
 		loc = loc,
 		flags = ast::type_flag::CONST,
-		repr = ast::alias_type {
-			unwrap = false,
-			ident = ["foo", "bar"],
-		},
+		repr = ["foo", "bar"],
 	};
 	let type_int = ast::_type {
 		loc = loc,
@@ -356,12 +353,6 @@ fn type_test(t: *ast::_type, expected: str) void = {
 	};
 
 	type_test(&t, "const foo::bar");
-	t.flags = 0;
-	t.repr = ast::alias_type {
-		unwrap = true,
-		ident = ["baz"],
-	};
-	type_test(&t, "...baz");
 
 	t.flags = ast::type_flag::ERROR;
 	t.repr = ast::builtin_type::INT;
@@ -460,8 +451,8 @@ fn type_test(t: *ast::_type, expected: str) void = {
 	};
 	type_test(&t, "nullable *int");
 
-	t.repr = [&type_int, &type_int]: ast::tagged_type;
-	type_test(&t, "(int | int)");
+	t.repr = [(&type_int, false), (&type_int, true)]: ast::tagged_type;
+	type_test(&t, "(int | ...int)");
 
 	t.repr = [&type_int, &type_int]: ast::tuple_type;
 	type_test(&t, "(int, int)");

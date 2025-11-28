@@ -144,15 +144,11 @@ fn primitive_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 fn alias_type(lexer: *lex::lexer) (ast::_type | error) = {
 	const start = lex::mkloc(lexer);
-	let unwrap = try(lexer, ltok::ELLIPSIS)? is lex::token;
 	let ident = ident(lexer)?;
 	return ast::_type {
 		loc = loc_from(lexer, start),
 		flags = 0,
-		repr = ast::alias_type {
-			unwrap = unwrap,
-			ident = ident,
-		},
+		repr = ident,
 	};
 };
 
@@ -179,12 +175,14 @@ fn pointer_type(lexer: *lex::lexer) (ast::_type | error) = {
 fn tagged_type(
 	lexer: *lex::lexer,
 	first: ast::_type,
-	start: lex::location
+	start: lex::location,
+	unwrap: bool,
 ) (ast::_type | error) = {
 	let tagged: ast::tagged_type = [];
-	append(tagged, alloc(first)!)!;
+	append(tagged, (alloc(first)!, unwrap))!;
 	for (true) {
-		append(tagged, alloc(_type(lexer)?)!)!;
+		let unwrap = try(lexer, ltok::ELLIPSIS)? is lex::token;
+		append(tagged, (alloc(_type(lexer)?)!, unwrap))!;
 
 		match (try(lexer, ltok::BOR)?) {
 		case lex::token =>
@@ -488,17 +486,20 @@ export fn _type(lexer: *lex::lexer) (ast::_type | error) = {
 		yield array_slice_type(lexer)?;
 	case ltok::LPAREN =>
 		want(lexer, ltok::LPAREN)?;
+		let unwrap = try(lexer, ltok::ELLIPSIS)? is lex::token;
 		let t = _type(lexer)?;
 		yield switch (want(lexer, ltok::BOR, ltok::COMMA)?.0) {
 		case ltok::BOR =>
-			yield tagged_type(lexer, t, tok.2)?;
+			yield tagged_type(lexer, t, tok.2, unwrap)?;
 		case ltok::COMMA =>
+			synassert(lex::mkloc(lexer), !unwrap,
+				"Expected tagged union")?;
 			yield tuple_type(lexer, t, tok.2)?;
 		case => abort("unreachable");
 		};
 	case ltok::FN =>
 		yield fn_type(lexer)?;
-	case ltok::ELLIPSIS, ltok::NAME =>
+	case ltok::NAME =>
 		yield alias_type(lexer)?;
 	case =>
 		return syntaxerr(lex::mkloc(lexer),

@@ -477,8 +477,7 @@ fn type_eq(a: *ast::_type, b: *ast::_type) bool = {
 	case let arepr: ast::alias_type =>
 		match (b.repr) {
 		case let brepr: ast::alias_type =>
-			return arepr.unwrap == brepr.unwrap
-				&& ast::ident_eq(arepr.ident, brepr.ident);
+			return ast::ident_eq(arepr, brepr);
 		case =>
 			return false;
 		};
@@ -550,12 +549,24 @@ fn type_eq(a: *ast::_type, b: *ast::_type) bool = {
 		// checking for equality is more effort than it's worth
 		return false;
 	case let arepr: ast::tagged_type =>
-		match (b.repr) {
+		let brepr = match (b.repr) {
 		case let brepr: ast::tagged_type =>
-			return types_eq(arepr, brepr);
+			yield brepr;
 		case =>
 			return false;
 		};
+		if (len(arepr) != len(brepr)) {
+			return false;
+		};
+		for (let i = 0z; i < len(arepr); i += 1) {
+			if (arepr[i].1 != brepr[i].1) {
+				return false;
+			};
+			if (!type_eq(arepr[i].0, brepr[i].0)) {
+				return false;
+			};
+		};
+		return true;
 	case let arepr: ast::tuple_type =>
 		match (b.repr) {
 		case let brepr: ast::tuple_type =>
@@ -582,27 +593,27 @@ fn types_eq(a: []*ast::_type, b: []*ast::_type) bool = {
 fn is_init_type(ident: ast::ident, _type: *ast::_type) bool = {
 	let type_ident = match (_type.repr) {
 	case let repr: ast::alias_type =>
-		yield repr.ident;
+		yield repr;
 	case let repr: ast::list_type =>
 		if (!(repr.length is ast::len_slice)) {
 			return false;
 		};
 		yield match (repr.members.repr) {
 		case let repr: ast::alias_type =>
-			yield repr.ident;
+			yield repr;
 		case =>
 			return false;
 		};
 	case let repr: ast::pointer_type =>
 		yield match (repr.referent.repr) {
 		case let repr: ast::alias_type =>
-			yield repr.ident;
+			yield repr;
 		case =>
 			return false;
 		};
 	case let repr: ast::tagged_type =>
 		for (let t .. repr) {
-			if (is_init_type(ident, t)) {
+			if (is_init_type(ident, t.0)) {
 				return true;
 			};
 		};
