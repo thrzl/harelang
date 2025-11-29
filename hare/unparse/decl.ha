@@ -186,21 +186,20 @@ fn decl_test(d: *ast::decl, expected: str) bool = {
 };
 
 @test fn decl() void = {
-	let loc = lex::location {
+	let lloc = lex::location {
 		path = "<test>",
 		line = 0,
 		col = 0,
 		off = 0,
 	};
+	let loc = ast::location { start = lloc, end = lloc };
 	let type_int = ast::_type {
-		start = loc,
-		end = loc,
+		loc = loc,
 		flags = 0,
 		repr = ast::builtin_type::INT,
 	};
 	let type_fn = ast::_type {
-		start = loc,
-		end = loc,
+		loc = loc,
 		flags = 0,
 		repr = ast::func_type {
 			result = &type_int,
@@ -222,15 +221,13 @@ fn decl_test(d: *ast::decl, expected: str) bool = {
 		},
 	};
 	let expr_void = ast::expr {
-		start = lex::location { ... },
-		end = lex::location { ... },
+		loc = loc,
 		expr = void: ast::literal_expr,
 	};
 
 	let d = ast::decl {
 		exported = false,
-		start = loc,
-		end = loc,
+		loc = loc,
 		decl = [
 			ast::decl_global {
 				is_const = false,

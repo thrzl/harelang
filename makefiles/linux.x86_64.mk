@@ -189,7 +189,7 @@ $(HARECACHE)/hare_lex.ssa: $(hare_lex_ha) $(HARECACHE)/ascii.td $(HARECACHE)/buf
 	@printf 'HAREC\t%s\n' "$@"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/hare_lex.td.tmp -N hare::lex $(hare_lex_ha)
 
-hare_ast_ha = hare/ast/decl.ha hare/ast/expr.ha hare/ast/ident.ha hare/ast/import.ha hare/ast/type.ha hare/ast/unit.ha
+hare_ast_ha = hare/ast/decl.ha hare/ast/expr.ha hare/ast/ident.ha hare/ast/import.ha hare/ast/loc.ha hare/ast/type.ha hare/ast/unit.ha
 $(HARECACHE)/hare_ast.ssa: $(hare_ast_ha) $(HARECACHE)/hare_lex.td $(HARECACHE)/strings.td
 	@mkdir -p -- "$(HARECACHE)"
 	@printf 'HAREC\t%s\n' "$@"

@@ -450,8 +450,7 @@ export type yield_expr = break_yield;
 
 // A Hare expression.
 export type expr = struct {
-	start: lex::location,
-	end: lex::location,
+	loc: location,
 	expr: (access_expr | align_expr | alloc_expr | append_expr |
 		assert_expr | assign_expr | binarithm_expr | binding_expr |
 		break_expr | call_expr | cast_expr | literal_expr |

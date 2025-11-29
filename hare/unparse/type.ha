@@ -330,15 +330,15 @@ fn type_test(t: *ast::_type, expected: str) void = {
 };
 
 @test fn _type() void = {
-	let loc = lex::location {
+	let lloc = lex::location {
 		path = "<test>",
 		line = 0,
 		col = 0,
 		off = 0,
 	};
+	let loc = ast::location { start = lloc, end = lloc };
 	let t = ast::_type {
-		start = loc,
-		end = loc,
+		loc = loc,
 		flags = ast::type_flag::CONST,
 		repr = ast::alias_type {
 			unwrap = false,
@@ -346,14 +346,12 @@ fn type_test(t: *ast::_type, expected: str) void = {
 		},
 	};
 	let type_int = ast::_type {
-		start = loc,
-		end = loc,
+		loc = loc,
 		flags = 0,
 		repr = ast::builtin_type::INT,
 	};
 	let expr_void = ast::expr {
-		start = lex::location { ... },
-		end = lex::location { ... },
+		loc = loc,
 		expr = void: ast::literal_expr,
 	};
 

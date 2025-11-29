@@ -28,8 +28,8 @@ fn expr_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	for (strings::next(&it) is rune) {
 		runes += 1;
 	};
-	assert(exp.start.line == 1 && exp.start.col == 1);
-	assert(exp.end.line == 1 && exp.end.col == runes);
+	assert(exp.loc.start.line == 1 && exp.loc.start.col == 1);
+	assert(exp.loc.end.line == 1 && exp.loc.end.col == runes);
 };
 
 @test fn expr_loc() void = {
@@ -87,16 +87,16 @@ fn expr_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 		abort();
 	};
 	defer ast::expr_finish(&exp);
-	assert(exp.start.line == 1 && exp.start.col == 1);
-	assert(exp.end.line == 1 && exp.end.col == 13);
+	assert(exp.loc.start.line == 1 && exp.loc.start.col == 1);
+	assert(exp.loc.end.line == 1 && exp.loc.end.col == 13);
 	let c = exp.expr as ast::cast_expr;
 	exp = *c.value;
-	assert(exp.start.line == 1 && exp.start.col == 1);
-	assert(exp.end.line == 1 && exp.end.col == 8);
+	assert(exp.loc.start.line == 1 && exp.loc.start.col == 1);
+	assert(exp.loc.end.line == 1 && exp.loc.end.col == 8);
 	c = exp.expr as ast::cast_expr;
 	exp = *c.value;
-	assert(exp.start.line == 1 && exp.start.col == 1);
-	assert(exp.end.line == 1 && exp.end.col == 3);
+	assert(exp.loc.start.line == 1 && exp.loc.start.col == 1);
+	assert(exp.loc.end.line == 1 && exp.loc.end.col == 3);
 };
 
 fn type_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
@@ -118,8 +118,8 @@ fn type_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	for (strings::next(&it) is rune) {
 		runes += 1;
 	};
-	assert(typ.start.line == 1 && typ.start.col == 1);
-	assert(typ.end.line == 1 && typ.end.col == runes);
+	assert(typ.loc.start.line == 1 && typ.loc.start.col == 1);
+	assert(typ.loc.end.line == 1 && typ.loc.end.col == runes);
 };
 
 @test fn type_loc() void = {

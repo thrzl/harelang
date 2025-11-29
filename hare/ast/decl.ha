@@ -55,8 +55,7 @@ export type decl_func = struct {
 // A Hare declaration.
 export type decl = struct {
 	exported: bool,
-	start: lex::location,
-	end: lex::location,
+	loc: location,
 	decl: ([]decl_const | []decl_global | []decl_type | decl_func |
 		assert_expr),
 

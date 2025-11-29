@@ -12,7 +12,7 @@ fn prototype(lexer: *lex::lexer) (ast::func_type | error) = {
 	let params: []ast::func_param = [];
 	want(lexer, ltok::LPAREN)?;
 	for (try(lexer, ltok::RPAREN)? is void) {
-		let loc = lex::mkloc(lexer);
+		let start = lex::mkloc(lexer);
 		match (try(lexer, ltok::ELLIPSIS)?) {
 		case lex::token =>
 			variadism = ast::variadism::C;
@@ -39,7 +39,7 @@ fn prototype(lexer: *lex::lexer) (ast::func_type | error) = {
 		};
 
 		append(params, ast::func_param {
-			loc = loc,
+			loc = loc_from(lexer, start),
 			name = name,
 			_type = _type,
 			default_value = default,
@@ -136,8 +136,7 @@ fn primitive_type(lexer: *lex::lexer) (ast::_type | error) = {
 			lex::tokstr(tok));
 	};
 	return ast::_type {
-		start = tok.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, tok.2),
 		flags = ast::type_flag::NONE,
 		repr = builtin,
 	};
@@ -148,8 +147,7 @@ fn alias_type(lexer: *lex::lexer) (ast::_type | error) = {
 	let unwrap = try(lexer, ltok::ELLIPSIS)? is lex::token;
 	let ident = ident(lexer)?;
 	return ast::_type {
-		start = start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start),
 		flags = 0,
 		repr = ast::alias_type {
 			unwrap = unwrap,
@@ -169,8 +167,7 @@ fn pointer_type(lexer: *lex::lexer) (ast::_type | error) = {
 	want(lexer, ltok::TIMES)?;
 	let _type = _type(lexer)?;
 	return ast::_type {
-		start = start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start),
 		flags = ast::type_flag::NONE,
 		repr = ast::pointer_type {
 			referent = alloc(_type)!,
@@ -201,8 +198,7 @@ fn tagged_type(
 		};
 	};
 	return ast::_type {
-		start = start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start),
 		flags = ast::type_flag::NONE,
 		repr = tagged,
 	};
@@ -229,8 +225,7 @@ fn tuple_type(
 		};
 	};
 	return ast::_type {
-		start = start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start),
 		flags = ast::type_flag::NONE,
 		repr = tuple,
 	};
@@ -241,8 +236,7 @@ fn fn_type(lexer: *lex::lexer) (ast::_type | error) = {
 	want(lexer, ltok::FN)?;
 	let proto = prototype(lexer)?;
 	return ast::_type {
-		start = start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start),
 		flags = 0,
 		repr = proto,
 	};
@@ -312,8 +306,7 @@ fn struct_union_type(lexer: *lex::lexer) (ast::_type | error) = {
 	};
 
 	return ast::_type {
-		start = kind.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, kind.2),
 		flags = ast::type_flag::NONE,
 		repr = switch (kind.0) {
 		case ltok::STRUCT =>
@@ -393,8 +386,7 @@ fn array_slice_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 	let _type = _type(lexer)?;
 	return ast::_type {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		flags = ast::type_flag::NONE,
 		repr = ast::list_type {
 			length = length,
@@ -441,7 +433,7 @@ fn enum_type(lexer: *lex::lexer) (ast::_type | error) = {
 		defer append(membs, ast::enum_field {
 			name = name.1 as str,
 			value = value,
-			loc = loc,
+			loc = loc_from(lexer, loc),
 			docs = comment,
 		})!;
 
@@ -458,8 +450,7 @@ fn enum_type(lexer: *lex::lexer) (ast::_type | error) = {
 	};
 
 	return ast::_type {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		flags = ast::type_flag::NONE,
 		repr = ast::enum_type {
 			storage = storage,

@@ -37,7 +37,7 @@ export fn imports(lexer: *lex::lexer) ([]ast::import | error) = {
 			...
 		})!;
 		let import = &imports[len(imports) - 1];
-		import.start = lex::mkloc(lexer);
+		import.loc.start = lex::mkloc(lexer);
 		let (name, trailing) = ident_trailing(lexer)?;
 		import.ident = name;
 		switch (want(lexer, ltok::SEMICOLON, ltok::LBRACE,
@@ -65,7 +65,7 @@ export fn imports(lexer: *lex::lexer) ([]ast::import | error) = {
 			want(lexer, ltok::SEMICOLON)?;
 		case => abort(); // Unreachable
 		};
-		import.end = lex::mkloc(lexer);
+		import.loc.end = lex::mkloc(lexer);
 	};
 	return imports;
 };

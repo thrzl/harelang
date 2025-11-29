@@ -4,6 +4,7 @@
 use fmt;
 use hare::lex;
 use hare::lex::{ltok};
+use hare::ast;
 use io;
 use memio;
 
@@ -91,5 +92,12 @@ export fn peek(
 export fn synassert(loc: lex::location, cond: bool, msg: str) (void | error) = {
 	if (!cond) {
 		return syntaxerr(loc, "{}", msg);
+	};
+};
+
+fn loc_from(lexer: *lex::lexer, start: lex::location) ast::location = {
+	return ast::location {
+		start = start,
+		end = lex::prevloc(lexer),
 	};
 };

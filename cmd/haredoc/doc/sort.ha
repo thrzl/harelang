@@ -26,8 +26,7 @@ export fn sort_decls(decls: []ast::decl) summary = {
 		case let f: ast::decl_func =>
 			append(sorted.funcs, ast::decl {
 				exported = false,
-				start = decl.start,
-				end = decl.end,
+				loc = decl.loc,
 				decl = ast::decl_func {
 					symbol = f.symbol,
 					ident = f.ident,
@@ -45,8 +44,7 @@ export fn sort_decls(decls: []ast::decl) summary = {
 				};
 				append(bucket, ast::decl {
 					exported = false,
-					start = decl.start,
-					end = decl.end,
+					loc = decl.loc,
 					decl = alloc([t])!,
 					docs = decl.docs,
 				})!;
@@ -55,8 +53,7 @@ export fn sort_decls(decls: []ast::decl) summary = {
 			for (let c .. consts) {
 				append(sorted.constants, ast::decl {
 					exported = false,
-					start = decl.start,
-					end = decl.end,
+					loc = decl.loc,
 					decl = alloc([c])!,
 					docs = decl.docs,
 				})!;
@@ -65,8 +62,7 @@ export fn sort_decls(decls: []ast::decl) summary = {
 			for (let g .. globals) {
 				append(sorted.globals, ast::decl {
 					exported = false,
-					start = decl.start,
-					end = decl.end,
+					loc = decl.loc,
 					decl = alloc([ast::decl_global {
 						is_const = g.is_const,
 						is_threadlocal = g.is_threadlocal,

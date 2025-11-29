@@ -13,8 +13,7 @@ export fn initializer(lexer: *lex::lexer) (ast::expr | error) = {
 	const loc = lex::mkloc(lexer);
 	if (try(lexer, ltok::ATTR_UNDEFINED)? is lex::token) {
 		return ast::expr {
-			start = loc,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, loc),
 			expr = ast::undefined_expr,
 		};
 	};
@@ -52,8 +51,7 @@ export fn expr(lexer: *lex::lexer) (ast::expr | error) = {
 			want(lexer, ltok::EQUAL)?;
 			let value = alloc(expr(lexer)?)!;
 			return ast::expr {
-				start = loc,
-				end = lex::prevloc(lexer),
+				loc = loc_from(lexer, loc),
 				expr = ast::assign_expr {
 					op = void,
 					object = null,
@@ -118,8 +116,7 @@ export fn expr(lexer: *lex::lexer) (ast::expr | error) = {
 	};
 
 	return ast::expr {
-		start = loc,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, loc),
 		expr = ex,
 	};
 };
@@ -166,8 +163,7 @@ fn assert_expr(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
 	};
 
 	return ast::expr {
-		start = tok.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, tok.2),
 		expr = expr,
 	};
 };
@@ -204,8 +200,7 @@ fn alloc_expr(lexer: *lex::lexer) (ast::expr | error) = {
 		};
 
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = expr,
 	};
 };
@@ -249,8 +244,7 @@ fn append_insert_expr(
 	} else expr;
 
 	return ast::expr {
-		start = tok.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, tok.2),
 		expr = expr,
 	};
 };
@@ -272,8 +266,7 @@ fn measurement(lexer: *lex::lexer) (ast::expr | error) = {
 	want(lexer, ltok::RPAREN)?;
 
 	return ast::expr {
-		start = tok.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, tok.2),
 		expr = expr,
 	};
 };
@@ -306,8 +299,7 @@ fn binarithm(
 		};
 
 		const expr = ast::expr {
-			start = lvalue.start,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, lvalue.loc.start),
 			expr = ast::binarithm_expr {
 				op = op,
 				lvalue = alloc(lvalue)!,
@@ -393,8 +385,7 @@ fn binding(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
 	};
 
 	return ast::expr {
-		start = loc,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, loc),
 		expr = ast::binding_expr {
 			is_static = is_static,
 			kind = kind,
@@ -434,8 +425,7 @@ fn builtin(lexer: *lex::lexer) (ast::expr | error) = {
 		want(lexer, ltok::LPAREN)?;
 		want(lexer, ltok::RPAREN)?;
 		return ast::expr {
-			start = tok.2,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, tok.2),
 			expr = void: ast::vastart_expr: ast::variadic_expr,
 		};
 	case ltok::VAARG =>
@@ -446,8 +436,7 @@ fn builtin(lexer: *lex::lexer) (ast::expr | error) = {
 		const _type = alloc(_type(lexer)?)!;
 		want(lexer, ltok::RPAREN)?;
 		return ast::expr {
-			start = tok.2,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, tok.2),
 			expr = ast::vaarg_expr {
 				ap = ap,
 				_type = _type,
@@ -459,8 +448,7 @@ fn builtin(lexer: *lex::lexer) (ast::expr | error) = {
 		const expr = alloc(objsel(lexer)?)!;
 		want(lexer, ltok::RPAREN)?;
 		return ast::expr {
-			start = tok.2,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, tok.2),
 			expr = expr: ast::vaend_expr: ast::variadic_expr,
 		};
 	case => abort(); // Invariant
@@ -494,8 +482,7 @@ fn call(lexer: *lex::lexer, lvalue: ast::expr) (ast::expr | error) = {
 	};
 
 	return ast::expr {
-		start = lvalue.start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, lvalue.loc.start),
 		expr = ast::call_expr {
 			lvalue = alloc(lvalue)!,
 			variadic = variadic,
@@ -529,8 +516,7 @@ fn cast(lexer: *lex::lexer, lvalue: (ast::expr | void)) (ast::expr | error) = {
 	let typ = match (try(lexer, ltok::NULL)?) {
 	case let t: lex::token =>
 		yield alloc(ast::_type {
-			start = t.2,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, t.2),
 			flags = 0,
 			repr = ast::builtin_type::NULL,
 		})!;
@@ -538,8 +524,7 @@ fn cast(lexer: *lex::lexer, lvalue: (ast::expr | void)) (ast::expr | error) = {
 		yield alloc(_type(lexer)?)!;
 	};
 	return cast(lexer, ast::expr {
-		start = lvalue.start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, lvalue.loc.start),
 		expr = ast::cast_expr {
 			kind = kind,
 			value = alloc(lvalue)!,
@@ -597,8 +582,7 @@ fn literal(lexer: *lex::lexer) (ast::expr | error) = {
 		return syntaxerr(lex::mkloc(lexer), "Expected literal expression");
 	};
 	return ast::expr {
-		start = tok.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, tok.2),
 		expr = expr,
 	};
 };
@@ -628,8 +612,7 @@ fn control(lexer: *lex::lexer) (ast::expr | error) = {
 	case => abort(); // unreachable
 	};
 	return ast::expr {
-		start = tok.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, tok.2),
 		expr = expr,
 	};
 };
@@ -641,8 +624,7 @@ fn delete_expr(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
 	// TODO: Assert that this was an indexing expression
 	want(lexer, ltok::RPAREN)?;
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = ast::delete_expr {
 			object = expr,
 			is_static = is_static,
@@ -671,8 +653,7 @@ fn compound_expr(lexer: *lex::lexer) (ast::expr | error) = {
 	};
 
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = ast::compound_expr {
 			exprs = items,
 			label = label,
@@ -688,8 +669,7 @@ fn stmt(lexer: *lex::lexer) (ast::expr | error) = {
 		case ltok::DEFER =>
 			let expr = alloc(expr(lexer)?)!;
 			yield ast::expr {
-				start = tok.2,
-				end = lex::prevloc(lexer),
+				loc = loc_from(lexer, tok.2),
 				expr = expr: ast::defer_expr,
 			};
 		case ltok::DEF, ltok::CONST, ltok::LET =>
@@ -796,8 +776,7 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 		};
 
 		yield alloc(ast::expr {
-			start = predicate_loc,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, predicate_loc),
 			expr = ast::binding_expr {
 				is_static = false,
 				kind = binding_kind,
@@ -833,8 +812,7 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 	};
 
 	return ast::expr {
-		start = tok.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, tok.2),
 		expr = ast::for_expr {
 			kind = kind as ast::for_kind,
 			bindings = bindings,
@@ -853,8 +831,7 @@ fn free_expr(lexer: *lex::lexer) (ast::expr | error) = {
 	const expr = alloc(expr(lexer)?)!;
 	want(lexer, ltok::RPAREN)?;
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = expr: ast::free_expr,
 	};
 };
@@ -872,8 +849,7 @@ fn if_expr(lexer: *lex::lexer) (ast::expr | error) = {
 		yield alloc(expr(lexer)?)!;
 	};
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = ast::if_expr {
 			cond = cond,
 			tbranch = tbranch,
@@ -900,8 +876,7 @@ fn indexing(lexer: *lex::lexer, lvalue: ast::expr) (ast::expr | error) = {
 
 	want(lexer, ltok::RBRACKET)?;
 	return ast::expr {
-		start = lvalue.start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, lvalue.loc.start),
 		expr = if (is_slice) ast::slice_expr {
 			object = alloc(lvalue)!,
 			start = start,
@@ -944,8 +919,7 @@ fn plain_expression(lexer: *lex::lexer) (ast::expr | error) = {
 	case ltok::STRUCT =>
 		let s = plain_struct(lexer, [])?;
 		return ast::expr {
-			start = tok.2,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, tok.2),
 			expr = s,
 		};
 	case ltok::LPAREN =>
@@ -963,15 +937,13 @@ fn plain_expression(lexer: *lex::lexer) (ast::expr | error) = {
 		match (peek(lexer, ltok::LBRACE)?) {
 		case void =>
 			return ast::expr {
-				start = tok.2,
-				end = lex::prevloc(lexer),
+				loc = loc_from(lexer, tok.2),
 				expr = id: ast::access_identifier,
 			};
 		case lex::token =>
 			let s = plain_struct(lexer, id)?;
 			return ast::expr {
-				start = tok.2,
-				end = lex::prevloc(lexer),
+				loc = loc_from(lexer, tok.2),
 				expr = s,
 			};
 		};
@@ -1011,8 +983,7 @@ fn plain_array(lexer: *lex::lexer) (ast::expr | error) = {
 		};
 	};
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = ast::array_literal {
 			expand = expand,
 			values = values,
@@ -1144,8 +1115,7 @@ fn plain_tuple(
 	};
 
 	return ast::expr {
-		start = start,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start),
 		expr = values: ast::tuple_literal,
 	};
 };
@@ -1175,14 +1145,12 @@ fn postfix(lexer: *lex::lexer, lvalue: (ast::expr | void)) (ast::expr | error) =
 		yield indexing(lexer, lvalue)?;
 	case ltok::QUESTION =>
 		yield ast::expr {
-			start = lvalue.start,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, lvalue.loc.start),
 			expr = alloc(lvalue)!: ast::propagate_expr,
 		};
 	case ltok::LNOT =>
 		yield ast::expr {
-			start = lvalue.start,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, lvalue.loc.start),
 			expr = alloc(lvalue)!: ast::error_assert_expr,
 		};
 	case => abort();
@@ -1198,8 +1166,7 @@ fn postfix_dot(
 	match (try(lexer, ltok::NAME)?) {
 	case let tok: lex::token =>
 		return ast::expr {
-			start = lvalue.start,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, lvalue.loc.start),
 			expr = ast::access_field {
 				object = alloc(lvalue)!,
 				field = tok.1 as str,
@@ -1212,8 +1179,7 @@ fn postfix_dot(
 			"Expected integer literal")?;
 		let val = val as ast::number_literal;
 		return ast::expr {
-			start = lvalue.start,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, lvalue.loc.start),
 			expr = ast::access_tuple {
 				object = alloc(lvalue)!,
 				value = alloc(lit)!,
@@ -1292,8 +1258,7 @@ fn switch_expr(lexer: *lex::lexer) (ast::expr | error) = {
 	};
 
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = ast::switch_expr {
 			value = alloc(value)!,
 			cases = cases,
@@ -1310,8 +1275,7 @@ fn match_case(lexer: *lex::lexer) (ast::match_case | error) = {
 	switch (tok.0) {
 	case ltok::NULL =>
 		typ = alloc(ast::_type {
-			start = loc,
-			end = lex::prevloc(lexer),
+			loc = loc_from(lexer, loc),
 			flags = 0,
 			repr = ast::builtin_type::NULL,
 		})!;
@@ -1361,8 +1325,7 @@ fn match_expr(lexer: *lex::lexer) (ast::expr | error) = {
 	};
 
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = ast::match_expr {
 			value = alloc(value)!,
 			cases = cases,
@@ -1441,8 +1404,7 @@ fn unarithm(lexer: *lex::lexer) (ast::expr | error) = {
 		};
 	};
 	return ast::expr {
-		start = tok.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, tok.2),
 		expr = expr,
 	};
 };
@@ -1472,8 +1434,7 @@ fn break_yield_expr(lexer: *lex::lexer) (ast::expr | error) = {
 		value = value,
 	};
 	return ast::expr {
-		start = start.2,
-		end = lex::prevloc(lexer),
+		loc = loc_from(lexer, start.2),
 		expr = if (start.0 == ltok::YIELD) bye: ast::yield_expr
 		else bye: ast::break_expr,
 	};

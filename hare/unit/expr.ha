@@ -2,13 +2,11 @@
 // (c) Hare authors <https://harelang.org>
 
 use hare::ast;
-use hare::lex;
 use hare::types;
 
 // A type-checked and validated Hare expression.
 export type expr = struct {
-	start: lex::location,
-	end: lex::location,
+	loc: ast::location,
 	result: const *types::_type,
 	terminates: bool,
 	expr: (access | bindings | compound | constant | _return),

@@ -193,7 +193,7 @@ fn details_tty(ctx: *context, decl: *ast::decl) (bool | error) = {
 		if (!no_color) fmt::fprintf(ctx.out, "\x1b[{}m",
 			color(unparse::synkind::COMMENT))?;
 		fmt::fprintfln(ctx.out, "// See {}:{}",
-			cwdpath(decl.start.path), decl.start.line)?;
+			cwdpath(decl.loc.start.path), decl.loc.start.line)?;
 	};
 
 	return true;

@@ -161,7 +161,7 @@ fn decl_func(lexer: *lex::lexer) (ast::decl_func | error) = {
 	let body = switch (tok.0) {
 	case ltok::EQUAL =>
 		for (let param &.. prototype.params) {
-			synassert(param.loc,
+			synassert(param.loc.start,
 				len(param.name) > 0,
 				"Expected parameter name in function declaration")?;
 		};
@@ -176,8 +176,10 @@ fn decl_func(lexer: *lex::lexer) (ast::decl_func | error) = {
 		symbol = sym,
 		ident = ident,
 		prototype = alloc(ast::_type {
-			start = proto_start,
-			end = proto_end,
+			loc = ast::location {
+				start = proto_start,
+				end = proto_end,
+			},
 			flags = 0,
 			repr = prototype,
 		})!,
@@ -196,8 +198,10 @@ export fn decl(lexer: *lex::lexer) (ast::decl | error) = {
 		want(lexer, ltok::SEMICOLON)?;
 		return ast::decl {
 			exported = false,
-			start = start,
-			end = expr.end,
+			loc = ast::location {
+				start = start,
+				end = expr.loc.end,
+			},
 			decl = expr.expr as ast::assert_expr,
 			docs = comment,
 		};
@@ -231,8 +235,10 @@ export fn decl(lexer: *lex::lexer) (ast::decl | error) = {
 	want(lexer, ltok::SEMICOLON)?;
 	return ast::decl {
 		exported = exported,
-		start = start,
-		end = lex::mkloc(lexer),
+		loc = ast::location {
+			start = start,
+			end = lex::mkloc(lexer),
+		},
 		decl = decl,
 		docs = comment,
 	};

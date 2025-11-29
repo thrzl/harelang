@@ -2,7 +2,6 @@
 // (c) Hare authors <https://harelang.org>
 
 use hare::ast;
-use hare::lex;
 use hare::types;
 
 
@@ -18,8 +17,7 @@ export type decl_func = struct {
 // A declaration within a unit.
 export type decl = struct {
 	exported: bool,
-	start: lex::location,
-	end: lex::location,
+	loc: ast::location,
 	decl: (decl_func | void), // TODO: Other decl types
 };
 

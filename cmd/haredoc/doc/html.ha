@@ -244,8 +244,8 @@ fn details(ctx: *context, decl: *ast::decl) (void | error) = {
 	match (os::getenv("HAREDOC_HTML_SRC")) {
 	case let fmt: str =>
 		const url = fmt::asprintf(fmt,
-			cwdpath(decl.start.path),
-			decl.start.line)!;
+			cwdpath(decl.loc.start.path),
+			decl.loc.start.line)!;
 		defer free(url);
 		fmt::fprint(ctx.out, " <a href='")?;
 		html_escape(ctx.out, url)?;
@@ -269,7 +269,7 @@ fn details(ctx: *context, decl: *ast::decl) (void | error) = {
 		const trimmed = trim_comment(decl.docs);
 		defer free(trimmed);
 		const buf = strings::toutf8(trimmed);
-		markup_html(ctx, &memio::fixed(buf), decl.start)?;
+		markup_html(ctx, &memio::fixed(buf), decl.loc.start)?;
 	} else {
 		fmt::fprintln(ctx.out, "</details>")?;
 	};

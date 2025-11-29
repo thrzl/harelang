@@ -69,8 +69,7 @@ fn process_func(
 
 	return decl {
 		exported = adecl.exported,
-		start = adecl.start,
-		end = adecl.end,
+		loc = adecl.loc,
 		decl = decl_func {
 			symbol = afndecl.symbol,
 			// TODO: Add namespace to ident
@@ -166,8 +165,7 @@ fn process_access(ctx: *context, aexpr: *ast::expr) (*expr | error) = {
 		abort(); // TODO
 	};
 	return alloc(expr {
-		start = aexpr.start,
-		end = aexpr.end,
+		loc = aexpr.loc,
 		result = result,
 		expr = ex,
 		terminates = false,
@@ -207,8 +205,7 @@ fn process_binding(ctx: *context, aexpr: *ast::expr) (*expr | error) = {
 		})!;
 	};
 	return alloc(expr {
-		start = aexpr.start,
-		end = aexpr.end,
+		loc = aexpr.loc,
 		result = &types::builtin_void,
 		expr = bindings,
 		...
@@ -227,8 +224,7 @@ fn process_compound(ctx: *context, aexpr: *ast::expr) (*expr | error) = {
 
 	scope_pop(ctx);
 	return alloc(expr {
-		start = aexpr.start,
-		end = aexpr.end,
+		loc = aexpr.loc,
 		result = &types::builtin_void, // TODO: Pick result type
 		expr = exprs,
 		terminates = exprs[i - 1].terminates,
@@ -297,8 +293,7 @@ fn process_constant(ctx: *context, aexpr: *ast::expr) (*expr | error) = {
 		abort(); // TODO
 	};
 	return alloc(expr {
-		start = aexpr.start,
-		end = aexpr.end,
+		loc = aexpr.loc,
 		result = result,
 		expr = ex,
 		...
@@ -315,8 +310,7 @@ fn process_return(ctx: *context, aexpr: *ast::expr) (*expr | error) = {
 	};
 	// TODO: assert(types::assignable(ctx.fntype.result as *types::func, rval.type));
 	return alloc(expr {
-		start = aexpr.start,
-		end = aexpr.end,
+		loc = aexpr.loc,
 		terminates = true,
 		result = &types::builtin_void,
 		expr = rval: _return,

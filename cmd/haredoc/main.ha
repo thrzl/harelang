@@ -291,8 +291,8 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 		};
 		const decl = decls[0];
 		fmt::printfln("{}:{}",
-			doc::cwdpath(decl.start.path),
-			decl.start.line)?;
+			doc::cwdpath(decl.loc.start.path),
+			decl.loc.start.line)?;
 		return;
 	};
 

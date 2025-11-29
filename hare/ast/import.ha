@@ -11,8 +11,7 @@ use strings;
 // 	use foo::{bar, baz};
 // 	use foo::*;
 export type import = struct {
-	start: lex::location,
-	end: lex::location,
+	loc: location,
 	ident: ident,
 	bindings: (void | import_alias | import_members | import_wildcard),
 };

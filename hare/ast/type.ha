@@ -20,7 +20,7 @@ export type builtin_type = enum {
 export type enum_field = struct {
 	name: str,
 	value: nullable *expr,
-	loc: lex::location,
+	loc: location,
 	docs: str,
 };
 
@@ -39,7 +39,7 @@ export type variadism = enum {
 
 // A parameter to a function type.
 export type func_param = struct {
-	loc: lex::location,
+	loc: location,
 	name: str,
 	_type: *_type,
 	default_value: (void | expr),
@@ -125,8 +125,7 @@ export type type_flag = enum uint {
 
 // A Hare type.
 export type _type = struct {
-	start: lex::location,
-	end: lex::location,
+	loc: location,
 	flags: type_flag,
 	repr: (alias_type | builtin_type | enum_type | func_type |
 		list_type | pointer_type | struct_type | union_type |
