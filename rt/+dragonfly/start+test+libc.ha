@@ -20,4 +20,4 @@ export @symbol("main") fn start_ha(c_argc: int, c_argv: *[*]*u8) int = {
 	return if (nfail > 0) 1 else 0;
 };
 
-let @symbol("environ") c_envp: *[*]nullable *u8;
+@symbol("environ") let c_envp: *[*]nullable *u8;
