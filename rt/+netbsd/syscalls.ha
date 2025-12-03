@@ -301,7 +301,10 @@ export fn ftruncate(fd: int, ln: off_t) (void | errno) = {
 	wrap_return(syscall2(SYS_ftruncate, fd: u64, ln: u32))?;
 };
 
-export fn nanosleep(req: *const timespec, rem: *timespec) (void | errno) = {
+export fn nanosleep(
+	req: *const timespec,
+	rem: nullable *timespec,
+) (void | errno) = {
 	wrap_return(syscall2(SYS___nanosleep50,
 		req: uintptr: u64, rem: uintptr: u64))?;
 };
@@ -310,7 +313,7 @@ export fn clock_nanosleep(
 	clock_id: int,
 	flags: int,
 	requested: *timespec,
-	remaining: *timespec
+	remaining: nullable *timespec,
 ) (void | errno) = {
 	wrap_return(syscall4(SYS_clock_nanosleep,
 		clock_id: u64,

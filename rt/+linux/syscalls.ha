@@ -513,7 +513,10 @@ export fn clock_settime(clock_id: int, tp: *const timespec) (void | errno) = {
 		clock_id: u64, tp: uintptr: u64))?;
 };
 
-export fn nanosleep(req: *const timespec, rem: *timespec) (void | errno) = {
+export fn nanosleep(
+	req: *const timespec,
+	rem: nullable *timespec,
+) (void | errno) = {
 	wrap_return(syscall2(SYS_nanosleep,
 		req: uintptr: u64, rem: uintptr: u64))?;
 };
@@ -522,7 +525,7 @@ export fn clock_nanosleep(
 	clock_id: int,
 	flags: int,
 	requested: *timespec,
-	remaining: *timespec
+	remaining: nullable *timespec,
 ) (void | errno) = {
 	wrap_return(syscall4(SYS_clock_nanosleep,
 		clock_id: u64,

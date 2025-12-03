@@ -654,12 +654,12 @@ export fn dup2(oldfd: int, newfd: int) (int | errno) = {
 
 @symbol("nanosleep") fn libc_nanosleep(
 	timeout: *const timespec,
-	remainder: *timespec
+	remainder: nullable *timespec,
 ) int;
 
 export fn nanosleep(
 	timeout: *const timespec,
-	remainder: *timespec
+	remainder: nullable *timespec,
 ) (void | errno) = {
 	let res = libc_nanosleep(timeout, remainder);
 	if (res == -1) {
