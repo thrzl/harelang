@@ -85,7 +85,7 @@ export fn resolve(
 		return unknown_service;
 	};
 	if (len(addrs) == 0) {
-		return dns::name_error;
+		return dns::name_error: dns::error;
 	};
 
 	return (addrs, port);
