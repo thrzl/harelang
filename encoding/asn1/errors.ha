@@ -45,7 +45,7 @@ fn wrap_err(e: error) io::error = {
 	case let e: asn1error =>
 		static assert(size(asn1error) <= size(errors::opaque_data));
 		let w = errors::opaque_ { strerror = &wrap_strerror, ... };
-		let ptr = &w.data: *error;
+		let ptr = &w.data: *asn1error;
 		*ptr = e;
 		return w;
 	};
