@@ -57,6 +57,14 @@ export fn sleep(d: duration) void = {
 	};
 };
 
+// Yields the process to the kernel and returns when [[clock]] c reaches
+// [[instant]] i. WARNING: In openbsd, this function has a flaw, which
+// occasionally causes it to sleep for much longer than intended. This is
+// unavoidable because openbsd is missing clock_nanosleep() and TIMER_ABSTIME.
+// This is a temporary version until this function is implemented in openbsd.
+export fn sleep_until(i: instant, c: clock = clock::MONOTONIC) void =
+	sleep(diff(now(c), i));
+
 // An enumeration of clocks available on this system. Different clocks represent
 // times from different epochs, and have different characteristics with regards
 // to leap seconds, NTP adjustments, and so on. All systems provide the REALTIME

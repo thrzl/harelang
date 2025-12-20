@@ -38,12 +38,12 @@ export fn timespec_to_instant(ts: rt::timespec) instant = instant {
 };
 
 // Yields the process to the kernel and returns after the requested duration.
-export fn sleep(d: duration) void = {
+export fn sleep(d: duration, c: clock = clock::MONOTONIC) void = {
 	let req = duration_to_timespec(d);
 
 	for (true) {
 		let res = rt::timespec { ... };
-		match (rt::nanosleep(&req, &res)) {
+		match (rt::clock_nanosleep(c: int, 0, &req, &res)) {
 		case void =>
 			return;
 		case let err: rt::errno =>
@@ -51,7 +51,26 @@ export fn sleep(d: duration) void = {
 			case rt::EINTR =>
 				req = res;
 			case =>
-				abort("Unexpected error from nanosleep");
+				abort("Unexpected error from clock_nanosleep");
+			};
+		};
+	};
+};
+
+// Yields the process to the kernel and returns when [[clock]] c reaches [[instant]] i.
+export fn sleep_until(i: instant, c: clock = clock::MONOTONIC) void = {
+	const requested = instant_to_timespec(i);
+
+	for (true) {
+		match (rt::clock_nanosleep(c: int, rt::TIMER_ABSTIME, &requested, null)) {
+		case void =>
+			return;
+		case let err: rt::errno =>
+			switch (err) {
+			case rt::EINTR =>
+				continue;
+			case =>
+				abort("Unexpected error from clock_nanosleep");
 			};
 		};
 	};
