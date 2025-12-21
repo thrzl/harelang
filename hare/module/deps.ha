@@ -232,14 +232,22 @@ fn _gather(
 	};
 	defer free(modpath);
 
+	let name = match (mod) {
+	case let mod: *path::buffer =>
+		yield strings::dup(path::string(mod))!;
+	case let mod: ast::ident =>
+		yield unparse::identstr(mod);
+	};
+	defer free(name);
+
 	for (let j = 0z; j < len(stack); j += 1) {
-		if (modpath == stack[j]) {
-			append(stack, modpath)!;
+		if (name == stack[j]) {
+			append(stack, strings::dup(name)!)!;
 			return strings::dupall(stack[j..])!: dep_cycle;
 		};
 	};
 	for (let j = 0z; j < len(out); j += 1) {
-		if (modpath == out[j].path) {
+		if (name == out[j].name) {
 			if (out[j].missing && !is_dep) {
 				assert(out[j].is_dep);
 				return attach(strings::dup(modpath)!, not_found);
@@ -248,7 +256,7 @@ fn _gather(
 			return j;
 		};
 	};
-	append(stack, modpath)!;
+	append(stack, name)!;
 	defer delete(stack[len(stack) - 1]);
 
 	let cache = get_cache(ctx.harecache, modpath)?;
@@ -262,12 +270,7 @@ fn _gather(
 	};
 
 	append(out, module {
-		name = match (mod) {
-		case let mod: *path::buffer =>
-			yield strings::dup(path::string(mod))!;
-		case let mod: ast::ident =>
-			yield unparse::identstr(mod);
-		},
+		name = strings::dup(name)!,
 		ns = match (mod) {
 		case let mod: *path::buffer =>
 			yield [];
