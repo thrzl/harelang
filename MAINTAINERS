@@ -65,10 +65,6 @@ DRAGONFLY SUPPORT
 M:	Michael Neumann <mneumann@ntecs.de>
 F:	*dragonfly*
 
-MATHEMATICAL LIBRARY
-M:	Bor Grošelj Simić <bgs@turminal.net>
-F:	math/
-
 NETBSD SUPPORT
 M:	Mallory Adams <malloryadams@fastmail.com>
 F:	*netbsd*
