@@ -27,6 +27,9 @@ export type enum_type = struct {
 	values: []enum_field,
 };
 
+// !t
+export type error_type = *_type;
+
 // The variadism strategy for a function type.
 export type variadism = enum {
 	NONE,
@@ -113,18 +116,10 @@ export type tagged_type = [](*_type, bool);
 // (int, bool, ...)
 export type tuple_type = []*_type;
 
-// Flags which apply to types.
-export type type_flag = enum uint {
-	NONE = 0,
-	CONST = 1 << 0,
-	ERROR = 1 << 1,
-};
-
 // A Hare type.
 export type _type = struct {
 	loc: location,
-	flags: type_flag,
-	repr: (alias_type | builtin_type | enum_type | func_type |
+	repr: (alias_type | builtin_type | enum_type | error_type | func_type |
 		list_type | pointer_type | struct_type | union_type |
 		tagged_type | tuple_type),
 };
@@ -164,6 +159,8 @@ export fn type_finish(t: nullable *_type) void = {
 				free(val.docs);
 			};
 			free(e.values);
+		case let e: error_type =>
+			type_finish(e: *_type);
 		case let f: func_type =>
 			type_finish(f.result);
 			free(f.result);

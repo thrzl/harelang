@@ -200,13 +200,6 @@ fn __type(ctx: *context, syn: *synfunc, t: *ast::_type) (size | io::error) = {
 	};
 
 	let n = 0z;
-	if (t.flags & ast::type_flag::CONST != 0) {
-		n += syn(ctx, "const", synkind::TYPE)?;
-		n += space(ctx)?;
-	};
-	if (t.flags & ast::type_flag::ERROR != 0) {
-		n += syn(ctx, "!", synkind::TYPE)?;
-	};
 	match (t.repr) {
 	case let a: ast::alias_type =>
 		n += _ident(ctx, syn, a, synkind::TYPE)?;
@@ -264,6 +257,9 @@ fn __type(ctx: *context, syn: *synfunc, t: *ast::_type) (size | io::error) = {
 			ctx.linelen += 8;
 		};
 		n += syn(ctx, "}", synkind::PUNCTUATION)?;
+	case let e: ast::error_type =>
+		n += syn(ctx, "!", synkind::TYPE)?;
+		n += __type(ctx, syn, e: *ast::_type)?;
 	case let f: ast::func_type =>
 		n += syn(ctx, "fn", synkind::TYPE)?;
 		n += prototype(ctx, syn, &f)?;
@@ -339,12 +335,13 @@ fn type_test(t: *ast::_type, expected: str) void = {
 	let loc = ast::location { start = lloc, end = lloc };
 	let t = ast::_type {
 		loc = loc,
-		flags = ast::type_flag::CONST,
-		repr = ["foo", "bar"],
+		repr = &ast::_type {
+			loc = loc,
+			repr = ["foo", "bar"],
+		}: ast::error_type,
 	};
 	let type_int = ast::_type {
 		loc = loc,
-		flags = 0,
 		repr = ast::builtin_type::INT,
 	};
 	let expr_void = ast::expr {
@@ -352,13 +349,11 @@ fn type_test(t: *ast::_type, expected: str) void = {
 		expr = void: ast::literal_expr,
 	};
 
-	type_test(&t, "const foo::bar");
+	type_test(&t, "!foo::bar");
 
-	t.flags = ast::type_flag::ERROR;
-	t.repr = ast::builtin_type::INT;
+	t.repr = &type_int: ast::error_type;
 	type_test(&t, "!int");
 
-	t.flags = ast::type_flag::CONST | ast::type_flag::ERROR;
 	t.repr = ast::enum_type {
 		storage = ast::builtin_type::U32,
 		values = [
@@ -376,9 +371,7 @@ fn type_test(t: *ast::_type, expected: str) void = {
 			},
 		],
 	};
-	type_test(&t, "const !enum u32 {\n\tFOO,\n\tBAR = void,\n}");
-
-	t.flags = 0;
+	type_test(&t, "enum u32 {\n\tFOO,\n\tBAR = void,\n}");
 
 	t.repr = ast::func_type {
 		result = &type_int,

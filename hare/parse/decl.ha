@@ -117,7 +117,6 @@ fn decl_func(
 				start = proto_start,
 				end = proto_end,
 			},
-			flags = 0,
 			repr = prototype,
 		})!,
 		body = body,

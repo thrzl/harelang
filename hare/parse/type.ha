@@ -137,7 +137,6 @@ fn primitive_type(lexer: *lex::lexer) (ast::_type | error) = {
 	};
 	return ast::_type {
 		loc = loc_from(lexer, tok.2),
-		flags = ast::type_flag::NONE,
 		repr = builtin,
 	};
 };
@@ -147,7 +146,6 @@ fn alias_type(lexer: *lex::lexer) (ast::_type | error) = {
 	let ident = ident(lexer)?;
 	return ast::_type {
 		loc = loc_from(lexer, start),
-		flags = 0,
 		repr = ident,
 	};
 };
@@ -164,7 +162,6 @@ fn pointer_type(lexer: *lex::lexer) (ast::_type | error) = {
 	let _type = _type(lexer)?;
 	return ast::_type {
 		loc = loc_from(lexer, start),
-		flags = ast::type_flag::NONE,
 		repr = ast::pointer_type {
 			referent = alloc(_type)!,
 			flags = flags,
@@ -197,7 +194,6 @@ fn tagged_type(
 	};
 	return ast::_type {
 		loc = loc_from(lexer, start),
-		flags = ast::type_flag::NONE,
 		repr = tagged,
 	};
 };
@@ -224,7 +220,6 @@ fn tuple_type(
 	};
 	return ast::_type {
 		loc = loc_from(lexer, start),
-		flags = ast::type_flag::NONE,
 		repr = tuple,
 	};
 };
@@ -235,7 +230,6 @@ fn fn_type(lexer: *lex::lexer) (ast::_type | error) = {
 	let proto = prototype(lexer)?;
 	return ast::_type {
 		loc = loc_from(lexer, start),
-		flags = 0,
 		repr = proto,
 	};
 };
@@ -305,7 +299,6 @@ fn struct_union_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 	return ast::_type {
 		loc = loc_from(lexer, kind.2),
-		flags = ast::type_flag::NONE,
 		repr = switch (kind.0) {
 		case ltok::STRUCT =>
 			yield ast::struct_type { members = membs, packed = packed, ...};
@@ -385,7 +378,6 @@ fn array_slice_type(lexer: *lex::lexer) (ast::_type | error) = {
 	let _type = _type(lexer)?;
 	return ast::_type {
 		loc = loc_from(lexer, start.2),
-		flags = ast::type_flag::NONE,
 		repr = ast::list_type {
 			length = length,
 			members = alloc(_type)!,
@@ -449,7 +441,6 @@ fn enum_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 	return ast::_type {
 		loc = loc_from(lexer, start.2),
-		flags = ast::type_flag::NONE,
 		repr = ast::enum_type {
 			storage = storage,
 			values = membs,
@@ -459,14 +450,7 @@ fn enum_type(lexer: *lex::lexer) (ast::_type | error) = {
 
 // Parses a type, e.g. '[]int'.
 export fn _type(lexer: *lex::lexer) (ast::_type | error) = {
-	let flags = ast::type_flag::NONE;
-	if (try(lexer, ltok::CONST)? is lex::token) {
-		flags |= ast::type_flag::CONST;
-	};
-
-	if (try(lexer, ltok::LNOT)? is lex::token) {
-		flags |= ast::type_flag::ERROR;
-	};
+	try(lexer, ltok::CONST)?;
 
 	let tok = peek(lexer)? as lex::token;
 	let typ: ast::_type = switch (tok.0) {
@@ -478,6 +462,12 @@ export fn _type(lexer: *lex::lexer) (ast::_type | error) = {
 		yield primitive_type(lexer)?;
 	case ltok::ENUM =>
 		yield enum_type(lexer)?;
+	case ltok::LNOT =>
+		let start = want(lexer, ltok::LNOT)?;
+		yield ast::_type {
+			loc = loc_from(lexer, start.2),
+			repr = alloc(_type(lexer)?)?: ast::error_type,
+		};
 	case ltok::NULLABLE, ltok::TIMES =>
 		yield pointer_type(lexer)?;
 	case ltok::STRUCT, ltok::UNION =>
@@ -506,7 +496,5 @@ export fn _type(lexer: *lex::lexer) (ast::_type | error) = {
 			"Unexpected {}, was expecting type",
 			lex::tokstr(tok));
 	};
-
-	typ.flags |= flags;
 	return typ;
 };

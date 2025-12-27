@@ -38,7 +38,7 @@ export fn sort_decls(decls: []ast::decl) summary = {
 			})!;
 		case let t: ast::decl_type =>
 			let bucket = &sorted.types;
-			if (t._type.flags & ast::type_flag::ERROR == ast::type_flag::ERROR) {
+			if (t._type.repr is ast::error_type) {
 				bucket = &sorted.errors;
 			};
 			append(bucket, ast::decl {

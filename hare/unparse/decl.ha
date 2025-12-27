@@ -177,12 +177,10 @@ fn decl_test(d: *ast::decl, expected: str) bool = {
 	let loc = ast::location { start = lloc, end = lloc };
 	let type_int = ast::_type {
 		loc = loc,
-		flags = 0,
 		repr = ast::builtin_type::INT,
 	};
 	let type_fn = ast::_type {
 		loc = loc,
-		flags = 0,
 		repr = ast::func_type {
 			result = &type_int,
 			variadism = ast::variadism::HARE,

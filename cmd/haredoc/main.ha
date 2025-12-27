@@ -403,7 +403,7 @@ fn include_related(matching: *[]ast::decl, notmatching: *[]ast::decl) void = {
 		if (len(d.ident) != 1) {
 			return;
 		};
-		if (d._type.flags & ast::type_flag::ERROR != 0) {
+		if (d._type.repr is ast::error_type) {
 			return;
 		};
 		match (d._type.repr) {
@@ -469,10 +469,6 @@ fn signature_matches(want: *ast::_type, prototype: *ast::_type) bool = {
 
 // This isn't perfect, but it's correct 99% of the time
 fn type_eq(a: *ast::_type, b: *ast::_type) bool = {
-	if (a.flags != b.flags) {
-		return false;
-	};
-
 	match (a.repr) {
 	case let arepr: ast::alias_type =>
 		match (b.repr) {
@@ -490,6 +486,13 @@ fn type_eq(a: *ast::_type, b: *ast::_type) bool = {
 		};
 	case ast::enum_type =>
 		return false; // code is invalid
+	case let e: ast::error_type =>
+		match (b.repr) {
+		case let brepr: ast::error_type =>
+			return type_eq(e: *ast::_type, brepr: *ast::_type);
+		case =>
+			return false;
+		};
 	case let arepr: ast::func_type =>
 		const brepr = match (b.repr) {
 		case let brepr: ast::func_type =>

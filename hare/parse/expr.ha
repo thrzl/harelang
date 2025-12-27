@@ -517,7 +517,6 @@ fn cast(lexer: *lex::lexer, lvalue: (ast::expr | void)) (ast::expr | error) = {
 	case let t: lex::token =>
 		yield alloc(ast::_type {
 			loc = loc_from(lexer, t.2),
-			flags = 0,
 			repr = ast::builtin_type::NULL,
 		})!;
 	case void =>
@@ -1276,7 +1275,6 @@ fn match_case(lexer: *lex::lexer) (ast::match_case | error) = {
 	case ltok::NULL =>
 		typ = alloc(ast::_type {
 			loc = loc_from(lexer, loc),
-			flags = 0,
 			repr = ast::builtin_type::NULL,
 		})!;
 	case ltok::LET =>
