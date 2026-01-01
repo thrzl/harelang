@@ -563,11 +563,10 @@ fn literal(
 	e: ast::literal_expr,
 ) (size | io::error) = {
 	match (e) {
-	case void =>
-		return syn(ctx, "void", synkind::KEYWORD)?;
-	case let v: ast::value =>
-		match (v) {
-		case void => abort();
+	case let p: ast::plain_literal =>
+		let val = match (p.value) {
+		case void =>
+			return syn(ctx, "void", synkind::KEYWORD)?;
 		case ast::_null =>
 			return syn(ctx, "null", synkind::KEYWORD)?;
 		case done =>
@@ -594,7 +593,32 @@ fn literal(
 				return syn(ctx, fmt::bsprintf(buf, "'{}'", r)!,
 					synkind::RUNE_STRING)?;
 			};
+		case let num: (u64 | f64) =>
+			yield num;
 		};
+		let suff = switch (p.storage) {
+		case ast::builtin_type::F32 => yield "f32";
+		case ast::builtin_type::F64 => yield "f64";
+		case ast::builtin_type::FCONST =>
+			let s = fmt::asprintf("{:F.}", p.value as f64)?;
+			defer free(s);
+			return syn(ctx, s, synkind::NUMBER)?;
+		case ast::builtin_type::I16 => yield "i16";
+		case ast::builtin_type::I32 => yield "i32";
+		case ast::builtin_type::I64 => yield "i64";
+		case ast::builtin_type::I8 => yield "i8";
+		case ast::builtin_type::ICONST => yield "";
+		case ast::builtin_type::INT => yield "i";
+		case ast::builtin_type::SIZE => yield "z";
+		case ast::builtin_type::U16 => yield "u16";
+		case ast::builtin_type::U32 => yield "u32";
+		case ast::builtin_type::U64 => yield "u64";
+		case ast::builtin_type::U8 => yield "u8";
+		case ast::builtin_type::UINT => yield "u";
+		case => abort(); // Invariant
+		};
+		let s = fmt::asprintf("{}{}", val, suff)?;
+		return syn(ctx, s, synkind::NUMBER)?;
 	case let ac: ast::array_literal =>
 		let z = syn(ctx, "[", synkind::PUNCTUATION)?;
 		for (let i = 0z; i < len(ac.values); i += 1) {
@@ -609,42 +633,6 @@ fn literal(
 		};
 		z += syn(ctx, "]", synkind::PUNCTUATION)?;
 		return z;
-	case let v: ast::number_literal =>
-		const s = switch (v.suff) {
-		case ltok::LIT_U8 =>
-			yield fmt::asprintf("{}u8", v.value)?;
-		case ltok::LIT_U16 =>
-			yield fmt::asprintf("{}u16", v.value)?;
-		case ltok::LIT_U32 =>
-			yield fmt::asprintf("{}u32", v.value)?;
-		case ltok::LIT_U64 =>
-			yield fmt::asprintf("{}u64", v.value)?;
-		case ltok::LIT_UINT =>
-			yield fmt::asprintf("{}u", v.value)?;
-		case ltok::LIT_SIZE =>
-			yield fmt::asprintf("{}z", v.value)?;
-		case ltok::LIT_I8 =>
-			yield fmt::asprintf("{}i8", v.value)?;
-		case ltok::LIT_I16 =>
-			yield fmt::asprintf("{}i16", v.value)?;
-		case ltok::LIT_I32 =>
-			yield fmt::asprintf("{}i32", v.value)?;
-		case ltok::LIT_I64 =>
-			yield fmt::asprintf("{}i64", v.value)?;
-		case ltok::LIT_INT =>
-			yield fmt::asprintf("{}i", v.value)?;
-		case ltok::LIT_ICONST =>
-			yield fmt::asprint(v.value)?;
-		case ltok::LIT_FCONST =>
-			yield fmt::asprintf("{:F.}", v.value)?;
-		case ltok::LIT_F32 =>
-			yield fmt::asprintf("{}f32", v.value)?;
-		case ltok::LIT_F64 =>
-			yield fmt::asprintf("{}f64", v.value)?;
-		case => abort();
-		};
-		defer free(s);
-		return syn(ctx, s, synkind::NUMBER)?;
 	case let sc: ast::struct_literal =>
 		return struct_literal(ctx, syn, sc)?;
 	case let tu: ast::tuple_literal =>
@@ -946,8 +934,8 @@ fn case_exprs(
 			z += syn(ctx, ";", synkind::PUNCTUATION)?;
 			return z;
 		};
-	case let e: ast::value =>
-		if (e is void) {
+	case let e: ast::plain_literal =>
+		if (e.storage == ast::builtin_type::VOID) {
 			z += space(ctx)?;
 			{
 				ctx.stack = &stack {

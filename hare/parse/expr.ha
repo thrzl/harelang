@@ -534,55 +534,52 @@ fn cast(lexer: *lex::lexer, lvalue: (ast::expr | void)) (ast::expr | error) = {
 
 fn literal(lexer: *lex::lexer) (ast::expr | error) = {
 	const tok = want(lexer)?;
-	const expr: ast::literal_expr = switch (tok.0) {
-	case ltok::LIT_RCONST, ltok::LIT_STR =>
-		yield tok.1 as (rune | str);
-	case ltok::LIT_U8, ltok::LIT_U16, ltok::LIT_U32, ltok::LIT_U64,
-		ltok::LIT_UINT, ltok::LIT_SIZE =>
-		yield ast::number_literal {
-			suff = tok.0,
-			value = tok.1 as u64,
-			sign = false,
-		};
-	case ltok::LIT_I8, ltok::LIT_I16, ltok::LIT_I32, ltok::LIT_I64,
-		ltok::LIT_INT =>
-		const n = tok.1 as u64;
-		yield ast::number_literal {
-			suff = tok.0,
-			value = n: i64,
-			sign = false,
-		};
-	case ltok::LIT_ICONST =>
-		const n = tok.1 as u64;
-		yield ast::number_literal {
-			suff = tok.0,
-			value = if (n <= types::I64_MAX: u64) n: i64 else n,
-			sign = false,
-		};
-	case ltok::LIT_F32, ltok::LIT_F64, ltok::LIT_FCONST =>
-		yield ast::number_literal {
-			suff = tok.0,
-			value = tok.1 as f64,
-			sign = false,
-		};
+	let val: ast::value = tok.1;
+	const stor = switch (tok.0) {
+	case ltok::LIT_RCONST => yield ast::builtin_type::RCONST;
+	case ltok::LIT_STR => yield ast::builtin_type::STR;
+	case ltok::LIT_U8 => yield ast::builtin_type::U8;
+	case ltok::LIT_U16 => yield ast::builtin_type::U16;
+	case ltok::LIT_U32 => yield ast::builtin_type::U32;
+	case ltok::LIT_U64 => yield ast::builtin_type::U64;
+	case ltok::LIT_UINT => yield ast::builtin_type::UINT;
+	case ltok::LIT_SIZE => yield ast::builtin_type::SIZE;
+	case ltok::LIT_I8 => yield ast::builtin_type::I8;
+	case ltok::LIT_I16 => yield ast::builtin_type::I16;
+	case ltok::LIT_I32 => yield ast::builtin_type::I32;
+	case ltok::LIT_I64 => yield ast::builtin_type::I64;
+	case ltok::LIT_INT => yield ast::builtin_type::INT;
+	case ltok::LIT_ICONST => yield ast::builtin_type::ICONST;
+	case ltok::LIT_F32 => yield ast::builtin_type::F32;
+	case ltok::LIT_F64 => yield ast::builtin_type::F64;
+	case ltok::LIT_FCONST => yield ast::builtin_type::FCONST;
 	case ltok::VOID =>
-		yield void;
+		val = void;
+		yield ast::builtin_type::VOID;
 	case ltok::NOMEM =>
-		yield nomem;
+		val = nomem;
+		yield ast::builtin_type::NOMEM;
 	case ltok::DONE =>
-		yield done;
+		val = done;
+		yield ast::builtin_type::DONE;
 	case ltok::TRUE =>
-		yield true;
+		val = true;
+		yield ast::builtin_type::BOOL;
 	case ltok::FALSE =>
-		yield false;
+		val = false;
+		yield ast::builtin_type::BOOL;
 	case ltok::NULL =>
-		yield ast::_null;
+		val = ast::_null;
+		yield ast::builtin_type::NULL;
 	case =>
 		return syntaxerr(lex::mkloc(lexer), "Expected literal expression");
 	};
 	return ast::expr {
 		loc = loc_from(lexer, tok.2),
-		expr = expr,
+		expr = ast::plain_literal {
+			storage = stor,
+			value = val,
+		},
 	};
 };
 
@@ -1174,9 +1171,11 @@ fn postfix_dot(
 	case void =>
 		let lit = literal(lexer)?;
 		let val = lit.expr as ast::literal_expr;
-		synassert(lex::mkloc(lexer), val is ast::number_literal,
+		synassert(lex::mkloc(lexer), val is ast::plain_literal,
 			"Expected integer literal")?;
-		let val = val as ast::number_literal;
+		let val = val as ast::plain_literal;
+		synassert(lex::mkloc(lexer), val.value is u64,
+			"Expected integer literal")?;
 		return ast::expr {
 			loc = loc_from(lexer, lvalue.loc.start),
 			expr = ast::access_tuple {
@@ -1369,41 +1368,12 @@ fn unarithm(lexer: *lex::lexer) (ast::expr | error) = {
 	};
 
 	const operand = unarithm(lexer)?;
-	const expr = :blk {
-		if (op == ast::unarithm_op::MINUS) match (operand.expr) {
-		case let c: ast::literal_expr =>
-			match (c) {
-			case let n: ast::number_literal =>
-				let sign = false;
-				const val = match (n.value) {
-				case let i: i64 =>
-					sign = i < 0;
-					yield -i;
-				case let u: u64 => void;
-				case let f: f64 =>
-					sign = math::signf64(f) < 0;
-					yield -f;
-				};
-
-				if (val is void) yield;
-				yield :blk, ast::number_literal {
-					suff = n.suff,
-					value = val as (i64 | f64),
-					sign = sign,
-				}: ast::literal_expr;
-			case => void;
-			};
-		case => void;
-		};
-
-		yield ast::unarithm_expr {
-			op = op,
-			operand = alloc(operand)!,
-		};
-	};
 	return ast::expr {
 		loc = loc_from(lexer, tok.2),
-		expr = expr,
+		expr = ast::unarithm_expr {
+			op = op,
+			operand = alloc(operand)!,
+		},
 	};
 };
 

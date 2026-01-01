@@ -49,7 +49,10 @@ export fn decl(
 	case let g: ast::decl_global =>
 		if (len(g.symbol) != 0) {
 			n += syn(&ctx, "@symbol(", synkind::ATTRIBUTE)?;
-			n += literal(&ctx, syn, g.symbol)?;
+			n += literal(&ctx, syn, ast::plain_literal {
+				storage = ast::builtin_type::STR,
+				value = g.symbol,
+			})?;
 			n += syn(&ctx, ")", synkind::ATTRIBUTE)?;
 			n += space(&ctx)?;
 		} else if (g.is_threadlocal) {
@@ -116,7 +119,10 @@ export fn decl(
 		let p = f.prototype.repr as ast::func_type;
 		if (len(f.symbol) != 0) {
 			n += syn(&ctx, "@symbol(", synkind::ATTRIBUTE)?;
-			n += literal(&ctx, syn, f.symbol)?;
+			n += literal(&ctx, syn, ast::plain_literal {
+				storage = ast::builtin_type::STR,
+				value = f.symbol,
+			})?;
 			n += syn(&ctx, ")", synkind::ATTRIBUTE)?;
 			n += space(&ctx)?;
 		};
@@ -202,7 +208,10 @@ fn decl_test(d: *ast::decl, expected: str) bool = {
 	};
 	let expr_void = ast::expr {
 		loc = loc,
-		expr = void: ast::literal_expr,
+		expr = ast::plain_literal {
+			storage = ast::builtin_type::VOID,
+			value = void,
+		},
 	};
 
 	let d = ast::decl {
@@ -273,10 +282,9 @@ fn decl_test(d: *ast::decl, expected: str) bool = {
 				name = "",
 				_type = &type_int,
 				default_value = ast::expr {
-					expr = ast::number_literal {
+					expr = ast::plain_literal {
+						storage = ast::builtin_type::ICONST,
 						value = 4u64,
-						sign = false,
-						suff = lex::ltok::LIT_ICONST,
 					},
 					...
 				},

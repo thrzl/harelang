@@ -244,19 +244,17 @@ export type tuple_literal = []*expr;
 // The value "null".
 export type _null = void;
 
-// A scalar value.
-export type value = (bool | done | nomem |_null | str | rune | void);
+// The contents of a plain literal.
+export type value = (...lex::value | bool | done | nomem | _null);
 
-// An integer or float literal.
-export type number_literal = struct {
-	suff: lex::ltok,
-	value: (i64 | u64 | f64),
-	sign: bool, // true if negative, false otherwise
+// A plain literal.
+export type plain_literal = struct {
+	storage: builtin_type,
+	value: value,
 };
 
 // A literal expression.
-export type literal_expr = (value | array_literal | number_literal |
-	struct_literal | tuple_literal);
+export type literal_expr = (plain_literal | array_literal | struct_literal | tuple_literal);
 
 // A continue expression. The label is set to empty string if absent.
 //
@@ -566,9 +564,12 @@ export fn expr_finish(e: nullable *expr) void = {
 					free(t[i]);
 				};
 				free(t);
-			case let s: str =>
-				free(s);
-			case (value | number_literal) => void;
+			case let v: plain_literal =>
+				match (v.value) {
+				case let s: str =>
+					free(s);
+				case => void;
+				};
 			};
 		case let c: continue_expr =>
 			free(c);

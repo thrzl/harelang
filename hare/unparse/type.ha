@@ -346,7 +346,10 @@ fn type_test(t: *ast::_type, expected: str) void = {
 	};
 	let expr_void = ast::expr {
 		loc = loc,
-		expr = void: ast::literal_expr,
+		expr = ast::plain_literal {
+			storage = ast::builtin_type::VOID,
+			value = void,
+		},
 	};
 
 	type_test(&t, "!foo::bar");
