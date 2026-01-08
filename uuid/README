@@ -1,4 +1,4 @@
-uuid: RFC 9562-compatible Univerally Unique IDentifiers.
+uuid: RFC 9562-compatible Universally Unique IDentifiers.
 
 This module only generates UUID4, aka "truly random" UUIDs, due to privacy
 concerns.
