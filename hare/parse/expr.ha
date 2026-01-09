@@ -10,7 +10,7 @@ use types;
 
 // Parses an initializer.
 export fn initializer(lexer: *lex::lexer) (ast::expr | error) = {
-	const loc = lex::mkloc(lexer);
+	const loc = mkloc(lexer);
 	if (try(lexer, ltok::ATTR_UNDEFINED)? is lex::token) {
 		return ast::expr {
 			loc = loc_from(lexer, loc),
@@ -22,7 +22,7 @@ export fn initializer(lexer: *lex::lexer) (ast::expr | error) = {
 
 // Parses an expression.
 export fn expr(lexer: *lex::lexer) (ast::expr | error) = {
-	const loc = lex::mkloc(lexer);
+	const loc = mkloc(lexer);
 
 	// All assignment-op tokens
 	const atoks: []ltok = [
@@ -77,7 +77,7 @@ export fn expr(lexer: *lex::lexer) (ast::expr | error) = {
 	case =>
 		yield false;
 	};
-	synassert(lex::mkloc(lexer), is_obj_selector,
+	synassert(mkloc(lexer), is_obj_selector,
 		"Expected an object-selector, pointer dereference, or slice for assignment target")?;
 	const ex = ast::assign_expr {
 		op = switch (tok.0) {
@@ -337,7 +337,7 @@ fn binding_unpack(lexer: *lex::lexer) ([]str | error) = {
 };
 
 fn binding(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
-	const loc = lex::mkloc(lexer);
+	const loc = mkloc(lexer);
 	const tok = want(lexer, ltok::DEF, ltok::CONST, ltok::LET)?.0;
 	const kind = switch (tok) {
 	case ltok::DEF =>
@@ -361,7 +361,7 @@ fn binding(lexer: *lex::lexer, is_static: bool) (ast::expr | error) = {
 			yield [];
 		case ltok::LPAREN =>
 			if (kind == ast::binding_kind::DEF) {
-				return syntaxerr(lex::mkloc(lexer),
+				return syntaxerr(mkloc(lexer),
 					"Can't use tuple unpacking with def");
 			};
 			yield binding_unpack(lexer)?;
@@ -572,7 +572,7 @@ fn literal(lexer: *lex::lexer) (ast::expr | error) = {
 		val = ast::_null;
 		yield ast::builtin_type::NULL;
 	case =>
-		return syntaxerr(lex::mkloc(lexer), "Expected literal expression");
+		return syntaxerr(mkloc(lexer), "Expected literal expression");
 	};
 	return ast::expr {
 		loc = loc_from(lexer, tok.2),
@@ -697,7 +697,7 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 	want(lexer, ltok::LPAREN)?;
 
 	let kind = void: (ast::for_kind | void);
-	let predicate_loc = lex::mkloc(lexer);
+	let predicate_loc = mkloc(lexer);
 
 	const bindings = match (try(lexer, ltok::LET, ltok::CONST)?) {
 	case let tok: lex::token =>
@@ -747,7 +747,7 @@ fn for_expr(lexer: *lex::lexer) (ast::expr | error) = {
 			} else if (kind as ast::for_kind !=
 					ast::for_kind::ACCUMULATOR
 					|| tok != ltok::EQUAL) {
-				return syntaxerr(lex::mkloc(lexer),
+				return syntaxerr(mkloc(lexer),
 					"Cannot create multiple bindings in for-each loop");
 			};
 
@@ -889,14 +889,14 @@ fn indexing(lexer: *lex::lexer, lvalue: ast::expr) (ast::expr | error) = {
 
 fn objsel(lexer: *lex::lexer) (ast::expr | error) = {
 	let expr = postfix(lexer, void)?;
-	synassert(lex::mkloc(lexer), expr.expr is ast::access_expr,
+	synassert(mkloc(lexer), expr.expr is ast::access_expr,
 		"Expected object selector")?;
 	return expr;
 };
 
 fn idxexpr(lexer: *lex::lexer) (ast::expr | error) = {
 	const expr = postfix(lexer, void)?;
-	synassert(lex::mkloc(lexer), expr.expr is ast::access_expr
+	synassert(mkloc(lexer), expr.expr is ast::access_expr
 		&& expr.expr as ast::access_expr is ast::access_index,
 		"Expected indexing expression")?;
 	return expr;
@@ -944,7 +944,7 @@ fn plain_expression(lexer: *lex::lexer) (ast::expr | error) = {
 			};
 		};
 	case =>
-		return syntaxerr(lex::mkloc(lexer),
+		return syntaxerr(mkloc(lexer),
 			"Unexpected {}, was expecting an expression",
 			lex::tokstr(tok));
 	};
@@ -1007,12 +1007,12 @@ fn plain_struct(
 			undefined = true;
 			// The rest of the autofill bits will run on the next
 			// pass after peek'ing the ...
-			synassert(lex::mkloc(lexer),
+			synassert(mkloc(lexer),
 				peek(lexer, ltok::ELLIPSIS)? is lex::token,
 				"Expected ... after @undefined struct initializer")?;
 			continue;
 		case ltok::ELLIPSIS =>
-			synassert(lex::mkloc(lexer), len(alias) != 0,
+			synassert(mkloc(lexer), len(alias) != 0,
 				"Cannot use auto-fill with anonymous struct")?;
 			autofill = true;
 			want(lexer, ltok::RBRACE)?;
@@ -1171,10 +1171,10 @@ fn postfix_dot(
 	case void =>
 		let lit = literal(lexer)?;
 		let val = lit.expr as ast::literal_expr;
-		synassert(lex::mkloc(lexer), val is ast::plain_literal,
+		synassert(mkloc(lexer), val is ast::plain_literal,
 			"Expected integer literal")?;
 		let val = val as ast::plain_literal;
-		synassert(lex::mkloc(lexer), val.value is u64,
+		synassert(mkloc(lexer), val.value is u64,
 			"Expected integer literal")?;
 		return ast::expr {
 			loc = loc_from(lexer, lvalue.loc.start),

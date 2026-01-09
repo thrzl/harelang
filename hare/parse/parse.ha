@@ -42,14 +42,14 @@ export fn want(lexer: *lex::lexer, want: lex::ltok...) (lex::token | error) = {
 	defer io::close(&buf)!;
 	for (let i = 0z; i < len(want); i += 1) {
 		const tstr = if (want[i] == ltok::NAME) "name"
-			else lex::tokstr((want[i], void, lex::mkloc(lexer)));
+			else lex::tokstr((want[i], void, mkloc(lexer)));
 		fmt::fprintf(&buf, "'{}'", tstr)!;
 		if (i + 1 < len(want)) {
 			fmt::fprint(&buf, ", ")!;
 		};
 	};
 	lex::unlex(lexer, tok);
-	return syntaxerr(lex::mkloc(lexer), "Unexpected '{}', was expecting {}",
+	return syntaxerr(mkloc(lexer), "Unexpected '{}', was expecting {}",
 		lex::tokstr(tok), memio::string(&buf)!);
 };
 
@@ -100,4 +100,15 @@ fn loc_from(lexer: *lex::lexer, start: lex::location) ast::location = {
 		start = start,
 		end = lex::prevloc(lexer),
 	};
+};
+
+fn mkloc(lexer: *lex::lexer) lex::location = {
+	let tok = match (lex::lex(lexer)) {
+	case let t: lex::token =>
+		yield t;
+	case lex::error =>
+		return lex::mkloc(lexer);
+	};
+	lex::unlex(lexer, tok);
+	return tok.2;
 };

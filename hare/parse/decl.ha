@@ -88,9 +88,9 @@ fn decl_func(
 	sym: str,
 	attr: ast::fndecl_attr,
 ) (ast::decl_func | error) = {
-	let ident_loc = lex::mkloc(lexer);
+	let ident_loc = mkloc(lexer);
 	let ident = ident(lexer)?;
-	let proto_start = lex::mkloc(lexer);
+	let proto_start = mkloc(lexer);
 	let prototype = prototype(lexer)?;
 	let proto_end = lex::prevloc(lexer);
 
@@ -126,7 +126,7 @@ fn decl_func(
 
 // Parses a declaration.
 export fn decl(lexer: *lex::lexer) (ast::decl | error) = {
-	const start = lex::mkloc(lexer);
+	const start = mkloc(lexer);
 	let comment = "";
 	if (try(lexer, ltok::STATIC)? is lex::token) {
 		comment = lex::comment(lexer);
@@ -208,7 +208,7 @@ export fn decl(lexer: *lex::lexer) (ast::decl | error) = {
 		exported = exported,
 		loc = ast::location {
 			start = start,
-			end = lex::mkloc(lexer),
+			end = mkloc(lexer),
 		},
 		decl = decl,
 		docs = comment,
