@@ -124,6 +124,7 @@ export fn move(fs: *fs, oldpath: str, newpath: str) (void | error) = {
 	// - Move non-regular files
 	let st = stat(fs, oldpath)?;
 	assert(isfile(st.mode), "TODO: move non-regular files");
+	st.mode &= 0o7777;
 	let old = open(fs, oldpath)?;
 	let new = match (create(fs, newpath, st.mode)) {
 	case let h: io::handle =>
