@@ -62,4 +62,8 @@ fn hashtable_insert(item: *mimetype) (void | nomem) = {
 	};
 	free(heap_db);
 	free(static_db);
+	for (let i = 0z; i < MIME_BUCKETS; i += 1) {
+		free(mimetable[i]);
+		free(exttable[i]);
+	};
 };
