@@ -265,8 +265,15 @@ fn _gather(
 	let deps: [](size, ast::ident) = alloc([], len(depids))!;
 
 	for (let depid .. depids) {
-		static append(deps, (_gather(ctx, out, stack,
-					depid, true, required)?, depid))!;
+		match (_gather(ctx, out, stack, depid, true, required)) {
+		case let s: size =>
+			static append(deps, (s, depid))!;
+		case let e: error =>
+			if (unwrap_error(e) is not_found) {
+				return depid: dep_missing;
+			};
+			return e;
+		};
 	};
 
 	append(out, module {

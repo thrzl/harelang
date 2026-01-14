@@ -23,6 +23,9 @@ export type tag_bad_format = !void;
 // A dependency cycle error.
 export type dep_cycle = ![]str;
 
+// A module dependency was not found.
+export type dep_missing = !ast::ident;
+
 // Two files in a module have the same basename and extension, and the
 // same number of compatible tags with the input tagset, so it is unknown
 // which should be used.
@@ -42,6 +45,7 @@ export type error = !(
 	file_conflict |
 	not_found |
 	dep_cycle |
+	dep_missing |
 	tag_has_dot |
 	tag_bad_format |
 	errcontext |
@@ -128,6 +132,10 @@ fn _strerror(e: error, buf: *memio::stream) void = {
 	case let e: dep_cycle =>
 		memio::concat(buf, "Dependency cycle: ")!;
 		memio::join(buf, " -> ", e...)!;
+		return;
+	case let e: dep_missing =>
+		memio::concat(buf, "Dependency missing: ",
+			unparse::identstr(e))!;
 		return;
 	case let e: file_conflict =>
 		memio::concat(buf, "File conflict: ")!;
