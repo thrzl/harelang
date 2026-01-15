@@ -35,7 +35,7 @@ export type resource = enum int {
 	NPROC = rt::RLIMIT_NPROC,
 	// Maximum socket buffer size per user ID (FreeBSD)
 	SBSIZE = rt::RLIMIT_SBSIZE,
-	// Maximum psuedo-terminals per user ID (FreeBSD)
+	// Maximum pseudo-terminals per user ID (FreeBSD)
 	NPTS = rt::RLIMIT_NPTS,
 	// Maximum swap space per user ID (FreeBSD)
 	SWAP = rt::RLIMIT_SWAP,
