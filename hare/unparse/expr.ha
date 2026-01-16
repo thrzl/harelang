@@ -618,6 +618,7 @@ fn literal(
 		case => abort(); // Invariant
 		};
 		let s = fmt::asprintf("{}{}", val, suff)?;
+		defer free(s);
 		return syn(ctx, s, synkind::NUMBER)?;
 	case let ac: ast::array_literal =>
 		let z = syn(ctx, "[", synkind::PUNCTUATION)?;
