@@ -33,8 +33,7 @@ export fn dirname(path: const str) const str = {
 
 // A POSIX-compliant implementation of basename. See the POSIX specification
 // for more information. Note that this function does *not* normalize the
-// input. The return value is either borrowed from the input or statically
-// allocated; use [[strings::dup]] to extend its lifetime.
+// input. The return value is borrowed from the input string.
 export fn basename(path: const str) const str = {
 	let path = strings::toutf8(path);
 	if (len(path) == 0) return ".";
