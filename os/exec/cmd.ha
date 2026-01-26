@@ -177,8 +177,8 @@ export fn chdir(cmd: *command, dir: str) void = {
 	cmd.dir = dir;
 };
 
-// Similar to [[lookup]] but TOCTOU-proof
-fn lookup_open(name: str) (platform_cmd | void | error) = {
+// Similar to [[lookup]] but TOCTOU-proof.
+fn lookup_open(name: str, path: str = "") (platform_cmd | void | error) = {
 	static let buf = path::buffer { ... };
 	path::set(&buf)!;
 
@@ -192,11 +192,13 @@ fn lookup_open(name: str) (platform_cmd | void | error) = {
 		};
 	};
 
-	const path = match (os::getenv("PATH")) {
-	case void =>
-		return;
-	case let s: str =>
-		yield s;
+	if (path == "") {
+		match (os::getenv("PATH")) {
+		case void =>
+			return;
+		case let s: str =>
+			path = s;
+		};
 	};
 
 	let tok = strings::tokenize(path, ":");
@@ -214,12 +216,14 @@ fn lookup_open(name: str) (platform_cmd | void | error) = {
 	};
 };
 
-// Looks up an executable by name in the system PATH. The return value is
-// statically allocated.
+// Looks up an executable by name in the path. Consults the $PATH environment
+// variable if no path argument is provided.
 //
 // The use of this function is lightly discouraged if [[cmd]] is suitable;
 // otherwise you may have a TOCTOU issue.
-export fn lookup(name: str) (str | fs::error) = {
+//
+// The return value is statically allocated.
+export fn lookup(name: str, path: str = "") (str | fs::error) = {
 	static let buf = path::buffer { ... };
 	path::set(&buf)!;
 
@@ -237,11 +241,13 @@ export fn lookup(name: str) (str | fs::error) = {
 		};
 	};
 
-	const path = match (os::getenv("PATH")) {
-	case let s: str =>
-		yield s;
-	case void =>
-		return errors::noentry;
+	if (path == "") {
+		match (os::getenv("PATH")) {
+		case void =>
+			return errors::noentry;
+		case let s: str =>
+			path = s;
+		};
 	};
 
 	let tok = strings::tokenize(path, ":");
