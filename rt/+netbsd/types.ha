@@ -340,6 +340,7 @@ export def TIOCGETA: u64 = 0x402c7413;
 export def TIOCSETA: u64 = 0x802c7414;
 export def TIOCPTSNAME: u64 = 0x48087448;
 export def TIOCSPGRP: u64 = 0x80047476;
+export def TIOCGPGRP: u64 = 0x40047477;
 export def FIODGNAME: u64 = 0x80106678;
 
 export type ptmget = struct {

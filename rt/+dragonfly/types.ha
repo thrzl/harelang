@@ -301,6 +301,7 @@ export def TIOCGETA: u64 = 0x402c7413;		// get termios struct
 export def TIOCSETA: u64 = 0x802c7414;		// set termios struct
 export def TIOCISPTMASTER: u64 = 0x20007455;	// is pty master
 export def TIOCSPGRP: u64 = 0x80047476;		// set pgrp on tty
+export def TIOCGPGRP: u64 = 0x40047477;		// get pgrp on tty
 export def FIODNAME: u64 = 0x80106678;		// get name of device on that fildesc
 
 // argument for ioctl FIODNAME
