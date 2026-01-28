@@ -66,11 +66,21 @@ fn rusage(st: *status, ru: *rt::rusage) void = {
 	st.rusage.nivcsw = ru.ru_nivcsw;
 };
 
+// Flags accepted by the [[wait]] family of functions.
+export type wait_flag = enum int {
+	NONE = 0,
+	CONTINUED = rt::WCONTINUED,
+	UNTRACED = rt::WUNTRACED,
+};
+
 // Waits for a process to complete, then returns its status information.
-export fn wait(proc: *process) (status | error) = {
+export fn wait(
+	proc: *process,
+	flags: wait_flag = wait_flag::NONE,
+) (status | error) = {
 	let ru = rt::rusage { ... };
 	let st = status { ... };
-	match (rt::wait4(*proc, &st.status, 0, &ru)) {
+	match (rt::wait4(*proc, &st.status, flags, &ru)) {
 	case let err: rt::errno =>
 		return errors::errno(err);
 	case let pid: rt::pid_t =>
@@ -82,10 +92,12 @@ export fn wait(proc: *process) (status | error) = {
 
 // Waits for the first child process to complete, then returns its process info
 // and status
-export fn waitany() ((process, status) | error) = {
+export fn waitany(
+	flags: wait_flag = wait_flag::NONE,
+) ((process, status) | error) = {
 	let ru = rt::rusage { ... };
 	let st = status { ... };
-	match (rt::wait4(rt::WAIT_ANY, &st.status, 0, &ru)) {
+	match (rt::wait4(rt::WAIT_ANY, &st.status, flags, &ru)) {
 	case let err: rt::errno =>
 		return errors::errno(err);
 	case let pid: rt::pid_t =>
@@ -120,10 +132,13 @@ export fn waitall() (uint | error | !(process, exit_status)) = {
 
 // Checks for process completion, returning its status information on
 // completion, or void if it is still running.
-export fn peek(proc: *process) (status | void | error) = {
+export fn peek(
+	proc: *process,
+	flags: wait_flag = wait_flag::NONE,
+) (status | void | error) = {
 	let ru = rt::rusage { ... };
 	let st = status { ... };
-	match (rt::wait4(*proc, &st.status, rt::WNOHANG, &ru)) {
+	match (rt::wait4(*proc, &st.status, rt::WNOHANG | flags, &ru)) {
 	case let err: rt::errno =>
 		return errors::errno(err);
 	case let pid: rt::pid_t =>
@@ -140,10 +155,12 @@ export fn peek(proc: *process) (status | void | error) = {
 
 // Checks if any child process has completed, returning its process info and
 // status if so.
-export fn peekany() ((process, status) | void | error) = {
+export fn peekany(
+	flags: wait_flag = wait_flag::NONE,
+) ((process, status) | void | error) = {
 	let ru = rt::rusage { ... };
 	let st = status { ... };
-	match (rt::wait4(rt::WAIT_ANY, &st.status, rt::WNOHANG, &ru)) {
+	match (rt::wait4(rt::WAIT_ANY, &st.status, rt::WNOHANG | flags, &ru)) {
 	case let err: rt::errno =>
 		return errors::errno(err);
 	case let pid: rt::pid_t =>
