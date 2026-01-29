@@ -220,7 +220,7 @@ $(HARECACHE)/shlex.ssa: $(shlex_ha) $(HARECACHE)/ascii.td $(HARECACHE)/encoding_
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/shlex.td.tmp -N shlex $(shlex_ha)
 
 unix_tty_ha = unix/tty/+dragonfly/isatty.ha unix/tty/+dragonfly/open.ha unix/tty/+dragonfly/pgid.ha unix/tty/+dragonfly/pty.ha unix/tty/+dragonfly/termios.ha unix/tty/+dragonfly/winsize.ha unix/tty/types.ha
-$(HARECACHE)/unix_tty.ssa: $(unix_tty_ha) $(HARECACHE)/errors.td $(HARECACHE)/fmt.td $(HARECACHE)/fs.td $(HARECACHE)/io.td $(HARECACHE)/os.td $(HARECACHE)/os_exec.td $(HARECACHE)/rt.td $(HARECACHE)/types_c.td
+$(HARECACHE)/unix_tty.ssa: $(unix_tty_ha) $(HARECACHE)/errors.td $(HARECACHE)/fmt.td $(HARECACHE)/fs.td $(HARECACHE)/io.td $(HARECACHE)/os.td $(HARECACHE)/rt.td $(HARECACHE)/types_c.td $(HARECACHE)/unix.td
 	@mkdir -p -- "$(HARECACHE)"
 	@printf 'HAREC\t%s\n' "$@"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/unix_tty.td.tmp -N unix::tty $(unix_tty_ha)
