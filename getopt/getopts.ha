@@ -151,7 +151,7 @@ export fn tryparse(args: []str, help: help...) (command | error | nomem) = {
 			};
 			if (found) continue;
 			if (r =='h') {
-				printhelp(os::stderr, args[0], help)!;
+				printhelp(os::stdout, args[0], help)!;
 				os::exit(os::status::SUCCESS);
 			};
 			return (args[0], help, r: unknown_option): error;
