@@ -108,7 +108,7 @@ $(HARECACHE)/std/types_c.ssa: $(types_c_ha) $(HARECACHE)/std/encoding_utf8.td $(
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/types_c.td.tmp -N types::c $(types_c_ha)
 
-os_ha = os/+darwin/dirfdfs.ha os/+darwin/exit.ha os/+darwin/fcntl.ha os/+darwin/fs.ha os/+darwin/platform_environ.ha os/+darwin/shm.ha os/+darwin/status.ha os/+darwin/stdfd.ha os/environ.ha os/os.ha
+os_ha = os/+darwin/dirfdfs.ha os/+darwin/exit.ha os/+darwin/fcntl.ha os/+darwin/fs.ha os/+darwin/platform_environ.ha os/+darwin/shm.ha os/+darwin/status.ha os/+darwin/stdfd.ha os/bufio.ha os/environ.ha os/os.ha
 $(HARECACHE)/std/os.ssa: $(os_ha) $(HARECACHE)/std/bufio.td $(HARECACHE)/std/encoding_utf8.td $(HARECACHE)/std/errors.td $(HARECACHE)/std/fs.td $(HARECACHE)/std/io.td $(HARECACHE)/std/path.td $(HARECACHE)/std/rt.td $(HARECACHE)/std/strings.td $(HARECACHE)/std/time.td $(HARECACHE)/std/types_c.td
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/os.td.tmp -N os $(os_ha)
@@ -184,7 +184,7 @@ $(HARECACHE)/std/unix_tty.ssa: $(unix_tty_ha) $(HARECACHE)/std/errors.td $(HAREC
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/unix_tty.td.tmp -N unix::tty $(unix_tty_ha)
 
 cmd_hare_build_ha = cmd/hare/build/gather.ha cmd/hare/build/platform.ha cmd/hare/build/queue.ha cmd/hare/build/types.ha cmd/hare/build/util.ha
-$(HARECACHE)/std/cmd_hare_build.ssa: $(cmd_hare_build_ha) $(HARECACHE)/std/crypto_sha256.td $(HARECACHE)/std/encoding_hex.td $(HARECACHE)/std/fmt.td $(HARECACHE)/std/fs.td $(HARECACHE)/std/hare_ast.td $(HARECACHE)/std/hare_module.td $(HARECACHE)/std/hare_unparse.td $(HARECACHE)/std/hash.td $(HARECACHE)/std/io.td $(HARECACHE)/std/memio.td $(HARECACHE)/std/os.td $(HARECACHE)/std/os_exec.td $(HARECACHE)/std/path.td $(HARECACHE)/std/shlex.td $(HARECACHE)/std/sort.td $(HARECACHE)/std/strings.td $(HARECACHE)/std/time.td $(HARECACHE)/std/unix_tty.td
+$(HARECACHE)/std/cmd_hare_build.ssa: $(cmd_hare_build_ha) $(HARECACHE)/std/crypto_sha256.td $(HARECACHE)/std/encoding_hex.td $(HARECACHE)/std/errors.td $(HARECACHE)/std/fmt.td $(HARECACHE)/std/fs.td $(HARECACHE)/std/hare_ast.td $(HARECACHE)/std/hare_module.td $(HARECACHE)/std/hare_unparse.td $(HARECACHE)/std/hash.td $(HARECACHE)/std/io.td $(HARECACHE)/std/memio.td $(HARECACHE)/std/os.td $(HARECACHE)/std/os_exec.td $(HARECACHE)/std/path.td $(HARECACHE)/std/shlex.td $(HARECACHE)/std/sort.td $(HARECACHE)/std/strings.td $(HARECACHE)/std/time.td $(HARECACHE)/std/unix_tty.td
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/cmd_hare_build.td.tmp -N cmd::hare::build $(cmd_hare_build_ha)
 
@@ -194,11 +194,11 @@ $(HARECACHE)/std/dirs.ssa: $(dirs_ha) $(HARECACHE)/std/errors.td $(HARECACHE)/st
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/dirs.td.tmp -N dirs $(dirs_ha)
 
 getopt_ha = getopt/getopts.ha
-$(HARECACHE)/std/getopt.ssa: $(getopt_ha) $(HARECACHE)/std/fmt.td $(HARECACHE)/std/io.td $(HARECACHE)/std/os.td $(HARECACHE)/std/strings.td
+$(HARECACHE)/std/getopt.ssa: $(getopt_ha) $(HARECACHE)/std/errors.td $(HARECACHE)/std/fmt.td $(HARECACHE)/std/io.td $(HARECACHE)/std/os.td $(HARECACHE)/std/strings.td
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/getopt.td.tmp -N getopt $(getopt_ha)
 
-cmd_hare_ha = cmd/hare/arch.ha cmd/hare/build.ha cmd/hare/cache.ha cmd/hare/deps.ha cmd/hare/error.ha cmd/hare/init+darwin.ha cmd/hare/main.ha cmd/hare/util.ha cmd/hare/version.ha
+cmd_hare_ha = cmd/hare/arch.ha cmd/hare/build.ha cmd/hare/cache.ha cmd/hare/deps.ha cmd/hare/error.ha cmd/hare/init+darwin.ha cmd/hare/main.ha cmd/hare/tool.ha cmd/hare/util.ha cmd/hare/version.ha
 $(HARECACHE)/std/cmd_hare.ssa: $(cmd_hare_ha) $(HARECACHE)/std/ascii.td $(HARECACHE)/std/bufio.td $(HARECACHE)/std/cmd_hare_build.td $(HARECACHE)/std/dirs.td $(HARECACHE)/std/errors.td $(HARECACHE)/std/fmt.td $(HARECACHE)/std/fs.td $(HARECACHE)/std/getopt.td $(HARECACHE)/std/hare_ast.td $(HARECACHE)/std/hare_lex.td $(HARECACHE)/std/hare_module.td $(HARECACHE)/std/hare_parse.td $(HARECACHE)/std/io.td $(HARECACHE)/std/memio.td $(HARECACHE)/std/os.td $(HARECACHE)/std/os_exec.td $(HARECACHE)/std/path.td $(HARECACHE)/std/shlex.td $(HARECACHE)/std/sort.td $(HARECACHE)/std/sort_cmp.td $(HARECACHE)/std/strconv.td $(HARECACHE)/std/strings.td $(HARECACHE)/std/time.td $(HARECACHE)/std/unix_tty.td
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/cmd_hare.td.tmp $(HARE_DEFINES)  $(cmd_hare_ha)
