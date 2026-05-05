@@ -103,6 +103,6 @@ fn to_native(addr: addr) (rt::sockaddr | invalid) = {
 			...
 		}
 	};
-	c::fromstr_buf(addr, ret.un.sun_path: []c::char);
+	c::fromstr_buf(addr, ret.un.sun_path: []c::char)!;
 	return ret;
 };
