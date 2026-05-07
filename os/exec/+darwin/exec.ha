@@ -2,6 +2,7 @@
 // (c) Hare authors <https://harelang.org>
 
 use errors;
+use fs;
 use io;
 use os;
 use rt;
@@ -65,7 +66,6 @@ fn open(path: str) (platform_cmd | error) = {
 	};
 	let success = false;
 	defer if (!success) rt::close(fd)!;
-	// match (rt::faccessat(fd, "", rt::X_OK, rt::AT_EMPTY_PATH)) {
 	match (rt::access(path, rt::X_OK)) {
 	case let err: rt::errno =>
 		return errors::errno(err);
@@ -88,30 +88,9 @@ fn open(path: str) (platform_cmd | error) = {
 	};
 	success = true;
 	return fd;
-
 };
 
-fn platform_finish(cmd: *command) void = rt::close(cmd.platform)!;
-
 fn platform_exec(cmd: *command) error = {
-	// We don't worry about freeing the return values from c::fromstr
-	// because once we exec(2) our heap is fried anyway
-	let argv: []nullable *const c::char = alloc([], len(cmd.argv) + 1z)!;
-	for (let arg .. cmd.argv) {
-		append(argv, c::fromstr(arg)!)!;
-	};
-	append(argv, null)!;
-
-	let envp: nullable *[*]nullable *const c::char = null;
-	if (len(cmd.env) != 0) {
-		let env: []nullable *const c::char = alloc([], len(cmd.env) + 1)!;
-		for (let e .. cmd.env) {
-			append(env, c::fromstr(e)!)!;
-		};
-		append(env, null)!;
-		envp = env: *[*]nullable *const c::char;
-	};
-
 	let need_devnull = false;
 	for (let file &.. cmd.files) {
 		const from = match (file.0) {
@@ -133,7 +112,7 @@ fn platform_exec(cmd: *command) error = {
 	};
 
 	const devnull: io::file = if (need_devnull) {
-		yield os::open("/dev/null")!;
+		yield os::open("/dev/null", fs::flag::RDWR)!;
 	} else -1;
 
 	for (let file .. cmd.files) {
@@ -168,14 +147,17 @@ fn platform_exec(cmd: *command) error = {
 		os::chdir(cmd.dir)?;
 	};
 
+	let envp: nullable *[*]nullable *const c::char = null;
+	if (len(cmd.env) > 1) {
+		envp = cmd.env: *[*]nullable *const c::char;
+	};
+
 	return errors::errno(rt::fexecve(cmd.platform,
-	// return errors::errno(rt::execve(argv[0]: *const char,
-		argv: *[*]nullable *const u8,
+		cmd.argv: *[*]nullable *const u8,
 		envp: *[*]nullable *const u8));
 };
 
 fn platform_start(cmd: *command) (process | errors::error) = {
-	// TODO: Let the user configure clone more to their taste (e.g. SIGCHLD)
 	let pipe: [2]int = [0...];
 	match (rt::pipe2(&pipe, rt::O_CLOEXEC)) {
 	case let err: rt::errno =>
@@ -183,8 +165,8 @@ fn platform_start(cmd: *command) (process | errors::error) = {
 	case void => void;
 	};
 
-	// pipe2 above is NOT actually pipe2, but pipe.
-	// So we apply the `FD_CLOEXEC` ourselves.
+	// pipe2 above is NOT actually pipe2 on Darwin, but pipe.
+	// So we apply the FD_CLOEXEC ourselves.
 	rt::fcntl(pipe[0], rt::F_SETFD, rt::FD_CLOEXEC): void;
 	rt::fcntl(pipe[1], rt::F_SETFD, rt::FD_CLOEXEC): void;
 
