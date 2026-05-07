@@ -6,4 +6,5 @@ _start:
 	leaq -8(%rsi), %rdi
 	call _rt.start_darwin
 
-; .include "rt/+darwin/@func-libc.s"
+# @func-libc.s is concatenated into rt_s by the platform Makefile;
+# no .include needed here.
