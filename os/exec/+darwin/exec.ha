@@ -167,8 +167,8 @@ fn platform_start(cmd: *command) (process | errors::error) = {
 
 	// pipe2 above is NOT actually pipe2 on Darwin, but pipe.
 	// So we apply the FD_CLOEXEC ourselves.
-	rt::fcntl(pipe[0], rt::F_SETFD, rt::FD_CLOEXEC): void;
-	rt::fcntl(pipe[1], rt::F_SETFD, rt::FD_CLOEXEC): void;
+	_ = rt::fcntl(pipe[0], rt::F_SETFD, rt::FD_CLOEXEC);
+	_ = rt::fcntl(pipe[1], rt::F_SETFD, rt::FD_CLOEXEC);
 
 	match (rt::fork()) {
 	case let err: rt::errno =>

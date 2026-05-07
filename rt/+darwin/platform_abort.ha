@@ -23,9 +23,9 @@ fn platform_abort(path: *str, line: u64, col: u64, msg: str) never = {
 		strvec(msg),
 		strvec("\n"),
 	];
-	writev(STDERR_FILENO, &iov, len(iov): int): void;
+	_ = writev(STDERR_FILENO, &iov, len(iov): int);
 
 	for (true) {
-		kill(getpid(), SIGABRT): void;
+		_ = kill(getpid(), SIGABRT);
 	};
 };

@@ -54,5 +54,5 @@ export def BUFSZ: size = 4096; // 4 KiB
 
 @fini fn fini_stdfd() void = {
 	// Flush any pending writes
-	io::close(stdout): void;
+	_ = io::close(stdout);
 };
