@@ -78,6 +78,11 @@ export fn slice(begin: *iterator, end: *iterator) str = {
 	return fromutf8_unsafe(utf8::slice(begin, end));
 };
 
+// Returns the byte-wise position of the iterator. When possible, it's generally
+// considered more idiomatic to use other functions in this module, such as
+// [[iterstr]] and [[slice]].
+export fn position(iter: *iterator) size = iter.dec.offs;
+
 @test fn iter() void = {
 	let s = iter("こんにちは");
 	assert(prev(&s) is done);

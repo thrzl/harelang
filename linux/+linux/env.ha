@@ -4,4 +4,4 @@
 use format::elf;
 
 // System V auxillary vector for the current process
-export let auxv: *[*]elf::auxv64 = null: *[*]elf::auxv64;
+export let auxv: *[*]elf::auxv64 = @undefined;

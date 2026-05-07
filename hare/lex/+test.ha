@@ -35,12 +35,13 @@ fn initstr(in: str, flags: flag = flag::NONE) lexer = {
 		path = "<test>",
 		line = 1234,
 		col = 1234,
+		off = 1234,
 	}));
 	let t = lex(&lexer) as token;
 	assert(t.0 == ltok::IF);
 	assert(t.1 is void);
 	assert(t.2.path == "<test>");
-	assert(t.2.line == 1234 && t.2.col == 1234);
+	assert(t.2.line == 1234 && t.2.col == 1234 && t.2.off == 1234);
 };
 
 fn vassert(expected: value, actual: value) void = {
@@ -91,6 +92,7 @@ fn loc(line: uint, col: uint) location = location {
 	path = "<test>",
 	line = line,
 	col = col,
+	off = 0,
 };
 
 @test fn lex1() void = {
@@ -337,6 +339,10 @@ fn loc(line: uint, col: uint) location = location {
 };
 
 @test fn invalid() void = {
+	// \r is not whitespace
+	let lexer = initbuf(['\r', '\n']);
+	const s = lex(&lexer) as error as syntax;
+
 	// Using \x80 within a string literal will cause this to output an
 	// empty string
 	let lexer = initbuf(['1', 0x80]);
@@ -357,6 +363,9 @@ fn loc(line: uint, col: uint) location = location {
 		// Regression: <X>e followed by another token used to cause a
 		// crash
 		("0e)", "expected exponent"),
+
+		(`'\U00110000'`, "invalid unicode codepoint in escape"),
+		(`'\uD800'`, "invalid unicode codepoint in escape"),
 
 		// Invalid digit separators
 		("1_", "Expected digit after separator"),
@@ -457,9 +466,9 @@ type op = enum {
 	for (let i = 0z; i < len(ops); i += 1) {
 		switch (ops[i]) {
 		case op::LEX =>
-			append(t, lex(&lexer)!);
+			append(t, lex(&lexer)!)!;
 		case op::NEXT =>
-			append(r, next(&lexer) as (rune, location));
+			append(r, next(&lexer) as (rune, location))!;
 		case op::UNGET =>
 			unget(&lexer, r[len(r) - 1].0);
 			delete(r[len(r) - 1]);
@@ -496,4 +505,89 @@ type op = enum {
 		(ltok::LIT_ICONST, 1, loc(1, 15)),
 	];
 	lextest(in, expected);
+};
+
+@test fn discard_basic_annotation() void = {
+	const in = `#[simple] void; #[simple::ident] void;`;
+	const expected: [_]token = [
+		(ltok::VOID, void, loc(1, 11)),
+		(ltok::SEMICOLON, void, loc(1, 15)),
+		(ltok::VOID, void, loc(1, 34)),
+		(ltok::SEMICOLON, void, loc(1, 38)),
+	];
+	lextest(in, expected);
+};
+
+@test fn discard_detailed_annotation() void = {
+	const in = `
+#[with::param(a, b, c)] void;
+#[with::nested::tokens(foo(bar[baz{bar}]))] void;
+`;
+	const expected: [_]token = [
+		(ltok::VOID, void, loc(2, 25)),
+		(ltok::SEMICOLON, void, loc(2, 29)),
+		(ltok::VOID, void, loc(3, 45)),
+		(ltok::SEMICOLON, void, loc(3, 49)),
+	];
+	lextest(in, expected);
+};
+
+@test fn annotation_callback() void = {
+	let items: []str = [];
+	defer strings::freeall(items);
+
+	const in = `#[sample::annotation(a b c)] void;`;
+	const lexer = initstr(in);
+	register_annotation(&lexer, ["sample", "annotation"],
+		&sample_annotation, &items);
+
+	for (true) {
+		const tok = match (lex(&lexer)) {
+		case let tok: token =>
+			yield tok;
+		case let err: error =>
+			fmt::errorln(strerror(err))!;
+			abort();
+		};
+		if (tok.0 == ltok::EOF) {
+			break;
+		};
+	};
+
+	assert(len(items) == 3);
+	assert(items[0] == "a");
+	assert(items[1] == "b");
+	assert(items[2] == "c");
+};
+
+fn sample_annotation(id: []str, l: *lexer, user: nullable *opaque) (void | error) = {
+	let items = user: *[]str;
+	assert(lex(l)!.0 == ltok::LPAREN);
+	append(items, lex(l)!.1 as str)!;
+	append(items, lex(l)!.1 as str)!;
+	append(items, lex(l)!.1 as str)!;
+	assert(lex(l)!.0 == ltok::RPAREN);
+	assert(lex(l)!.0 == ltok::RBRACKET);
+};
+
+@test fn save_restore() void = {
+	const lexer = initstr(`export fn main() void = void;`);
+	assert(lex(&lexer)!.0 == ltok::EXPORT);
+	assert(lex(&lexer)!.0 == ltok::FN);
+
+	let tok = lex(&lexer)!;
+	assert(tok.0 == ltok::NAME && tok.1 as str == "main");
+	let state = save(&lexer)!;
+
+	assert(lex(&lexer)!.0 == ltok::LPAREN);
+	assert(lex(&lexer)!.0 == ltok::RPAREN);
+	assert(lex(&lexer)!.0 == ltok::VOID);
+	assert(lex(&lexer)!.0 == ltok::EQUAL);
+
+	restore(&lexer, &state)!;
+
+	assert(lex(&lexer)!.0 == ltok::LPAREN);
+	assert(lex(&lexer)!.0 == ltok::RPAREN);
+	assert(lex(&lexer)!.0 == ltok::VOID);
+	assert(lex(&lexer)!.0 == ltok::EQUAL);
 };

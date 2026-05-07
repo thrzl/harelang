@@ -1,5 +1,4 @@
-math::checked provides safe integer arithmetic functions that check for
-overflow.
+checked: overflow-checked integer arithmetic
 
 The functions add*, sub* and mul* perform wrapping integer arithmetic, with the
 same semantics as the +, -, and * operators.

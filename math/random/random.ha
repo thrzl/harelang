@@ -5,10 +5,10 @@
 export type random = u64;
 
 // Initializes a pseudorandom number generator with a given seed. This seed will
-// yield the same sequence of psuedo-random numbers if used again.
+// yield the same sequence of pseudo-random numbers if used again.
 export fn init(seed: u64) random = seed;
 
-// Returns a psuedo-random 64-bit unsigned integer.
+// Returns a pseudo-random 64-bit unsigned integer.
 export fn next(r: *random) u64 = {
 	// SplitMix64
 	*r += 0x9e3779b97f4a7c15;

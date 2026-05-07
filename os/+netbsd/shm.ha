@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
-use bytes;
 use errors;
 use fs;
 use io;
@@ -50,7 +49,7 @@ fn shm_get_path(name: const str) (str | fs::error) = {
 		return errors::errno(rt::EINVAL): fs::error;
 
 	const _path = strings::concat(
-		rt::SHMFS_DIR_PATH, "/", rt::SHMFS_OBJ_PREFIX, name);
+		rt::SHMFS_DIR_PATH, "/", rt::SHMFS_OBJ_PREFIX, name)!;
 
 	if (len(_path) > path::MAX)
 		return errors::errno(rt::ENAMETOOLONG): fs::error;

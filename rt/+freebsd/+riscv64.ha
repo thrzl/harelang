@@ -31,10 +31,10 @@ export type siginfo = struct {
 	},
 };
 
-export type ucontext = struct {
+export type ucontext_t = struct {
 	uc_sigmask: sigset,
 	uc_mcontext: mcontext,
-	uc_link: *ucontext,
+	uc_link: *ucontext_t,
 	uc_stack: stack_t,
 	uc_flags: int,
 	__spare__: [4]int,

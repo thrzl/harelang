@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
-use bufio;
 use fmt;
 use io;
-use memio;
 use net::ip;
 use os;
 use strings;
@@ -44,8 +42,11 @@ export fn load() *config = {
 
 	match (parse(&cache, file)) {
 	case let err: error =>
-		fmt::errorfln("Error parsing /etc/resolv.conf: {}",
-			strerror(err)): void;
+		_ = fmt::errorfln("Error parsing /etc/resolv.conf: {}",
+			strerror(err));
+		return &cache;
+	case nomem =>
+		_ = fmt::errorfln("Error parsing /etc/resolv.conf: out of memory");
 		return &cache;
 	case void =>
 		cache_valid = true;
@@ -54,18 +55,19 @@ export fn load() *config = {
 };
 
 // Parses a resolv.conf-formatted file and populates the given config object.
-fn parse(conf: *config, in: io::handle) (void | error) = {
+fn parse(conf: *config, in: io::handle) (void | nomem | error) = {
 	const rd = read(in);
-	for (const param => next(&rd)!) {
+	defer finish(&rd);
+	for (const param => next(&rd)?) {
 		switch (param.name) {
 		case "nameserver" =>
-			append(conf.nameservers, param.value as ip::addr);
+			append(conf.nameservers, param.value as ip::addr)!;
 		case "search" =>
 			strings::freeall(conf.search);
-			conf.search = strings::dupall(param.value as []str);
+			conf.search = strings::dupall(param.value as []str)!;
 		case "sortlist" =>
 			free(conf.sortlist);
-			conf.sortlist = alloc((param.value as []ip::subnet)...);
+			conf.sortlist = alloc((param.value as []ip::subnet)...)!;
 		case "options" =>
 			conf.options = *(param.value as *options);
 		case => void;

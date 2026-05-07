@@ -1,3 +1,5 @@
+parse: parser for the Hare grammar
+
 hare::parse provides a parser for Hare source code. The [[subunit]] function
 will parse a single Hare source file and return a [[hare::ast::subunit]]. Other
 functions provide parsers for various important Hare sub-terminals, such as

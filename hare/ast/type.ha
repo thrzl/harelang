@@ -4,23 +4,20 @@
 use hare::lex;
 
 // A type alias.
-export type alias_type = struct {
-	unwrap: bool,
-	ident: ident,
-};
+export type alias_type = ident;
 
 // A built-in primitive type (int, bool, str, etc).
 export type builtin_type = enum {
 	BOOL, DONE, F32, F64, FCONST, I16, I32, I64, I8, ICONST, INT, NEVER,
-	NULL, OPAQUE, RCONST, RUNE, SIZE, STR, U16, U32, U64, U8, UINT, UINTPTR,
-	VALIST, VOID,
+	NOMEM, NULL, OPAQUE, RCONST, RUNE, SIZE, STR, U16, U32, U64, U8, UINT,
+	UINTPTR, UNDEFINED, VALIST, VOID
 };
 
 // An enumeration field (and optional value).
 export type enum_field = struct {
 	name: str,
 	value: nullable *expr,
-	loc: lex::location,
+	loc: location,
 	docs: str,
 };
 
@@ -29,6 +26,9 @@ export type enum_type = struct {
 	storage: builtin_type,
 	values: []enum_field,
 };
+
+// !t
+export type error_type = *_type;
 
 // The variadism strategy for a function type.
 export type variadism = enum {
@@ -39,7 +39,7 @@ export type variadism = enum {
 
 // A parameter to a function type.
 export type func_param = struct {
-	loc: lex::location,
+	loc: location,
 	name: str,
 	_type: *_type,
 	default_value: (void | expr),
@@ -81,7 +81,7 @@ export type pointer_type = struct {
 
 // A single field of a struct type.
 export type struct_field = struct {
-	name: str,
+	name: str, // may be "_"
 	_type: *_type,
 };
 
@@ -91,9 +91,8 @@ export type struct_embedded = *_type;
 // An embedded type alias.
 export type struct_alias = ident;
 
-// struct { @offset(10) foo: int, struct { bar: int }, baz::quux }
+// struct { foo: int, struct { bar: int }, baz::quux }
 export type struct_member = struct {
-	_offset: nullable *expr,
 	member: (struct_field | struct_embedded | struct_alias),
 
 	// Only valid if the lexer has comments enabled
@@ -112,24 +111,15 @@ export type union_type = []struct_member;
 export type struct_union_type = (struct_type | union_type);
 
 // (int | bool)
-export type tagged_type = []*_type;
+export type tagged_type = [](*_type, bool);
 
 // (int, bool, ...)
 export type tuple_type = []*_type;
 
-// Flags which apply to types.
-export type type_flag = enum uint {
-	NONE = 0,
-	CONST = 1 << 0,
-	ERROR = 1 << 1,
-};
-
 // A Hare type.
 export type _type = struct {
-	start: lex::location,
-	end: lex::location,
-	flags: type_flag,
-	repr: (alias_type | builtin_type | enum_type | func_type |
+	loc: location,
+	repr: (alias_type | builtin_type | enum_type | error_type | func_type |
 		list_type | pointer_type | struct_type | union_type |
 		tagged_type | tuple_type),
 };
@@ -137,8 +127,6 @@ export type _type = struct {
 fn struct_members_free(membs: []struct_member) void = {
 	for (let i = 0z; i < len(membs); i += 1) {
 		free(membs[i].docs);
-		expr_finish(membs[i]._offset);
-		free(membs[i]._offset);
 		match (membs[i].member) {
 		case let f: struct_field =>
 			free(f.name);
@@ -155,56 +143,66 @@ fn struct_members_free(membs: []struct_member) void = {
 };
 
 // Frees resources associated with a [[_type]].
-export fn type_finish(t: nullable *_type) void = match (t) {
-case null => void;
-case let t: *_type =>
-	match (t.repr) {
-	case let a: alias_type =>
-		ident_free(a.ident);
-	case builtin_type => void;
-	case let e: enum_type =>
-		for (let i = 0z; i < len(e.values); i += 1) {
-			free(e.values[i].name);
-			expr_finish(e.values[i].value);
-			free(e.values[i].value);
+export fn type_finish(t: nullable *_type) void = {
+	match (t) {
+	case null => void;
+	case let t: *_type =>
+		match (t.repr) {
+		case let a: alias_type =>
+			ident_free(a);
+		case builtin_type => void;
+		case let e: enum_type =>
+			for (let val .. e.values) {
+				free(val.name);
+				expr_finish(val.value);
+				free(val.value);
+				free(val.docs);
+			};
+			free(e.values);
+		case let e: error_type =>
+			type_finish(e: *_type);
+		case let f: func_type =>
+			type_finish(f.result);
+			free(f.result);
+			for (let param .. f.params) {
+				free(param.name);
+				type_finish(param._type);
+				free(param._type);
+				match(&param.default_value) {
+				case let e: *expr =>
+					expr_finish(e);
+				case void => void;
+				};
+			};
+			free(f.params);
+		case let l: list_type =>
+			match (l.length) {
+			case let e: *expr =>
+				expr_finish(e);
+				free(e);
+			case => void;
+			};
+			type_finish(l.members);
+			free(l.members);
+		case let p: pointer_type =>
+			type_finish(p.referent);
+			free(p.referent);
+		case let s: struct_type =>
+			struct_members_free(s.members);
+		case let t: tagged_type =>
+			for (let i = 0z; i < len(t); i += 1) {
+				type_finish(t[i].0);
+				free(t[i].0);
+			};
+			free(t);
+		case let t: tuple_type =>
+			for (let i = 0z; i < len(t); i += 1) {
+				type_finish(t[i]);
+				free(t[i]);
+			};
+			free(t);
+		case let u: union_type =>
+			struct_members_free(u);
 		};
-		free(e.values);
-	case let f: func_type =>
-		type_finish(f.result);
-		free(f.result);
-		for (let i = 0z; i < len(f.params); i += 1) {
-			free(f.params[i].name);
-			type_finish(f.params[i]._type);
-			free(f.params[i]._type);
-		};
-		free(f.params);
-	case let l: list_type =>
-		match (l.length) {
-		case let e: *expr =>
-			expr_finish(e);
-			free(e);
-		case => void;
-		};
-		type_finish(l.members);
-		free(l.members);
-	case let p: pointer_type =>
-		type_finish(p.referent);
-		free(p.referent);
-	case let s: struct_type =>
-		struct_members_free(s.members);
-	case let t: tagged_type =>
-		for (let i = 0z; i < len(t); i += 1) {
-			type_finish(t[i]);
-			free(t[i]);
-		};
-		free(t);
-	case let t: tuple_type =>
-		for (let i = 0z; i < len(t); i += 1) {
-			type_finish(t[i]);
-			free(t[i]);
-		};
-		free(t);
-	case let u: union_type =>
-		struct_members_free(u);
 	};
 };

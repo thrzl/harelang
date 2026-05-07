@@ -12,6 +12,7 @@ use io;
 use memio;
 use net::ip;
 use net::uri;
+use os;
 use path;
 use strings;
 
@@ -84,11 +85,12 @@ export fn emit_html(ctx: *context) (void | error) = {
 			path = "README", // XXX: this is meh
 			line = 1,
 			col = 1,
+			off = 0,
 		})?;
 		fmt::fprintln(ctx.out, "</div>")?;
 	};
 
-	let identpath = strings::join("/", ctx.ident...);
+	let identpath = strings::join("/", ctx.ident...)!;
 	defer free(identpath);
 
 	if (len(ctx.submods) != 0) {
@@ -99,13 +101,17 @@ export fn emit_html(ctx: *context) (void | error) = {
 		};
 		fmt::fprintln(ctx.out, "<ul class='submodules'>")?;
 		for (let submodule .. ctx.submods) {
-			let path = path::init("/", identpath, submodule)!;
-
 			fmt::fprintf(ctx.out, "<li><a href='")?;
-			html_escape(ctx.out, path::string(&path))?;
+			html_escape(ctx.out, submodule.name)?;
 			fmt::fprintf(ctx.out, "'>")?;
-			html_escape(ctx.out, submodule)?;
-			fmt::fprintfln(ctx.out, "</a></li>")?;
+			html_escape(ctx.out, submodule.name)?;
+			if (submodule.desc != "") {
+				fmt::fprintfln(ctx.out, "</a>: ")?;
+				html_escape(ctx.out, submodule.desc)?;
+				fmt::fprintfln(ctx.out, "</li>")?;
+			} else {
+				fmt::fprintfln(ctx.out, "</a></li>")?;
+			};
 		};
 		fmt::fprintln(ctx.out, "</ul>")?;
 	};
@@ -182,7 +188,28 @@ fn tocentries(
 				lname)?;
 			undoc = true;
 		};
-		unparse::decl(out, &syn_centry, &decls[i])?;
+
+		match (&decls[i].decl) {
+		case let d: *ast::decl_func =>
+			free(d.symbol);
+			d.symbol = "";
+		case => void;
+		};
+
+		const decl = &decls[i];
+		match (decl.decl) {
+		case let t: ast::decl_type =>
+			// Print summarized types in the TOC
+			fmt::fprintf(out, "<span class='keyword'>type</span> ")?;
+			fmt::fprintf(out, "<a href='#")?;
+			unparse::ident(out, decl_ident(decl))?;
+			fmt::fprintf(out, "'>")?;
+			unparse::ident(out, decl_ident(decl))?;
+			fmt::fprintf(out, "</a>;")?;
+		case =>
+			unparse::decl(out, &syn_centry, &decls[i])?;
+		};
+
 		fmt::fprintln(out)?;
 	};
 	fmt::fprint(out, "</pre>")?;
@@ -197,11 +224,11 @@ fn details(ctx: *context, decl: *ast::decl) (void | error) = {
 	fmt::fprintf(ctx.out, "{} ", match (decl.decl) {
 		case ast::decl_func =>
 			yield "fn";
-		case []ast::decl_type =>
+		case ast::decl_type =>
 			yield "type";
-		case []ast::decl_const =>
+		case ast::decl_const =>
 			yield "def";
-		case []ast::decl_global =>
+		case ast::decl_global =>
 			yield "let";
 		case ast::assert_expr => abort();
 		})?;
@@ -209,8 +236,20 @@ fn details(ctx: *context, decl: *ast::decl) (void | error) = {
 	// TODO: Add source URL
 	fmt::fprint(ctx.out, "</span><span class='heading-extra'><a href='#")?;
 	unparse::ident(ctx.out, decl_ident(decl))?;
-	fmt::fprint(ctx.out, "'>[link]</a>
-	</span>")?;
+	fmt::fprint(ctx.out, "'>[permalink]</a>")?;
+	match (os::getenv("HAREDOC_HTML_SRC")) {
+	case let fmt: str =>
+		const url = fmt::asprintf(fmt,
+			cwdpath(decl.loc.start.path),
+			decl.loc.start.line)!;
+		defer free(url);
+		fmt::fprint(ctx.out, " <a href='")?;
+		html_escape(ctx.out, url)?;
+		fmt::fprint(ctx.out, "'>[source]</a>")?;
+	case void => yield;
+	};
+
+	fmt::fprint(ctx.out, "</span>")?;
 	fmt::fprintln(ctx.out, "</h4>")?;
 
 	if (len(decl.docs) == 0) {
@@ -226,13 +265,70 @@ fn details(ctx: *context, decl: *ast::decl) (void | error) = {
 		const trimmed = trim_comment(decl.docs);
 		defer free(trimmed);
 		const buf = strings::toutf8(trimmed);
-		markup_html(ctx, &memio::fixed(buf), decl.start)?;
+		markup_html(ctx, &memio::fixed(buf), decl.loc.start)?;
 	} else {
 		fmt::fprintln(ctx.out, "</details>")?;
 	};
 
 	fmt::fprintln(ctx.out, "</section>")?;
 	return;
+};
+
+// Returns the relative path from the current module to a target module path.
+// The caller is responsible for freeing the allocated string.
+fn relpath(from: ast::ident, to: []str) str = {
+	let common = 0z; // Length of common prefix.
+	for (common < len(from) && common < len(to); common += 1) {
+		if (from[common] != to[common]) {
+			break;
+		};
+	};
+
+	let parts: []str = [];
+	for (let i = common; i < len(from); i += 1) {
+		append(parts, "..")!;
+	};
+	for (let i = common; i < len(to); i += 1) {
+		append(parts, to[i])!;
+	};
+
+	if (len(parts) == 0) {
+		return strings::dup(".")!;
+	};
+
+	return strings::join("/", parts...)!;
+};
+
+@test fn relpath_sibling() void = {
+	const from1: []str = ["strings"];
+	const to1: []str = ["strconv"];
+	const result1 = relpath(from1, to1);
+	defer free(result1);
+	assert(result1 == "../strconv");
+};
+
+@test fn relpath_shared_prefix() void = {
+	const from2: []str = ["fakeone"];
+	const to2: []str = ["faketwo"];
+	const result2 = relpath(from2, to2);
+	defer free(result2);
+	assert(result2 == "../faketwo");
+};
+
+@test fn relpath_nested_to_top() void = {
+	const from3: []str = ["encoding", "base64"];
+	const to3: []str = ["strings"];
+	const result3 = relpath(from3, to3);
+	defer free(result3);
+	assert(result3 == "../../strings");
+};
+
+@test fn relpath_top_to_nested() void = {
+	const from4: []str = ["strings"];
+	const to4: []str = ["encoding", "base64"];
+	const result4 = relpath(from4, to4);
+	defer free(result4);
+	assert(result4 == "../encoding/base64");
 };
 
 fn html_decl_ref(ctx: *context, ref: ast::ident) (void | error) = {
@@ -258,23 +354,23 @@ fn html_decl_ref(ctx: *context, ref: ast::ident) (void | error) = {
 	case symkind::LOCAL =>
 		fmt::fprintf(ctx.out, "<a href='#{0}' class='ref'>{0}</a>", ident)?;
 	case symkind::MODULE =>
-		let ipath = strings::join("/", id...);
-		defer free(ipath);
-		fmt::fprintf(ctx.out, "<a href='/{}' class='ref'>{}::</a>",
-			ipath, ident)?;
+		let rpath = relpath(ctx.ident, id);
+		defer free(rpath);
+		fmt::fprintf(ctx.out, "<a href='{}' class='ref'>{}::</a>",
+			rpath, ident)?;
 	case symkind::SYMBOL =>
-		let ipath = strings::join("/", id[..len(id) - 1]...);
-		defer free(ipath);
-		fmt::fprintf(ctx.out, "<a href='/{}/{}' class='ref'>{}</a>",
-			ipath, id[len(id) - 1], ident)?;
+		let rpath = relpath(ctx.ident, id[..len(id) - 1]);
+		defer free(rpath);
+		fmt::fprintf(ctx.out, "<a href='{}#{}' class='ref'>{}</a>",
+			rpath, id[len(id) - 1], ident)?;
 	case symkind::ENUM_LOCAL =>
 		fmt::fprintf(ctx.out, "<a href='#{}' class='ref'>{}</a>",
 			id[len(id) - 2], ident)?;
 	case symkind::ENUM_REMOTE =>
-		let ipath = strings::join("/", id[..len(id) - 2]...);
-		defer free(ipath);
-		fmt::fprintf(ctx.out, "<a href='/{}#{}' class='ref'>{}</a>",
-			ipath, id[len(id) - 2], ident)?;
+		let rpath = relpath(ctx.ident, id[..len(id) - 2]);
+		defer free(rpath);
+		fmt::fprintf(ctx.out, "<a href='{}#{}' class='ref'>{}</a>",
+			rpath, id[len(id) - 2], ident)?;
 	};
 	free(ident);
 };
@@ -282,10 +378,10 @@ fn html_decl_ref(ctx: *context, ref: ast::ident) (void | error) = {
 fn html_mod_ref(ctx: *context, ref: ast::ident) (void | error) = {
 	const ident = unparse::identstr(ref);
 	defer free(ident);
-	let ipath = strings::join("/", ref...);
-	defer free(ipath);
-	fmt::fprintf(ctx.out, "<a href='/{}' class='ref'>{}::</a>",
-		ipath, ident)?;
+	let rpath = relpath(ctx.ident, ref);
+	defer free(rpath);
+	fmt::fprintf(ctx.out, "<a href='{}' class='ref'>{}::</a>",
+		rpath, ident)?;
 };
 
 
@@ -418,11 +514,18 @@ fn breadcrumb(ident: ast::ident) str = {
 		return "";
 	};
 	let buf = memio::dynamic();
-	fmt::fprintf(&buf, "<a href='/'>stdlib</a> » ")!;
+	let root_parts: []str = [];
+	for (let i = 0z; i < len(ident); i += 1) {
+		append(root_parts, "..")!;
+	};
+	let root_path = strings::join("/", root_parts...)!;
+	defer free(root_path);
+	fmt::fprintf(&buf, "<a href='{}'>stdlib</a> » ", root_path)!;
+
 	for (let i = 0z; i < len(ident) - 1; i += 1) {
-		let ipath = strings::join("/", ident[..i+1]...);
-		defer free(ipath);
-		fmt::fprintf(&buf, "<a href='/{}'>{}</a>::", ipath, ident[i])!;
+		let rpath = relpath(ident, ident[..i+1]);
+		defer free(rpath);
+		fmt::fprintf(&buf, "<a href='{}'>{}</a>::", rpath, ident[i])!;
 	};
 	fmt::fprint(&buf, ident[len(ident) - 1])!;
 	return memio::string(&buf)!;
@@ -439,9 +542,9 @@ fn head(ident: ast::ident) (void | error) = {
 
 	const title =
 		if (len(id) == 0)
-			fmt::asprintf("Hare documentation")
+			fmt::asprintf("Hare documentation")!
 		else
-			fmt::asprintf("{} — Hare documentation", id);
+			fmt::asprintf("{} — Hare documentation", id)!;
 	defer free(title);
 
 	// TODO: Move bits to +embed?

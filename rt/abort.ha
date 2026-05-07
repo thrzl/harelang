@@ -11,9 +11,11 @@ export type abort_handler = fn(
 
 let handle_abort: *abort_handler = &platform_abort;
 
-// Sets a new global runtime abort handler.
-export fn onabort(handler: *abort_handler) void = {
+// Sets a new global runtime abort handler, returning the previous handler.
+export fn onabort(handler: *abort_handler) *abort_handler = {
+	const prev = handle_abort;
 	handle_abort = handler;
+	return prev;
 };
 
 export @symbol("rt.abort") fn _abort(
@@ -29,12 +31,10 @@ export @symbol("rt.abort") fn _abort(
 const reasons: [_]str = [
 	"slice or array access out of bounds",			// 0
 	"type assertion failed",				// 1
-	"out of memory",					// 2
-	"static insert/append exceeds slice capacity",		// 3
-	"execution reached unreachable code (compiler bug)",	// 4
-	"slice allocation capacity smaller than initializer",	// 5
-	"assertion failed",					// 6
-	"error occurred",					// 7
+	"execution reached unreachable code (compiler bug)",	// 2
+	"slice allocation capacity smaller than initializer",	// 3
+	"assertion failed",					// 4
+	"error occurred",					// 5
 ];
 
 export fn abort_fixed(path: *str, line: u64, col: u64, i: u64) void = {

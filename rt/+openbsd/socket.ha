@@ -13,7 +13,7 @@ export type sockaddr_in = struct {
 	sin_family: sa_family_t,
 	sin_port: u16,
 	sin_addr: in_addr,
-	__pad: [8]u8,
+	_: [8]u8, // padding
 };
 
 export type in6_addr = struct {

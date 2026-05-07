@@ -20,7 +20,7 @@ def timeout: time::duration = 3 * time::SECOND;
 // free the return value with [[message_free]].
 //
 // If no DNS servers are provided, the system default servers (if any) are used.
-export fn query(query: *message, servers: ip::addr...) (*message | error) = {
+export fn query(query: *message, servers: ip::addr...) (*message | error | nomem) = {
 	if (len(servers) == 0) {
 		servers = resolvconf::load().nameservers;
 	};
@@ -61,7 +61,12 @@ export fn query(query: *message, servers: ip::addr...) (*message | error) = {
 	let header = header { ... };
 	let src: ip::addr = ip::ANY_V4;
 	for (true) {
-		let nevent = poll::poll(pollfd, timeout)!;
+		let nevent = match (poll::poll(pollfd, timeout)) {
+		case let nevent: uint =>
+			yield nevent;
+		case let e: poll::error =>
+			return e: io::error;
+		};
 		if (nevent == 0) {
 			return errors::timeout;
 		};
@@ -73,16 +78,11 @@ export fn query(query: *message, servers: ip::addr...) (*message | error) = {
 			z = udp::recvfrom(socket6, buf, &src, null)?;
 		};
 
-		let expected = false;
-		for (let i = 0z; i < len(servers); i += 1) {
-			if (ip::equal(src, servers[i])) {
-				expected = true;
+		for (let s .. servers) {
+			if (ip::equal(src, s)) {
 				break;
 			};
-		};
-		if (!expected) {
-			continue;
-		};
+		} else continue;
 
 		const dec = decoder_init(buf[..z]);
 		decode_header(&dec, &header)?;
@@ -93,7 +93,14 @@ export fn query(query: *message, servers: ip::addr...) (*message | error) = {
 
 	if (!header.op.tc) {
 		check_rcode(header.op.rcode)?;
-		return decode(buf[..z])?;
+		return match (decode(buf[..z])) {
+		case let m: *message =>
+			return m;
+		case format =>
+			return format;
+		case nomem =>
+			return nomem;
+		};
 	};
 
 	// Response was truncated, retry over TCP. In TCP mode, the
@@ -107,8 +114,8 @@ export fn query(query: *message, servers: ip::addr...) (*message | error) = {
 	let socket = tcp::connect(src, 53)?;
 	defer net::close(socket)!;
 
-	io::writeall(socket, zbuf)!;
-	io::writeall(socket, buf[..z])!;
+	io::writeall(socket, zbuf)?;
+	io::writeall(socket, buf[..z])?;
 
 	let rz: u16 = match (io::readall(socket, zbuf)?) {
 	case let s: size =>
@@ -119,7 +126,7 @@ export fn query(query: *message, servers: ip::addr...) (*message | error) = {
 	case =>
 		return format;
 	};
-	let tcpbuf: []u8 = alloc([0...], rz);
+	let tcpbuf: []u8 = alloc([0...], rz)?;
 	defer free(tcpbuf);
 
 	match (io::readall(socket, tcpbuf)?) {
@@ -137,5 +144,12 @@ export fn query(query: *message, servers: ip::addr...) (*message | error) = {
 		return format;
 	};
 	check_rcode(header.op.rcode)?;
-	return decode(tcpbuf)?;
+	return match (decode(tcpbuf)) {
+	case let m: *message =>
+		return m;
+	case format =>
+		return format;
+	case nomem =>
+		return nomem;
+	};
 };

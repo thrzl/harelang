@@ -17,31 +17,94 @@ export type encoding = struct {
 };
 
 // Represents the standard base-64 encoding alphabet as defined in RFC 4648.
-export const std_encoding: encoding = encoding { ... };
+export const std_encoding: encoding = encoding {
+	encmap = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+		'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
+		'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+		'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
+		'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'],
+	decmap = [
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0x3e, 0xff, 0xff, 0xff, 0x3f,
+		0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b,
+		0x3c, 0x3d, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+		0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+		0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
+		0x17, 0x18, 0x19, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+		0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+		0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
+		0x31, 0x32, 0x33, 0xff...
+	],
+};
 
 // Represents the "base64url" alphabet as defined in RFC 4648, suitable for use
 // in URLs and file paths.
-export const url_encoding: encoding = encoding { ... };
+export const url_encoding: encoding = encoding {
+	encmap = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+		'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
+		'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+		'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
+		'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'],
+	decmap = [
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0x3e, 0xff, 0xff,
+		0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b,
+		0x3c, 0x3d, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+		0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+		0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
+		0x17, 0x18, 0x19, 0xff, 0xff, 0xff, 0xff, 0x3f,
+		0xff, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+		0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+		0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
+		0x31, 0x32, 0x33, 0xff...
+	],
+};
 
 // Initializes a new encoding based on the passed alphabet, which must be a
 // 64-byte ASCII string.
 export fn encoding_init(enc: *encoding, alphabet: str) void = {
 	const alphabet = strings::toutf8(alphabet);
-	enc.decmap[..] = [-1...];
 	assert(len(alphabet) == 64);
+	enc.decmap[..] = [0xff...];
 	for (let i: u8 = 0; i < 64; i += 1) {
 		const ch = alphabet[i];
-		assert(ascii::valid(ch: rune) && enc.decmap[ch] == -1);
+		assert(ascii::valid(ch: rune) && enc.decmap[ch] == 0xff);
 		enc.encmap[i] = ch;
 		enc.decmap[ch] = i;
 	};
 };
 
-@init fn init() void = {
-	const std_alpha: str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	const url_alpha: str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-	encoding_init(&std_encoding, std_alpha);
-	encoding_init(&url_encoding, url_alpha);
+@test fn std_encodings() void = {
+	let std = encoding { ... };
+	const std_alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	encoding_init(&std, std_alpha);
+	for (let i = 0z; i < len(std.encmap); i += 1) {
+		assert(std.encmap[i] == std_encoding.encmap[i]);
+	};
+	for (let i = 0z; i < len(std.decmap); i += 1) {
+		assert(std.decmap[i] == std_encoding.decmap[i]);
+	};
+
+	let url = encoding { ... };
+	const url_alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+	encoding_init(&url, url_alpha);
+	for (let i = 0z; i < len(url.encmap); i += 1) {
+		assert(url.encmap[i] == url_encoding.encmap[i]);
+	};
+	for (let i = 0z; i < len(url.decmap); i += 1) {
+		assert(url.decmap[i] == url_encoding.decmap[i]);
+	};
 };
 
 export type encoder = struct {
@@ -205,11 +268,23 @@ fn clear(e: *encoder) void = {
 
 // Encodes a byte slice in base 64, using the given encoding, returning a slice
 // of ASCII bytes. The caller must free the return value.
-export fn encodeslice(enc: *encoding, in: []u8) []u8 = {
+export fn encodeslice(enc: *encoding, in: []u8) ([]u8 | nomem) = {
 	let out = memio::dynamic();
 	let encoder = newencoder(enc, &out);
-	io::writeall(&encoder, in)!;
-	io::close(&encoder)!;
+	match (io::writeall(&encoder, in)) {
+	case size => void;
+	case nomem =>
+		io::close(&out)!;
+		return nomem;
+	case => abort(); // unreachable
+	};
+	match (io::close(&encoder)) {
+	case void => void;
+	case nomem =>
+		io::close(&out)!;
+		return nomem;
+	case => abort(); // unreachable
+	};
 	return memio::buffer(&out);
 };
 
@@ -233,8 +308,8 @@ export fn encode(
 
 // Encodes a byte slice in base 64, using the given encoding, returning a
 // string. The caller must free the return value.
-export fn encodestr(enc: *encoding, in: []u8) str = {
-	return strings::fromutf8(encodeslice(enc, in))!;
+export fn encodestr(enc: *encoding, in: []u8) (str | nomem) = {
+	return strings::fromutf8(encodeslice(enc, in)?)!;
 };
 
 @test fn encode() void = {
@@ -259,7 +334,7 @@ export fn encodestr(enc: *encoding, in: []u8) str = {
 		assert(bytes::equal(encb, strings::toutf8(expect[i])));
 
 		// Testing encodestr should cover encodeslice too
-		let s = encodestr(&std_encoding, in[..i]);
+		let s = encodestr(&std_encoding, in[..i])!;
 		defer free(s);
 		assert(s == expect[i]);
 	};
@@ -358,7 +433,8 @@ fn decode_reader(
 			s.pad = true;
 			break;
 		};
-		if (!ascii::valid(buf[i]: u32: rune) || s.enc.decmap[buf[i]] == -1) {
+		if (!ascii::valid(buf[i]: u32: rune)
+				|| s.enc.decmap[buf[i]] == 0xff) {
 			return errors::invalid;
 		};
 		buf[i] = s.enc.decmap[buf[i]];
@@ -394,7 +470,7 @@ fn decode_reader(
 export fn decodeslice(
 	enc: *encoding,
 	in: []u8,
-) ([]u8 | errors::invalid) = {
+) ([]u8 | errors::invalid | nomem) = {
 	if (len(in) == 0) {
 		return [];
 	};
@@ -403,20 +479,24 @@ export fn decodeslice(
 	};
 	let ins = memio::fixed(in);
 	let decoder = newdecoder(enc, &ins);
-	let out = alloc([0u8...], decodedsize(len(in)));
+	let out = alloc([0u8...], decodedsize(len(in)))?;
 	let outs = memio::fixed(out);
 	match (io::copy(&outs, &decoder)) {
-	case io::error =>
+	case nomem =>
+		free(out);
+		return nomem;
+	case errors::invalid =>
 		free(out);
 		return errors::invalid;
 	case let sz: size =>
 		return memio::buffer(&outs)[..sz];
+	case => abort(); // unreachable
 	};
 };
 
 // Decodes a string of ASCII-encoded base 64 data, using the given encoding,
 // returning a slice of decoded bytes. The caller must free the return value.
-export fn decodestr(enc: *encoding, in: str) ([]u8 | errors::invalid) = {
+export fn decodestr(enc: *encoding, in: str) ([]u8 | errors::invalid | nomem) = {
 	return decodeslice(enc, strings::toutf8(in));
 };
 
@@ -446,22 +526,22 @@ export fn decode(
 		// invalid padding
 		("=", &std_encoding),
 		("==", &std_encoding),
-	        ("===", &std_encoding),
-	        ("=====", &std_encoding),
-	        ("======", &std_encoding),
-	        // invalid characters
-	        ("@Zg=", &std_encoding),
-	        ("ê==", &std_encoding),
-	        ("êg==", &std_encoding),
+		("===", &std_encoding),
+		("=====", &std_encoding),
+		("======", &std_encoding),
+		// invalid characters
+		("@Zg=", &std_encoding),
+		("ê==", &std_encoding),
+		("êg==", &std_encoding),
 		("$3d==", &std_encoding),
 		("%3d==", &std_encoding),
 		("[==", &std_encoding),
 		("!", &std_encoding),
-	        // data after padding is encountered
-	        ("Zg===", &std_encoding),
-	        ("Zg====", &std_encoding),
-	        ("Zg==Zg==", &std_encoding),
-	        ("Zm8=Zm8=", &std_encoding),
+		// data after padding is encountered
+		("Zg===", &std_encoding),
+		("Zg====", &std_encoding),
+		("Zg==Zg==", &std_encoding),
+		("Zm8=Zm8=", &std_encoding),
 	];
 	let buf: [12]u8 = [0...];
 	for (let bufsz = 1z; bufsz <= 12; bufsz += 1) {
@@ -474,7 +554,7 @@ export fn decode(
 			for (true) match (io::read(&decoder, buf)!) {
 			case let z: size =>
 				if (z > 0) {
-					append(decb, buf[..z]...);
+					append(decb, buf[..z]...)!;
 				};
 			case io::EOF =>
 				break;

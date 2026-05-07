@@ -5,7 +5,7 @@ use fmt;
 use io;
 use memio;
 use strings;
-use time::chrono;
+use time;
 
 // [[format]] layout for the email date format.
 export def EMAIL: str = "%a, %d %b %Y %H:%M:%S %z";
@@ -58,6 +58,9 @@ export def QUARTZZOFF: str = "%s.%N%z";
 // and locality.
 export def QUARTZLOC: str = "%s.%N:%L";
 
+// TODO: consider adding specifier for timescale name, and "QUARTZTSC" layout.
+// e.g. "%s.%N!%C" -> 123456789123.000000000!UTC
+
 def WEEKDAYS: [_]str = [
 	"Monday",
 	"Tuesday",
@@ -92,30 +95,33 @@ def MONTHS_SHORT: [_]str = [
 	"Oct", "Nov", "Dec",
 ];
 
-// TODO: Make format() accept parameters of type (date | period), using the
-// "intervals" standard representation provided by ISO 8601?
-//
-// See https://en.wikipedia.org/wiki/ISO_8601#Time_intervals
-//
-// Ticket: https://todo.sr.ht/~sircmpwn/hare/650
-
-// Formats a [[date]] and writes it into a caller supplied buffer.
-// The returned string is borrowed from this buffer.
-export fn bsformat(
-	buf: []u8,
-	layout: str,
-	d: *date,
-) (str | io::error) = {
+// Formats a [[date]] and writes it into a caller supplied buffer. The returned
+// string is borrowed from this buffer. If the resulting string does not fit
+// into 'buf', nomem is returned.
+export fn bsformat(buf: []u8, layout: str, d: *date) (str | nomem) = {
 	let sink = memio::fixed(buf);
-	format(&sink, layout, d)?;
+	match (format(&sink, layout, d)) {
+	case size => void;
+	case nomem =>
+		return nomem;
+	case =>
+		abort();
+	};
 	return memio::string(&sink)!;
 };
 
 // Formats a [[date]] and writes it into a heap-allocated string.
 // The caller must free the return value.
-export fn asformat(layout: str, d: *date) (str | io::error) = {
+export fn asformat(layout: str, d: *date) (str | nomem) = {
 	let sink = memio::dynamic();
-	format(&sink, layout, d)?;
+	match (format(&sink, layout, d)) {
+	case size => void;
+	case nomem =>
+		io::close(&sink)!;
+		return nomem;
+	case =>
+		abort();
+	};
 	return memio::string(&sink)!;
 };
 
@@ -165,11 +171,7 @@ export fn asformat(layout: str, d: *date) (str | io::error) = {
 //        Years before the Common Era have a minus sign prefix. ("2000").
 // - %z : The observed zone offset. ("+0100").
 // - %Z : The observed zone abbreviation. ("CET").
-export fn format(
-	h: io::handle,
-	layout: str,
-	d: *date
-) (size | io::error) = {
+export fn format(h: io::handle, layout: str, d: *date) (size | io::error) = {
 	let iter = strings::iter(layout);
 	let z = 0z;
 	for (let r => strings::next(&iter)) {
@@ -246,15 +248,9 @@ fn fmtspec(out: io::handle, r: rune, d: *date) (size | io::error) = {
 	case 'Y' =>
 		return fmt::fprintf(out, "{:.4}", _year(d));
 	case 'z' =>
-		const (sign, zo) = if (chrono::ozone(d).zoff >= 0) {
-			yield ('+', calc_hmsn(chrono::ozone(d).zoff));
-		} else {
-			yield ('-', calc_hmsn(-chrono::ozone(d).zoff));
-		};
-		const (hr, mi) = (zo.0, zo.1);
-		return fmt::fprintf(out, "{}{:.2}{:.2}", sign, hr, mi);
+		return fmtzoff(out, zone(d).zoff);
 	case 'Z' =>
-		return fmt::fprint(out, chrono::ozone(d).abbr);
+		return fmt::fprint(out, zone(d).abbr);
 	case '%' =>
 		return fmt::fprint(out, "%");
 	case =>
@@ -262,8 +258,20 @@ fn fmtspec(out: io::handle, r: rune, d: *date) (size | io::error) = {
 	};
 };
 
+fn fmtzoff(h: io::handle, zoff: time::duration) (size | io::error) = {
+	// TODO: formatting & parsing: account for all possible styles for zoffs
+	// (+NN, +NNNN, +NN:NN, +NN:NN:NN, +NN:NN:NN.NNNNNNNNN).
+	const (sign, zo) =
+		if (zoff >= 0)
+			('+', calc_hmsn(zoff))
+		else
+			('-', calc_hmsn(-zoff));
+	const (hr, mi) = (zo.0, zo.1);
+	return fmt::fprintf(h, "{}{:.2}{:.2}", sign, hr, mi);
+};
+
 @test fn format() void = {
-	const d = new(chrono::UTC, 0, 1994, 1, 1, 2, 17, 5, 24)!;
+	const d = new(UTC, 0, 1994, 1, 1, 2, 17, 5, 24)!;
 
 	const cases = [
 		// special characters

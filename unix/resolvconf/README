@@ -1,3 +1,5 @@
+resolvconf: /etc/resolv.conf file format parser
+
 [[unix::resolvconf]] implements a parser for /etc/resolv.conf files which has
 feature parity with the resolv.conf format supported by glibc 2.36. However,
 most options are not supported by Hare internally, i.e. via [[net::dns]].

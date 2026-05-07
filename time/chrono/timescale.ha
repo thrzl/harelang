@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
+// TODO: consider:  export const TSC_UTC = &utc;  etc.
+
 use time;
 
 // Represents a scale of time; a time standard. See [[convert]].
@@ -11,67 +13,78 @@ export type timescale = struct {
 	convfrom: *tsconverter,
 };
 
-export type tsconverter = fn(ts: *timescale, i: time::instant) ([]time::instant | void);
+export type tsconverter = fn(ts: *timescale, i: time::instant) ([]time::instant | void | nomem);
 
-// A discontinuity between two [[timescale]]s caused a one-to-one
-// [[time::instant]] conversion to fail.
-export type discontinuity = !void;
+// Timescale mismatch.
+export type tscmismatch = !(*timescale, *timescale);
 
-// The analytical result of a [[time::instant]] conversion between two
-// [[timescale]]s at a point of [[discontinuity]].
-//
-// An empty slice represents a nonexistent conversion result.
-// A populated (>1) slice represents an ambiguous conversion result.
-export type analytical = ![]time::instant;
+fn check_timescales(a: *timescale, b: *timescale) (void | tscmismatch) = {
+	if (a != b) {
+		return (a, b): tscmismatch;
+	};
+};
 
-// Converts a [[time::instant]] from one [[timescale]] to the next exhaustively.
-// The final conversion result is returned. For each active pair of timescales,
-// if neither implements conversion from the first to the second, a two-step
-// intermediary TAI conversion will occur. If given zero or one timescales, the
-// given instant is returned.
-export fn convert(i: time::instant, tscs: *timescale...) (time::instant | analytical) = {
-	let ts: []time::instant = [i];
-	let tmps: []time::instant = [];
+// Converts a [[moment]] from one [[timescale]] to the next exhaustively.
+// The final conversion result is returned. For each considered pair of
+// timescales, if neither implements conversion from the first to the second, a
+// two-step intermediary [[tai]] conversion will occur. If given zero
+// timescales, the given moment is returned. The caller must free the result.
+export fn convert(m: moment, tscs: *timescale...) ([]moment | nomem) = {
+	// TODO: consider returning just 2-tuple of (earliest, latest) moments.
 
-	for (let j = 1z; j < len(tscs); j += 1) {
-		let a = tscs[j - 1];
+	let ok = false;
+	let t = *(&m: *time::instant);
+	let ms: []moment = [m];
+	defer if (!ok) free(ms);
+	let tmps: []moment = [];
+	defer if (!ok) free(tmps);
+
+	for (let j = 0z; j < len(tscs); j += 1) {
+		let a = if (j == 0) m.tsc else tscs[j - 1];
 		let b = tscs[j];
 
-		for (let k = 0z; k < len(ts); k += 1) {
-			const t = ts[k];
+		for (let k = 0z; k < len(ms); k += 1) {
+			const m = ms[k];
 
 			// try .convto
-			match (a.convto(b, t)) {
+			match (a.convto(b, to_instant(m))) {
 			case let convs: []time::instant =>
-				append(tmps, convs...);
+				for (let c .. convs) {
+					append(tmps, new(b, c))?;
+				};
 				continue;
 			case void => void;
 			};
 
 			// try .convfrom
-			match (b.convfrom(a, t)) {
+			match (b.convfrom(a, to_instant(m))) {
 			case let convs: []time::instant =>
-				append(tmps, convs...);
+				for (let c .. convs) {
+					append(tmps, new(b, c))?;
+				};
 				continue;
 			case void => void;
 			};
 
 			// default to TAI intermediary
-			const convs = a.convto(&tai, t) as []time::instant;
-
-			for (let conv .. convs) {
-				append(tmps, (
-					b.convfrom(&tai, conv) as []time::instant
-				)...);
+			const convs = a.convto(&tai, to_instant(m)) as []time::instant;
+			for (let c .. convs) {
+				const convs = b.convfrom(&tai, c) as []time::instant;
+				for (let c .. convs) {
+					append(tmps, new(b, c))?;
+				};
+				continue;
 			};
 		};
 
-		// TODO: sort and deduplicate 'ts' here
-		ts = tmps;
+		// TODO: sort and deduplicate 'ms' here
+		free(ms);
+		ms = tmps;
 		tmps = [];
 	};
 
-	return if (len(ts) == 1) ts[0] else ts;
+	ok = true;
+	return ms;
 };
 
 
@@ -86,9 +99,9 @@ export const tai: timescale = timescale {
 	convfrom = &tai_conv,
 };
 
-fn tai_conv(ts: *timescale, i: time::instant) ([]time::instant | void) = {
+fn tai_conv(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
 	if (ts == &tai) {
-		return alloc([i]...);
+		return alloc([i]...)?;
 	};
 };
 
@@ -100,42 +113,54 @@ fn tai_conv(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 // Discontinuous (has leap seconds).
 //
 // During a program's initialization, this timescale initializes by loading its
-// UTC/TAI leap second data from [[UTC_LEAPSECS_PATH]]; otherwise, fails
+// UTC/TAI leapsecond data from [[UTC_LEAPSECS_PATH]]; otherwise, fails
 // silently. If failed, any attempt to consult UTC leapsec data (e.g. calling
-// [[convert]] on UTC) causes an abort. This includes [[in]].
+// [[convert]] on UTC) causes an abort. This includes [[time::date::in]].
 export const utc: timescale = timescale {
 	name = "Coordinated Universal Time",
 	abbr = "UTC",
 	convto = &utc_convto,
 	convfrom = &utc_convfrom,
 };
+// TODO: find better way to handle utc initialization cases.
 
-fn utc_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
+fn utc_convto(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
+	let ok = false;
+	let ret: []time::instant = [];
+	defer if (!ok) free(ret);
+
 	if (ts == &utc) {
-		return alloc([i]...);
+		append(ret, i)?;
+		ok = true;
+		return ret;
 	} else if (ts == &tai) {
-		let ret: []time::instant = [];
-		if (!utc_isinitialized) {
-			match (init_utc_leapsecs()) {
-			case void =>
-				utc_isinitialized = true;
-			case =>
-				abort("Failed to initialize UTC timescale");
+		match (utc_status) {
+		case let loaded: bool =>
+			if (!loaded) {
+				match (utc_init_leapsecs()) {
+				case void =>
+					utc_status = true;
+				case =>
+					abort("UTC timescale init error");
+				};
 			};
+		case utciniterror =>
+			abort("UTC timescale init error");
 		};
 
 		const firstleap = utc_leapsecs[0]; // TODO: no leapsecs loaded
-		if (time::compare(i, time::from_unix(firstleap.0)) < 0) {
+		if (time::compare(i, time::new(firstleap.0)) < 0) {
 			append(ret, time::instant {
 				sec = i.sec + firstleap.1,
 				nsec = i.nsec,
-			});
+			})?;
+			ok = true;
 			return ret;
 		};
 
 		for (let idx = len(utc_leapsecs) - 1; idx >= 0 ; idx -= 1) {
 			const leap = utc_leapsecs[idx];
-			const leapsecond = time::from_unix(leap.0);
+			const leapsecond = time::new(leap.0);
 			const leapoffset = leap.1;
 			const diff = time::diff(leapsecond, i);
 
@@ -150,7 +175,8 @@ fn utc_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 					append(ret, time::instant {
 						sec = i.sec + leapoffset,
 						nsec = i.nsec,
-					});
+					})?;
+					ok = true;
 					return ret;
 				};
 
@@ -164,7 +190,8 @@ fn utc_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 							sec = i.sec + leapoffset,
 							nsec = i.nsec,
 						},
-					]...);
+					]...)?;
+					ok = true;
 					return ret;
 				};
 
@@ -177,11 +204,13 @@ fn utc_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 					append(ret, time::instant {
 						sec = i.sec + leapoffset,
 						nsec = i.nsec,
-					});
+					})?;
+					ok = true;
 					return ret;
 				};
 
 				if (diff >= offsetdiff && diff < 0) {
+					ok = true;
 					return ret;
 				};
 
@@ -189,34 +218,46 @@ fn utc_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 			};
 		};
 	};
+
+	ok = true;
 };
 
-fn utc_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void) = {
+fn utc_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
+	let ok = false;
+	let ret: []time::instant = [];
+	defer if (!ok) free(ret);
 	if (ts == &utc) {
-		return alloc([i]...);
+		append(ret, i)?;
+		ok = true;
+		return ret;
 	} else if (ts == &tai) {
-		let ret: []time::instant = [];
-		if (!utc_isinitialized) {
-			match (init_utc_leapsecs()) {
-			case void =>
-				utc_isinitialized = true;
-			case =>
-				abort("Failed to initialize UTC timescale");
+		match (utc_status) {
+		case let loaded: bool =>
+			if (!loaded) {
+				match (utc_init_leapsecs()) {
+				case void =>
+					utc_status = true;
+				case =>
+					abort("UTC timescale init error");
+				};
 			};
+		case utciniterror =>
+			abort("UTC timescale init error");
 		};
 
 		const firstleap = utc_leapsecs[0]; // TODO: no leapsecs loaded
-		if (time::compare(i, time::from_unix(firstleap.0 + firstleap.1)) < 0) {
+		if (time::compare(i, time::new(firstleap.0 + firstleap.1)) < 0) {
 			append(ret, time::instant {
 				sec = i.sec - firstleap.1,
 				nsec = i.nsec,
-			});
+			})?;
+			ok = true;
 			return ret;
 		};
 
 		for (let idx = len(utc_leapsecs) - 1; idx >= 0 ; idx -= 1) {
 			const leap = utc_leapsecs[idx];
-			const leapsecond = time::from_unix(leap.0 + leap.1);
+			const leapsecond = time::new(leap.0 + leap.1);
 			const leapoffset = leap.1;
 			const diff = time::diff(leapsecond, i);
 
@@ -231,7 +272,8 @@ fn utc_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 					append(ret, time::instant {
 						sec = i.sec - leapoffset,
 						nsec = i.nsec,
-					});
+					})?;
+					ok = true;
 					return ret;
 				};
 
@@ -244,7 +286,8 @@ fn utc_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 					append(ret, time::instant {
 						sec = i.sec - leapoffset,
 						nsec = i.nsec,
-					});
+					})?;
+					ok = true;
 					return ret;
 				};
 
@@ -252,6 +295,8 @@ fn utc_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 			};
 		};
 	};
+
+	ok = true;
 };
 
 
@@ -271,19 +316,19 @@ export const gps: timescale = timescale {
 // (International Atomic Time). Used by [[gps]].
 def GPS_OFFSET: time::duration = -19 * time::SECOND;
 
-fn gps_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
+fn gps_convto(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
 	if (ts == &gps) {
-		return alloc([i]...);
+		return alloc([i]...)?;
 	} else if (ts == &tai) {
-		return alloc([time::add(i, -GPS_OFFSET)]...);
+		return alloc([time::add(i, -GPS_OFFSET)]...)?;
 	};
 };
 
-fn gps_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void) = {
+fn gps_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
 	if (ts == &gps) {
-		return alloc([i]...);
+		return alloc([i]...)?;
 	} else if (ts == &tai) {
-		return alloc([time::add(i, GPS_OFFSET)]...);
+		return alloc([time::add(i, GPS_OFFSET)]...)?;
 	};
 };
 
@@ -304,20 +349,20 @@ export const tt: timescale = timescale {
 // Atomic Time). Used by [[tt]].
 def TT_OFFSET: time::duration = 32184 * time::MILLISECOND; // 32.184 seconds
 
-fn tt_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
+fn tt_convto(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
 	if (ts == &tt) {
-		return alloc([i]...);
+		return alloc([i]...)?;
 	} else if (ts == &tai) {
-		return alloc([time::add(i, -TT_OFFSET)]...);
+		return alloc([time::add(i, -TT_OFFSET)]...)?;
 	};
 };
 
 
-fn tt_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void) = {
+fn tt_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
 	if (ts == &tt) {
-		return alloc([i]...);
+		return alloc([i]...)?;
 	} else if (ts == &tai) {
-		return alloc([time::add(i, TT_OFFSET)]...);
+		return alloc([time::add(i, TT_OFFSET)]...)?;
 	};
 };
 
@@ -355,10 +400,9 @@ def DELTA_MARSEPOCH_JANSIX: time::duration = 44796 * 24 * time::HOUR;
 // Earth and Mars. Earth's midnight occurred first.
 def DELTA_JANSIX_ADJUSTMENT: time::duration = 82944 * time::MILLISECOND;
 
-fn mtc_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
-	let ret: []time::instant = [];
+fn mtc_convto(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
 	if (ts == &mtc) {
-		return alloc([i]...);
+		return alloc([i]...)?;
 	} else if (ts == &tai) {
 		// Change epoch from that of the Mars Sol Date
 		// to the Earth-Mars convergence date 2000 Jan 6th.
@@ -376,13 +420,13 @@ fn mtc_convto(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 
 		// Get the TAI time.
 		// assertion since TT and TAI are continuous.
-		return alloc([(tt.convto(&tai, i) as []time::instant)[0]]...);
+		return alloc([(tt.convto(&tai, i) as []time::instant)[0]]...)?;
 	};
 };
 
-fn mtc_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void) = {
+fn mtc_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void | nomem) = {
 	if (ts == &mtc) {
-		return alloc([i]...);
+		return alloc([i]...)?;
 	} else if (ts == &tai) {
 		// Get the "Terrestrial Time".
 		// assertion since TT and TAI are continuous.
@@ -400,7 +444,7 @@ fn mtc_convfrom(ts: *timescale, i: time::instant) ([]time::instant | void) = {
 		i = time::add(i, -DELTA_JANSIX_ADJUSTMENT);
 
 		// Change epoch to that of the Mars Sol Date.
-		return alloc([time::add(i, DELTA_MARSEPOCH_JANSIX)]...);
+		return alloc([time::add(i, DELTA_MARSEPOCH_JANSIX)]...)?;
 	};
 };
 

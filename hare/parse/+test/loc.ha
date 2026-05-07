@@ -14,6 +14,7 @@ fn expr_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>");
+	defer lex::finish(&lexer);
 	let exp = match (expr(&lexer)) {
 	case let exp: ast::expr =>
 		yield exp;
@@ -27,14 +28,14 @@ fn expr_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	for (strings::next(&it) is rune) {
 		runes += 1;
 	};
-	assert(exp.start.line == 1 && exp.start.col == 1);
-	assert(exp.end.line == 1 && exp.end.col == runes);
+	assert(exp.loc.start.line == 1 && exp.loc.start.col == 1);
+	assert(exp.loc.end.line == 1 && exp.loc.end.col == runes);
 };
 
 @test fn expr_loc() void = {
 	expr_testloc("foo", "foo[bar]", "foo.bar", "foo.1");
-	expr_testloc("alloc(foo)");
-	expr_testloc("append(foo, bar)", "append(foo, bar, baz)");
+	expr_testloc("alloc(foo)!");
+	expr_testloc("append(foo, bar)!", "append(foo, bar, baz)!");
 	expr_testloc("assert(foo)", `assert(foo, "bar")`, "abort()",
 		`abort("foo")`);
 	expr_testloc("foo is bar", "foo as bar");
@@ -55,7 +56,7 @@ fn expr_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 		"for (let bar = 0; baz; quux) quuux");
 	expr_testloc("free(foo)");
 	expr_testloc("if (foo) bar", "if (foo) bar else baz");
-	expr_testloc("insert(foo[0], bar)", "insert(foo[0], bar, baz)");
+	expr_testloc("insert(foo[0], bar)!", "insert(foo[0], bar, baz)!");
 	expr_testloc("len(foo)");
 	expr_testloc("{ foo; bar; }", "{ defer foo; }",
 		"{ let foo: bar = baz; }", "{ let foo: bar = baz, quux = quuux; }",
@@ -77,6 +78,7 @@ fn expr_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>");
+	defer lex::finish(&lexer);
 	let exp = match (expr(&lexer)) {
 	case let exp: ast::expr =>
 		yield exp;
@@ -85,16 +87,16 @@ fn expr_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 		abort();
 	};
 	defer ast::expr_finish(&exp);
-	assert(exp.start.line == 1 && exp.start.col == 1);
-	assert(exp.end.line == 1 && exp.end.col == 13);
+	assert(exp.loc.start.line == 1 && exp.loc.start.col == 1);
+	assert(exp.loc.end.line == 1 && exp.loc.end.col == 13);
 	let c = exp.expr as ast::cast_expr;
 	exp = *c.value;
-	assert(exp.start.line == 1 && exp.start.col == 1);
-	assert(exp.end.line == 1 && exp.end.col == 8);
+	assert(exp.loc.start.line == 1 && exp.loc.start.col == 1);
+	assert(exp.loc.end.line == 1 && exp.loc.end.col == 8);
 	c = exp.expr as ast::cast_expr;
 	exp = *c.value;
-	assert(exp.start.line == 1 && exp.start.col == 1);
-	assert(exp.end.line == 1 && exp.end.col == 3);
+	assert(exp.loc.start.line == 1 && exp.loc.start.col == 1);
+	assert(exp.loc.end.line == 1 && exp.loc.end.col == 3);
 };
 
 fn type_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
@@ -102,6 +104,7 @@ fn type_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>");
+	defer lex::finish(&lexer);
 	let typ = match (_type(&lexer)) {
 	case let typ: ast::_type =>
 		yield typ;
@@ -115,12 +118,12 @@ fn type_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	for (strings::next(&it) is rune) {
 		runes += 1;
 	};
-	assert(typ.start.line == 1 && typ.start.col == 1);
-	assert(typ.end.line == 1 && typ.end.col == runes);
+	assert(typ.loc.start.line == 1 && typ.loc.start.col == 1);
+	assert(typ.loc.end.line == 1 && typ.loc.end.col == runes);
 };
 
 @test fn type_loc() void = {
-	type_testloc("foo", "...foo");
+	type_testloc("foo");
 	type_testloc("int");
 	type_testloc("enum { FOO = bar }");
 	type_testloc("fn(foo: bar) baz");
@@ -128,6 +131,6 @@ fn type_testloc(srcs: str...) void = for (let i = 0z; i < len(srcs); i += 1) {
 	type_testloc("*foo", "nullable *int");
 	type_testloc("struct { foo: bar }");
 	type_testloc("union { foo: bar }");
-	type_testloc("(foo | bar)");
+	type_testloc("(foo | bar)", "(foo | ...bar)");
 	type_testloc("(foo, bar)");
 };

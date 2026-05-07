@@ -34,21 +34,17 @@ use net::uri;
 // be performed alongside the A or AAAA record lookup for that name. If the name
 // server provides an SRV record for the given service, it will be utilized in
 // lieu of the service database.
-export fn dial(
-	proto: str,
-	address: str,
-	service: str,
-) (net::socket | error) = {
+export fn dial(proto: str, address: str, service: str) (net::socket | error) = {
 	for (let i = 0z; i < len(default_protocols); i += 1) {
 		const p = default_protocols[i];
 		if (p.name == proto) {
-			return p.dial(address, service);
+			return p.dial(address, service)?;
 		};
 	};
 	for (let i = 0z; i < len(protocols); i += 1) {
 		const p = protocols[i];
 		if (p.name == proto) {
-			return p.dial(address, service);
+			return p.dial(address, service)?;
 		};
 	};
 	return net::unknownproto: net::error;
@@ -71,13 +67,13 @@ export fn dial_uri(proto: str, uri: *uri::uri) (net::socket | error) = {
 
 	let addr = match (uri.host) {
 	case let host: str =>
-		yield fmt::bsprintf(addr, "{}{}{}", host, colon, port);
+		yield fmt::bsprintf(addr, "{}{}{}", host, colon, port)!;
 	case let ip: ip::addr4 =>
 		const host = ip::string(ip);
-		yield fmt::bsprintf(addr, "{}{}{}", host, colon, port);
+		yield fmt::bsprintf(addr, "{}{}{}", host, colon, port)!;
 	case let ip: ip::addr6 =>
 		const host = ip::string(ip);
-		yield fmt::bsprintf(addr, "[{}]{}{}", host, colon, port);
+		yield fmt::bsprintf(addr, "[{}]{}{}", host, colon, port)!;
 	};
 
 	return dial(proto, addr, uri.scheme);

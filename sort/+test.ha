@@ -58,23 +58,23 @@ use types;
 		5, 2, 3, 7, 10, 7, 7, 5, 5, 2, 3, 4, 5, 3, 6, 2, 3, 6, 8, 8, 9,
 		7, 10, 4, 10, 3, 2, 7, 10, 8, 8, 2, 2, 5, 3, 7, 4, 1,
 	];
-	sort(nums, size(int), &cmp::ints);
+	sort(nums, size(int), &cmp::ints)!;
 	for (let i = 1z; i < len(nums); i += 1) {
 		assert(nums[i] >= nums[i - 1]);
 	};
 };
 
 @test fn big_equal() void = {
-	let nums = alloc([42...], 1000000);
+	let nums = alloc([42...], 1000000)!;
 	defer free(nums);
-	sort(nums, size(int), &cmp::ints);
+	sort(nums, size(int), &cmp::ints)!;
 	for (let i = 0z; i < len(nums); i += 1) {
 		assert(nums[i] == 42);
 	};
 };
 
 @test fn big_random() void = {
-	let nums = alloc([0...], 100000);
+	let nums = alloc([0...], 100000)!;
 	defer free(nums);
 
 	let rand = random::init(0x424242);
@@ -82,7 +82,7 @@ use types;
 		nums[i] = random::next(&rand): int;
 	};
 
-	sort(nums, size(int), &cmp::ints);
+	sort(nums, size(int), &cmp::ints)!;
 	for (let i = 1z; i < len(nums); i += 1) {
 		assert(nums[i] >= nums[i - 1]);
 	};
@@ -93,7 +93,7 @@ use types;
 
 	assert(!sorted(nums, size(int), &cmp::ints));
 
-	sort(nums, size(int), &cmp::ints);
+	sort(nums, size(int), &cmp::ints)!;
 	assert(sorted(nums, size(int), &cmp::ints));
 	assert(sorted(nums[..0], size(int), &cmp::ints));
 };
@@ -104,4 +104,36 @@ use types;
 	assert(cmp::ints(&0, &0) == 0);
 	assert(cmp::ints(&0, &types::INT_MIN) == 1);
 	assert(cmp::ints(&types::INT_MIN, &0) == -1);
+};
+
+@test fn shuffle() void = {
+	let rand = random::init(0x424242);
+	let cases: [_][]int = [
+		[1, 2, 3, 4, 5],
+		[1, 2],
+		[1],
+		[],
+	];
+	for (let testcase .. cases) {
+		assert(sorted(testcase, size(int), &cmp::ints));
+		shuffle(testcase, size(int), &rand);
+		if (len(testcase) <= 1) {
+			continue;
+		};
+
+		assert(!sorted(testcase, size(int), &cmp::ints));
+		sort(testcase, size(int), &cmp::ints)!;
+		assert(sorted(testcase, size(int), &cmp::ints));
+	};
+
+	// TODO: check for uniformness
+	let same = 0;
+	for (let i = 0; i < 5000; i += 1) {
+		let data = [0, 1, 2, 3, 4];
+		shuffle(data, size(int), &rand);
+		if (sorted(data, size(int), &cmp::ints)) {
+			same += 1;
+		};
+	};
+	assert(same >= 36 && same <= 46); // 5000 / 120 ~= 41.6
 };

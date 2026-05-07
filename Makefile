@@ -10,13 +10,14 @@ header:
 include config.mk
 include makefiles/$(PLATFORM).$(ARCH).mk
 
-all: $(BINOUT)/hare $(BINOUT)/haredoc docs
+all: $(BINOUT)/hare-configured $(BINOUT)/haredoc docs
 
 HARE_DEFINES = \
 	-D PLATFORM:str='"$(PLATFORM)"' \
 	-D ARCH:str='"$(ARCH)"' \
 	-D VERSION:str="\"$(VERSION)\"" \
 	-D HAREPATH:str='"$(HAREPATH)"' \
+	-D TOOLDIR:str='"$(TOOLDIR)"' \
 	-D AARCH64_AS:str='"$(AARCH64_AS)"' \
 	-D AARCH64_CC:str='"$(AARCH64_CC)"' \
 	-D AARCH64_LD:str='"$(AARCH64_LD)"' \
@@ -45,6 +46,7 @@ HARE_DEFINES = \
 	@printf 'SCDOC\t%s\n' '$@'
 	@$(SCDOC) < '$<' > '$@'
 
+# bootstrapped hare(1), without HARE_DEFINES configuration
 $(BINOUT)/hare: $(OBJS)
 	@mkdir -p -- "$(BINOUT)"
 	@printf 'LD\t%s\n' "$@"
@@ -54,7 +56,8 @@ HARE_BUILD_ENV = HAREPATH=. HAREC="$(HAREC)" QBE="$(QBE)" AS="$(AS)" \
 	LD="$(LD)" HARECFLAGS="$(HARECFLAGS)" QBEFLAGS="$(QBEFLAGS)" \
 	ASFLAGS="$(ASFLAGS)" LDLINKFLAGS="$(LDLINKFLAGS)" LDFLAGS="$(LDFLAGS)"
 
-$(BINOUT)/hare-install: $(BINOUT)/hare
+# hare(1) configured with HARE_DEFINES configuration
+$(BINOUT)/hare-configured: $(BINOUT)/hare
 	@mkdir -p $(BINOUT)
 	@printf 'HARE\t%s\n' "$@"
 	@env $(HARE_BUILD_ENV) \
@@ -84,13 +87,14 @@ docs: \
 	docs/hare-build.1 \
 	docs/hare-cache.1 \
 	docs/hare-deps.1 \
+	docs/hare-tool.1 \
 	docs/haredoc.1 \
 	docs/hare-run.1 \
 	docs/hare-test.1 \
 	docs/haredoc.5 \
 	docs/hare-module.5
 
-MAN1 = hare hare-build hare-cache hare-deps haredoc hare-run hare-test
+MAN1 = hare hare-build hare-cache hare-deps haredoc hare-run hare-test hare-tool
 MAN5 = haredoc hare-module
 
 bootstrap:
@@ -107,11 +111,11 @@ check: $(BINOUT)/hare
 
 install: install-cmd install-mods
 
-install-cmd: all $(BINOUT)/hare-install
+install-cmd: all $(BINOUT)/hare-configured
 	mkdir -p -- \
 		'$(DESTDIR)$(BINDIR)' '$(DESTDIR)$(MANDIR)/man1' \
 		'$(DESTDIR)$(BINDIR)' '$(DESTDIR)$(MANDIR)/man5'
-	install -m755 '$(BINOUT)/hare-install' '$(DESTDIR)$(BINDIR)/hare'
+	install -m755 '$(BINOUT)/hare-configured' '$(DESTDIR)$(BINDIR)/hare'
 	install -m755 '$(BINOUT)/haredoc' '$(DESTDIR)$(BINDIR)/haredoc'
 	for i in $(MAN1); do install -m644 docs/$$i.1 '$(DESTDIR)$(MANDIR)'/man1/$$i.1; done
 	for i in $(MAN5); do install -m644 docs/$$i.5 '$(DESTDIR)$(MANDIR)'/man5/$$i.5; done
@@ -119,7 +123,7 @@ install-cmd: all $(BINOUT)/hare-install
 install-mods:
 	rm -rf -- '$(DESTDIR)$(STDLIB)'
 	mkdir -p -- '$(DESTDIR)$(STDLIB)'
-	cp -R -- $$(scripts/moddirs) '$(DESTDIR)$(STDLIB)'
+	cp -R -- $$(scripts/moddirs) README '$(DESTDIR)$(STDLIB)'
 
 uninstall:
 	rm -- '$(DESTDIR)$(BINDIR)/hare'
@@ -128,5 +132,5 @@ uninstall:
 	for i in $(MAN5); do rm -- '$(DESTDIR)$(MANDIR)'/man5/$$i.5; done
 	rm -r -- '$(DESTDIR)$(STDLIB)'
 
-.PHONY: all $(BINOUT)/hare-install $(BINOUT)/haredoc bootstrap clean check \
+.PHONY: all $(BINOUT)/hare-configured $(BINOUT)/haredoc bootstrap clean check \
 	docs docs/html install start uninstall

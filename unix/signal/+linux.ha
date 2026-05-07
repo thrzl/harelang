@@ -31,18 +31,14 @@ export fn handle(
 	};
 
 	let new = rt::sigact {
-		sa_sigaction = handler: *fn(int, *rt::siginfo, *opaque) void,
+		sa_sigaction = handler: *fn(_: int,
+			_: *rt::siginfo, _: *opaque) void,
 		sa_mask = mask,
 		sa_flags = flags,
-		// Filled in by rt:
-		sa_restorer = null: *fn () void,
+		// Filled in by rt
+		sa_restorer = @undefined,
 	};
-	let old = rt::sigact {
-		// Filled in by rt:
-		sa_sigaction = null: *fn(int, *rt::siginfo, *opaque) void,
-		sa_restorer = null: *fn() void,
-		...
-	};
+	let old = rt::sigact { @undefined... };
 	match (rt::sigaction(signum, &new, &old)) {
 	case rt::errno =>
 		abort("sigaction failed (invalid signal?)");
@@ -289,8 +285,7 @@ export type siginfo = union {
 			},
 		},
 	},
-	// Pads the structure out to the length used by the kernel; do not use.
-	_si_pad: [128 - 3 * size(int)]u8,
+	_: [128 - 3 * size(int)]u8, // padding
 };
 
 // A code indicating why a signal was sent.

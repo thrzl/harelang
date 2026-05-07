@@ -1,0 +1,4 @@
+sha1: SHA-1 hashing algorithm
+
+SHA-1 is no longer considered a secure hash function. New applications are
+strongly advised to consider [[crypto::sha512]] or [[crypto::sha256]] instead.

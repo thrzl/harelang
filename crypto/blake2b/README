@@ -1,3 +1,5 @@
+blake2b: blake2b password hashing algorithm support
+
 This module implements the blake2b password hashing algorithm, bug-for-bug
 compatible with the classic OpenBSD implementation. It is not recommended except
 in cases of backwards-compatibility with legacy systems.

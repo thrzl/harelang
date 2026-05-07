@@ -22,7 +22,7 @@ export type pollfd = struct {
 	revents: i16,
 };
 
-// Pass this [[time::duration]] to [[poll]] to cause it wait indefinitely for
+// Pass this [[time::duration]] to [[poll]] to cause it to wait indefinitely for
 // the next event.
 export def INDEF: time::duration = -1;
 
@@ -37,7 +37,7 @@ export def NONBLOCK: time::duration = 0;
 // those which have revents set to a nonzero value.
 export fn poll(
 	fds: []pollfd,
-	timeout: time::duration,
+	timeout: time::duration = INDEF,
 ) (uint | error) = {
 	let ts = time::duration_to_timespec(timeout);
 	let ts = if (timeout == INDEF) null else &ts;

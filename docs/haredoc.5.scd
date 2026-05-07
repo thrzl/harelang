@@ -6,9 +6,9 @@ haredoc - Hare documentation format
 
 # DESCRIPTION
 
-Hare documentation is written in a simple markup language. *haredoc*(1) will
-display the documentation literally, without any additional formatting. Other
-tools may format Hare documentation into other formats.
+Hare documentation is written in a simple markup language. By default,
+*haredoc*(1) will display the documentation literally, without any additional
+formatting. Other tools may format Hare documentation into other formats.
 
 Text may be written normally, broken into several lines to conform to the
 80-column limit. To begin a new paragraph, insert an empty line.
@@ -27,6 +27,20 @@ preceded by a space.
 This markup language is extracted from Hare comments preceding exported symbols
 in your source code, and from a file named "README" in your module directory, if
 present.
+
+# README
+
+A file named "README" at the root directory of a Hare module is used as a
+summary of the entire module. It should start with a brief one-line summary of
+the module using the module's name (the last item in its identifier), a colon, a
+space, and a summary, as follows:
+
+```
+memio: memory-backed I/O functions
+```
+
+This may be followed by an empty line, then a long-form summary of the module
+using the documentation format described abovce.
 
 # EXAMPLE
 

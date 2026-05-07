@@ -146,9 +146,87 @@ export fn remaining_tokens(s: *tokenizer) []u8 = {
 	return s.in;
 };
 
+// Splits a byte slice into tokens delimited by 'delim', starting at the
+// beginning of the slice, and returning a slice of up to N tokens. The caller
+// must free the returned slice. The slices within the result are borrowed from
+// 'in'.
+//
+// The caller must ensure that 'delim' is not empty. The caller must free the
+// result after use.
+export fn splitn(in: []u8, delim: []u8, n: size) ([][]u8 | nomem) = {
+	assert(len(delim) > 0, "bytes::splitn must not be called with an empty delimiter");
+	let toks: [][]u8 = [];
+	let ok = false;
+	defer if (!ok) free(toks);
+	let tok = tokenize(in, delim...);
+	for (let i = 0z; i < n - 1z; i += 1) {
+		match (next_token(&tok)) {
+		case let s: []u8 =>
+			append(toks, s)?;
+		case done =>
+			ok = true;
+			return toks;
+		};
+	};
+	match (peek_token(&tok)) {
+	case done => void;
+	case []u8 =>
+		append(toks, remaining_tokens(&tok))?;
+	};
+	ok = true;
+	return toks;
+};
+
+// Splits a byte slice into tokens delimited by 'delim', starting at the end of
+// the slice, and returning a slice of up to N tokens. The caller must free the
+// returned slice. The slices within the result are borrowed from 'in'.
+//
+// The caller must ensure that 'delim' is not empty. The caller must free the
+// result after use.
+export fn rsplitn(in: []u8, delim: []u8, n: size) ([][]u8 | nomem) = {
+	assert(len(delim) > 0, "bytes::rsplitn called with empty delimiter");
+	let toks: [][]u8 = [];
+	let tok = rtokenize(in, delim...);
+	let ok = false;
+	defer if (!ok) free(toks);
+	for (let i = 0z; i < n - 1z; i += 1) {
+		match (next_token(&tok)) {
+		case let s: []u8 =>
+			append(toks, s)?;
+		case done =>
+			ok = true;
+			return toks;
+		};
+	};
+	match (peek_token(&tok)) {
+	case done => void;
+	case []u8 =>
+		append(toks, remaining_tokens(&tok))?;
+	};
+
+	for (let i = 0z; i < len(toks) / 2; i += 1) {
+		const j = len(toks) - i - 1;
+		const tmp = toks[i];
+		toks[i] = toks[j];
+		toks[j] = tmp;
+	};
+
+	ok = true;
+	return toks;
+};
+
+// Splits a byte slice into tokens delimited by byte present in 'delim' (see
+// [[tokenize]] for details).
+//
+// The caller must free the returned slice. The byte slices within the slice are
+// borrowed from 'in'.
+//
+// The caller must ensure that 'delim' is not empty.
+export fn split(in: []u8, delim: []u8) ([][]u8 | nomem) =
+	splitn(in, delim, types::SIZE_MAX);
+
 fn tokenize_test(
-	func: *fn([]u8, u8...) tokenizer,
-	testcase: str,
+	func: *fn(_: []u8, _: u8...) tokenizer,
 	in: []u8,
 	delim: []u8,
 	tokens: [][]u8,
@@ -164,79 +242,146 @@ fn tokenize_test(
 
 		const p = peek_token(&tok) as []u8;
 		const n = next_token(&tok) as []u8;
-		assert(equal(p, n), testcase);
-		assert(equal(n, want), testcase);
+		assert(equal(p, n));
+		assert(equal(n, want));
 	};
 
 	if (n >= iters) {
 		return tok;
 	};
 
-	assert(peek_token(&tok) is done, testcase);
-	assert(next_token(&tok) is done, testcase);
+	assert(peek_token(&tok) is done);
+	assert(next_token(&tok) is done);
 	return tok;
 };
 
 @test fn tokenize() void = {
-	tokenize_test(&tokenize, "simple case", [1, 2, 0, 3, 4], [0], [
+	// simple case
+	tokenize_test(&tokenize, [1, 2, 0, 3, 4], [0], [
 		[1, 2],
 		[3, 4],
 	]);
 
-	tokenize_test(&tokenize, "multiple delimiters", [1, 2, 0, 3, 4, 42, 5, 6], [0, 42], [
+	// multiple delimiters
+	tokenize_test(&tokenize, [1, 2, 0, 3, 4, 42, 5, 6], [0, 42], [
 		[1, 2],
 		[3, 4],
 		[5, 6],
 	]);
 
-	tokenize_test(&tokenize, "empty tokens", [1, 2, 0, 0, 0, 3, 4], [0], [
+	// empty tokens
+	tokenize_test(&tokenize, [1, 2, 0, 0, 0, 3, 4], [0], [
 		[1, 2],
 		[],
 		[],
 		[3, 4],
 	]);
 
-	tokenize_test(&tokenize, "leading empty tokens", [0, 1, 2, 3, 0], [0], [
+	// leading empty tokens
+	tokenize_test(&tokenize, [0, 1, 2, 3, 0], [0], [
 		[],
 		[1, 2, 3],
 		[],
 	]);
 
-	const tok = tokenize_test(&tokenize, "remaining_tokens", [1, 2, 0, 3, 4], [0], [
+	// remaining_tokens
+	const tok = tokenize_test(&tokenize, [1, 2, 0, 3, 4], [0], [
 		[1, 2],
 	], 1);
 	assert(equal(remaining_tokens(&tok), [3, 4]));
 };
 
 @test fn rtokenize() void = {
-	tokenize_test(&rtokenize, "simple case", [1, 2, 0, 3, 4], [0], [
+	// simple case
+	tokenize_test(&rtokenize, [1, 2, 0, 3, 4], [0], [
 		[3, 4],
 		[1, 2],
 	]);
 
-	tokenize_test(&rtokenize, "multiple delimiters", [1, 2, 0, 3, 4, 42, 5, 6], [0, 42], [
+	// multiple delimiters
+	tokenize_test(&rtokenize, [1, 2, 0, 3, 4, 42, 5, 6], [0, 42], [
 		[5, 6],
 		[3, 4],
 		[1, 2],
 	]);
 
-	tokenize_test(&rtokenize, "empty tokens", [1, 2, 0, 0, 0, 3, 4], [0], [
+	// empty tokens
+	tokenize_test(&rtokenize, [1, 2, 0, 0, 0, 3, 4], [0], [
 		[3, 4],
 		[],
 		[],
 		[1, 2],
 	]);
 
-	tokenize_test(&rtokenize, "leading empty tokens", [0, 1, 2, 3, 0], [0], [
+	// leading empty tokens
+	tokenize_test(&rtokenize, [0, 1, 2, 3, 0], [0], [
 		[],
 		[1, 2, 3],
 		[],
 	]);
 
-	const tok = tokenize_test(&rtokenize, "remaining_tokens", [1, 2, 0, 3, 4], [0], [
+	// remaining_tokens
+	const tok = tokenize_test(&rtokenize, [1, 2, 0, 3, 4], [0], [
 		[3, 4],
 	], 1);
 	assert(equal(remaining_tokens(&tok), [1, 2]));
+};
+
+@test fn split() void = {
+	const input = *(&"Hello, my name is Drew": *[]u8);
+	const space: [1]u8 = [' '];
+
+	const expected = [
+		*(&"Hello,": *[]u8),
+		*(&"my": *[]u8),
+		*(&"name": *[]u8),
+		*(&"is Drew": *[]u8),
+	];
+	const actual = splitn(input, space[..], 4z)!;
+	assert(len(expected) == len(actual));
+	for (let i = 0z; i < len(expected); i += 1) {
+		assert(equal(expected[i], actual[i]));
+	};
+	free(actual);
+
+	const expected2 = [
+		*(&"Hello,": *[]u8),
+		*(&"my": *[]u8),
+		*(&"name": *[]u8),
+		*(&"is": *[]u8),
+		*(&"Drew": *[]u8),
+	];
+	const actual2 = split(input, space[..])!;
+	assert(len(expected2) == len(actual2));
+	for (let i = 0z; i < len(expected2); i += 1) {
+		assert(equal(expected2[i], actual2[i]));
+	};
+	free(actual2);
+
+	const eq: [1]u8 = ['='];
+	const single = *(&"one": *[]u8);
+	const actual3 = splitn(single, eq[..], 2z)!;
+	const expected3 = [
+		*(&"one": *[]u8),
+	];
+	assert(len(expected3) == len(actual3));
+	for (let i = 0z; i < len(expected3); i += 1) {
+		assert(equal(expected3[i], actual3[i]));
+	};
+	free(actual3);
+
+	const expected4 = [
+		*(&"Hello, my": *[]u8),
+		*(&"name": *[]u8),
+		*(&"is": *[]u8),
+		*(&"Drew": *[]u8),
+	];
+	const actual4 = rsplitn(input, space[..], 4z)!;
+	assert(len(expected4) == len(actual4));
+	for (let i = 0z; i < len(expected4); i += 1) {
+		assert(equal(expected4[i], actual4[i]));
+	};
+	free(actual4);
 };
 
 // Returns the input slice "cut" along the first instance of a delimiter,

@@ -107,7 +107,7 @@ fn lookup_local_enum(ctx: *context, what: ast::ident) (ast::ident | void) = {
 	for (let decl &.. ctx.summary.types) {
 		const name = decl_ident(decl)[0];
 		if (name == what[0]) {
-			const t = (decl.decl as []ast::decl_type)[0];
+			const t = decl.decl as ast::decl_type;
 			const e = match (t._type.repr) {
 			case let e: ast::enum_type =>
 				yield e;
@@ -148,29 +148,26 @@ fn lookup_remote_enum(ctx: *context, what: ast::ident) (ast::ident | void | erro
 	for (let in .. srcs.ha) {
 		let d = scan(in)?;
 		defer free(d);
-		append(decls, d...);
+		append(decls, d...)!;
 	};
 
 	for (let decl .. decls) {
-		const decls = match (decl.decl) {
-		case let t: []ast::decl_type =>
+		const d = match (decl.decl) {
+		case let t: ast::decl_type =>
 			yield t;
 		case =>
 			continue;
 		};
-
-		for (let d .. decls) {
-			if (d.ident[0] == decl_name) {
-				const e = match (d._type.repr) {
-				case let e: ast::enum_type =>
-					yield e;
-				case =>
-					abort();
-				};
-				for (let value .. e.values) {
-					if (value.name == member) {
-						return what;
-					};
+		if (d.ident[0] == decl_name) {
+			const e = match (d._type.repr) {
+			case let e: ast::enum_type =>
+				yield e;
+			case =>
+				abort();
+			};
+			for (let value .. e.values) {
+				if (value.name == member) {
+					return what;
 				};
 			};
 		};
@@ -188,6 +185,7 @@ export fn scan(path: str) ([]ast::decl | parse::error) = {
 	let sc = bufio::newscanner(input);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, path, lex::flag::COMMENTS);
+	defer lex::finish(&lexer);
 	let su = parse::subunit(&lexer)?;
 	ast::imports_finish(su.imports);
 	return su.decls;

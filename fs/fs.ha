@@ -124,18 +124,19 @@ export fn move(fs: *fs, oldpath: str, newpath: str) (void | error) = {
 	// - Move non-regular files
 	let st = stat(fs, oldpath)?;
 	assert(isfile(st.mode), "TODO: move non-regular files");
+	st.mode &= 0o7777;
 	let old = open(fs, oldpath)?;
 	let new = match (create(fs, newpath, st.mode)) {
 	case let h: io::handle =>
 		yield h;
 	case let err: error =>
-		io::close(old): void;
+		_ = io::close(old);
 		return err;
 	};
 	match (io::copy(new, old)) {
 	case let err: io::error =>
-		io::close(new): void;
-		io::close(old): void;
+		_ = io::close(new);
+		_ = io::close(old);
 		remove(fs, newpath)?;
 		return err;
 	case size => void;
@@ -145,9 +146,9 @@ export fn move(fs: *fs, oldpath: str, newpath: str) (void | error) = {
 	remove(fs, oldpath)?;
 };
 
-// Returns an iterator for a path, which yields the contents of a directory.
-// Pass empty string to yield from the root. The order in which entries are
-// returned is undefined. The return value must be finished with [[finish]].
+// Creates an [[iterator]] for a given directory to read its contents. The order
+// in which entries are returned is undefined. The user should call [[next]] to
+// enumerate entries, and [[finish]] when done iterating.
 export fn iter(fs: *fs, path: str) (*iterator | error) = {
 	match (fs.iter) {
 	case null =>

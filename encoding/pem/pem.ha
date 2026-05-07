@@ -9,13 +9,12 @@ use errors;
 use fmt;
 use io;
 use memio;
-use os;
 use strings;
 
 
-const begin: str = "-----BEGIN ";
-const end: str = "-----END ";
-const suffix: str = "-----";
+def BEGIN: str = "-----BEGIN ";
+def END: str = "-----END ";
+def SUFFIX: str = "-----";
 
 export type decoder = struct {
 	in: b64stream,
@@ -91,14 +90,14 @@ export fn next(dec: *decoder) ((str, pemdecoder) | io::EOF | io::error) = {
 		};
 		const line = strings::rtrim(line, '\r');
 
-		if (!strings::hasprefix(line, begin)
-				|| !strings::hassuffix(line, suffix)) {
+		if (!strings::hasprefix(line, BEGIN)
+				|| !strings::hassuffix(line, SUFFIX)) {
 			continue;
 		};
 
 		memio::reset(&dec.label);
 		const label = strings::sub(line,
-			len(begin), len(line) - len(suffix));
+			len(BEGIN), len(line) - len(SUFFIX));
 		memio::concat(&dec.label, label)!;
 
 		return (memio::string(&dec.label)!, pemdecoder {
@@ -123,7 +122,7 @@ fn pem_read(st: *io::stream, buf: []u8) (size | io::EOF | io::error) = {
 	case io::EOF => void;
 	};
 
-	const line = match (bufio::scan_line(&(st.b64.in : *b64stream).in)) {
+	const line = match (bufio::scan_line(&(st.b64.in: *b64stream).in)) {
 	case io::EOF =>
 		return io::EOF;
 	case utf8::invalid =>
@@ -133,8 +132,8 @@ fn pem_read(st: *io::stream, buf: []u8) (size | io::EOF | io::error) = {
 	};
 	const line = strings::rtrim(line, '\r');
 
-	if (!strings::hasprefix(line, end)
-			|| !strings::hassuffix(line, suffix)) {
+	if (!strings::hasprefix(line, END)
+			|| !strings::hassuffix(line, SUFFIX)) {
 		return errors::invalid;
 	};
 
@@ -194,7 +193,7 @@ const pemencoder_vt: io::vtable = io::vtable {
 // Creates a new PEM encoder stream. The stream has to be closed to write the
 // trailer.
 export fn newencoder(label: str, s: io::handle) (pemencoder | io::error) = {
-	fmt::fprintf(s, "{}{}{}\n", begin, label, suffix)?;
+	fmt::fprintf(s, "{}{}{}\n", BEGIN, label, SUFFIX)?;
 	return pemencoder {
 		stream = &pemencoder_vt,
 		out = s,
@@ -230,5 +229,5 @@ fn pem_wclose(s: *io::stream) (void | io::error) = {
 	let s = s: *pemencoder;
 	io::writeall(&s.b64, s.buf[..s.ln])?;
 	io::close(&s.b64)?;
-	fmt::fprintf(s.out, "\n{}{}{}\n", end, s.label, suffix)?;
+	fmt::fprintf(s.out, "\n{}{}{}\n", END, s.label, SUFFIX)?;
 };

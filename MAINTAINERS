@@ -61,27 +61,27 @@ DNS SUPPORT
 M:	Conrad Hoffmann <ch@bitfehler.net>
 F:	net/dns/
 
-MATHEMATICAL LIBRARY
-M:	Bor Grošelj Simić <bgs@turminal.net>
-F:	math/
+DRAGONFLY SUPPORT
+M:	Michael Neumann <mneumann@ntecs.de>
+F:	*dragonfly*
 
 NETBSD SUPPORT
 M:	Mallory Adams <malloryadams@fastmail.com>
 F:	*netbsd*
 
 OPENBSD SUPPORT
-M:	Lorenz (xha) <me@xha.li>
+M:	pasta <pasta@pastatech.eu>
 F:	*openbsd*
 
 REGULAR EXPRESSIONS
-M:	Vlad-Stefan Harbuz <vlad@vladh.net>
+M:	Vlad-Stefan Harbuz <vlad@vlad.website>
 F:	regex/
 
 THE REST
 M:	Drew DeVault <sir@cmpwn.com>
 M:	Ember Sawady <ecs@d2evs.net>
 M:	Sebastian <sebastian@sebsite.pw>
-M:	Bor Grošelj Simić <bgs@turminal.net>
+M:	Joe Finney <me@spxtr.net>
 L:	~sircmpwn/hare-dev@lists.sr.ht
 T:	git https://git.sr.ht/~sircmpwn/hare
 C:	irc://irc.libera.chat/#hare-dev

@@ -10,14 +10,14 @@ export type memfd_flag = enum uint {
 	NONE = 0,
 	// Unsets the close-on-exec flag when creating a memfd.
 	NOCLOEXEC = 1,
-	// ALlows sealing operations on this file.
+	// Allows sealing operations on this file.
 	ALLOW_SEALING = 2,
 };
 
-// Creates a new anonyomous [[io::file]] backed by memory.
+// Creates a new anonymous [[io::file]] backed by memory.
 //
 // The initial file size is zero. It can be written to normally, or the size can
-// be set manually with [[trunc]].
+// be set manually with [[io::trunc]].
 //
 // This function is available on Linux and FreeBSD.
 export fn memfd(

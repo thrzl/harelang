@@ -8,7 +8,7 @@ export type decoder = struct {
 	src: []u8,
 };
 
-// Initializes a new UTF-8 decoder.
+// Initializes a new UTF-8 decoder. You may copy the decoder to save its state.
 export fn decode(src: []u8) decoder = decoder {
 	src = src,
 	offs = 0,
@@ -21,6 +21,9 @@ const masks: [2][8]u8 = [
 
 // Returns the next rune from a decoder. done is returned when there are no
 // remaining codepoints.
+//
+// If an invalid UTF-8 sequence is encountered, the position of the decoder is
+// set to immediately after the first invalid byte.
 export fn next(d: *decoder) (rune | done | more | invalid) = {
 	if (d.offs == len(d.src)) {
 		return done;
@@ -193,6 +196,11 @@ export fn slice(begin: *decoder, end: *decoder) []u8 = {
 	next(&d1)!;
 	assert(len(remaining(&d1)) == 0);
 };
+
+// Returns the position of the decoder. When possible, it's generally considered
+// more idiomatic to use other functions in this module, such as [[remaining]]
+// and [[slice]].
+export fn position(d: *decoder) size = d.offs;
 
 // Returns void if a given byte slice contains only valid UTF-8 sequences,
 // otherwise returns invalid.

@@ -23,6 +23,9 @@ export type tag_bad_format = !void;
 // A dependency cycle error.
 export type dep_cycle = ![]str;
 
+// A module dependency was not found.
+export type dep_missing = !ast::ident;
+
 // Two files in a module have the same basename and extension, and the
 // same number of compatible tags with the input tagset, so it is unknown
 // which should be used.
@@ -42,6 +45,7 @@ export type error = !(
 	file_conflict |
 	not_found |
 	dep_cycle |
+	dep_missing |
 	tag_has_dot |
 	tag_bad_format |
 	errcontext |
@@ -57,12 +61,10 @@ export type context = struct {
 // The location of a module
 export type location = (*path::buffer | ast::ident);
 
-// Returns a string representation of a [[location]]. The result must be freed
-// by the caller.
-export fn locstr(loc: location) str = {
+fn locstr(loc: location) str = {
 	match (loc) {
 	case let buf: *path::buffer =>
-		return strings::dup(path::string(buf));
+		return strings::dup(path::string(buf))!;
 	case let id: ast::ident =>
 		return unparse::identstr(id);
 	};
@@ -70,7 +72,7 @@ export fn locstr(loc: location) str = {
 
 // XXX: this shouldn't be necessary, the language should have some built-in way
 // to carry context with errors
-fn attach(ctx: str, e: error) errcontext = (ctx, alloc(e)): errcontext;
+fn attach(ctx: str, e: error) errcontext = (ctx, alloc(e)!): errcontext;
 
 // Returns the original [[error]] that might be hidden behind more context.
 export fn unwrap_error(err: error) error = {
@@ -130,6 +132,10 @@ fn _strerror(e: error, buf: *memio::stream) void = {
 	case let e: dep_cycle =>
 		memio::concat(buf, "Dependency cycle: ")!;
 		memio::join(buf, " -> ", e...)!;
+		return;
+	case let e: dep_missing =>
+		memio::concat(buf, "Dependency missing: ",
+			unparse::identstr(e))!;
 		return;
 	case let e: file_conflict =>
 		memio::concat(buf, "File conflict: ")!;

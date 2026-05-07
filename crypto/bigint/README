@@ -1,3 +1,5 @@
+bigint: constant-time operations on arbitrarily large integers
+
 Bigint provides constant time operations on big integers. This module is limited
 in scope, therefore the user must exercise caution and read the documentation
 carefully to avoid misuse. Restrictions apply to the compatibility of

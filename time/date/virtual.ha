@@ -5,16 +5,19 @@ use sort;
 use time;
 use time::chrono;
 
-// Flags for resolving an absent zone-offset. Handles timezone transitions.
+// Flags for resolving undetermined zone-offsets. Handles timezone transitions.
 //
-// The [[realize]] function, as well as other date creation functions (like
-// [[new]], [[truncate]], [[reckon]]...) accept zflags. If zflags are provided,
-// these functions normally calculate an intermediate date with a best-guess
-// numerical zone-offset. This intermediate date can be [[invalid]] if it falls
-// within the observed overlap or gap of a timezone transition, where such dates
-// are ambiguous or nonexistent. In this case, the provided zflags are
-// consulted, and a final calculation takes place before the final resultant
-// date (or [[zfunresolved]]) is returned.
+// The [[realize]] function, as well as other date creation functions (e.g.
+// [[new]], [[truncate]], [[reckon]]) accept zflags in place of a numerical
+// zone-offset. If zflags are provided, these functions first calculate an
+// intermediate date with a reasonable numerical zone-offset, usually some
+// preexisting one or a best guess using some [[locality]].
+//
+// This intermediate date can be [[invalid]] if it falls within the observed gap
+// or overlap of a timezone transition, where such dates are ambiguous or
+// nonexistent. In this case, the provided zflags are consulted, and a final
+// adjustment takes place before the final resultant date with a new zone-offset
+// (or [[zfunresolved]]) is returned.
 //
 // Timezone transitions create gaps and overlaps, the two causes of [[invalid]]
 // intermediate dates. Passing one "GAP_" and one "LAP_" flag covers both cases.
@@ -22,8 +25,9 @@ use time::chrono;
 // 	let zf = date::zflag::LAP_EARLY | date::zflag::GAP_END;
 // 	date::new(loc, zf, fields...)!; // will never return [[zfunresolved]]
 //
-// Note that usage of "GAP_" flags will cause the resultant date to be different
-// to what is originally specified if the intermediate date falls within a gap.
+// Note, "GAP_" flags will cause the resultant date to be different to the
+// intermediate date if it falls within a gap.
+//
 // Flags with greater value take precedent.
 //
 // The following figures exist to help understand the effect of these flags.
@@ -89,43 +93,38 @@ export type zflag = enum u8 {
 	// date (Fig A "g") using the most negative (westmost) zone-offset.
 	LAP_LATE  = 0b00000010,
 
-	// Upon encountering an observed gap, disregard the specified date and
-	// select the date at the start boundary of the observed gap (Fig B
-	// "gp"), corresponding to the contiguous time just before the
+	// Upon encountering an observed gap, disregard the intermediate date
+	// and select the date at the observed gap's start-boundary
+	// (Fig B "gp"), corresponding to the contiguous time just before the
 	// transition (Fig B "tx").
 	GAP_START = 0b00000100,
-	// Upon encountering an observed gap, disregard the specified date and
-	// select the date at the end boundary of the observed gap (Fig B "gq"),
+	// Upon encountering an observed gap, disregard the intermediate date
+	// and select the date at the observed gap's end-boundary (Fig B "gq"),
 	// corresponding to the contiguous time at the transition (Fig B "tx").
 	GAP_END   = 0b00001000,
 };
 
 // Failed to resolve an absent zone-offset. The provided [[zflag]]s failed to
 // account for some timezone effect and could not produce a valid zone-offset.
-// A false value signifies the occurence of a timezone transition gap.
-// A true value signifies the occurence of a timezone transition overlap.
-export type zfunresolved = !bool;
+export type zfunresolved = !zferror;
+
+export type zferror = enum {
+	GAP,
+	LAP,
+};
 
 // A [[virtual]] date does not have enough information from which to create a
 // valid [[date]].
-export type insufficient = !lack; // TODO: drop alias workaround
+export type insufficient = !void;
 
-export type lack = enum u8 {
-	LOCALITY = 1 << 0, // could not deduce locality
-	DAYDATE = 1 << 1,  // could not deduce daydate
-	DAYTIME = 1 << 2,  // could not deduce time-of-day
-	ZOFF = 1 << 3,     // could not deduce zone offset
-};
-
-// A virtual date; a [[date]] wrapper interface, which represents a date of
-// uncertain validity. Its fields need not be valid observed chronological
-// values. It is meant as an intermediary container for date information to be
-// resolved with the [[realize]] function.
+// A virtual date of undetermined validity; a [[date]] wrapper interface. It is
+// meant as an intermediary container for date information to be resolved with
+// the [[realize]] function.
 //
-// Unlike [[date]], a virtual date's fields are meant to be treated as public
-// and mutable. The embedded [[time::instant]] and [[time::chrono::locality]]
-// fields (.sec .nsec .loc) are considered meaningless. Behaviour with the
-// observer functions is undefined.
+// A virtual date's "observer" fields (including that of the embedded date)
+// should be treated as writable. The [[realize]] function takes into account
+// all these fields, except for the embedded [[time::chrono::moment]] and
+// [[locality]] fields (.sec .nsec .tsc .loc).
 //
 // This can be used to safely construct a new [[date]] piece-by-piece. Start
 // with [[newvirtual]], then collect enough date/time information incrementally
@@ -141,27 +140,28 @@ export type lack = enum u8 {
 // 	v.nanosecond = 600000000;
 // 	let d = date::realize(v)!;
 //
+// Virtual date behaviour with the observer functions is undefined.
 export type virtual = struct {
 	date,
-	// virtual's timescalar second
+	// The virtual date's timescalar second.
 	vsec:     (void | i64),
-	// virtual's nanosecond of timescalar second
+	// The virtual date's nanosecond of the timescalar second.
 	vnsec:    (void | i64),
-	// virtual's locality
-	vloc:     (void | chrono::locality),
-	// locality name
+	// The virtual date's [[locality]].
+	vloc:     (void | locality),
+	// The [[locality]]'s name.
 	locname:  (void | str),
-	// zone offset
+	// The zone-offset. See [[zflag]] for its effects in [[realize]].
 	zoff:     (void | time::duration | zflag),
-	// zone abbreviation
+	// The zone-abbreviation.
 	zabbr:    (void | str),
-	// all but the last two digits of the year
+	// The century; all but the last two digits of the year.
 	century:  (void | int),
-	// the last two digits of the year
+	// The last two digits of the year; the year modulo 100.
 	year100:  (void | int),
-	// hour of 12 hour clock
+	// The hour of a 12 hour clock; the hour modulo 12.
 	hour12:   (void | int),
-	// AM/PM (false/true)
+	// The meridiem indicator (false=AM, true=PM).
 	ampm:     (void | bool),
 };
 
@@ -169,8 +169,9 @@ export type virtual = struct {
 export fn newvirtual() virtual = virtual {
 	sec         = 0,
 	nsec        = 0,
-	loc         = chrono::UTC,
-	zone        = null,
+	tsc         = &chrono::utc,
+	loc         = UTC,
+	zonephase   = null,
 	daydate     = void,
 	daytime     = void,
 
@@ -204,9 +205,9 @@ export fn newvirtual() virtual = virtual {
 
 // Realizes a valid [[date]] from a [[virtual]] date, or fails appropriately.
 //
-// The virtual date must hold enough valid date information to be able to
-// calculate values for the resulting date. A valid combination of its fields
-// must be "filled-in" (hold numerical, non-void values). For example:
+// The virtual date must hold enough valid date information to calculate a
+// resulting date. A valid combination of "inputs" (filled in, non-void fields)
+// must be provided. For example:
 //
 // 	let v = date::newvirtual();
 // 	v.locname = "Europe/Amsterdam";
@@ -217,108 +218,56 @@ export fn newvirtual() virtual = virtual {
 // 	v.minute = 14;
 // 	v.second = 7;
 // 	v.nanosecond = 0;
-// 	let d = date::realize(v, time::chrono::tz("Europe/Amsterdam")!)!;
+// 	let d = date::realize(v, date::tzdb("Europe/Amsterdam")!)!;
 //
-// This function consults the fields of the given virtual date using a
-// predictable procedure, attempting the simplest and most common field
-// combinations first. Fields marked below with an asterisk (*), when empty,
-// depend on other filled-in field-sets to calculate a new value for itself. The
-// order in which these "dependency" field-sets are tried is described below.
+// A fixed algorithm is used to ascertain the given input combination.
+// Combinations are attempted in a particular order listed below.
+// Inputs marked with '*' can be substituted with further combinations.
+// The algorithm is as follows:
 //
-// The resultant date depends on a locality value and instant value.
+// The resultant date is made from a [[locality]] and [[time::instant]].
 //
-// The locality ([[time::chrono::locality]]) value depends on:
+// The locality is derived from one of:
 //
 // - .vloc
 // - .locname : This is compared to the .name field of each locality
 //   provided via the locs parameter, or "UTC" if none are provided.
 //   The first matching locality is used.
 //
-// The instant ([[time::instant]]) value depends on:
+// The instant is derived from one of:
 //
 // - .vsec, .vnsec
-// - .daydate*, .daytime*, .zoff
+// - .daydate*, .daytime*, .zoff : See [[zflag]] for its effects here.
 //
-// An empty .daydate depends on:
+// A void .daydate may be substituted with one of:
 //
 // - .year*, .month, .day
 // - .year*, .yearday
 // - .year*, .week, .weekday
 // - .isoweekyear, .isoweek, .weekday
 //
-// An empty .daytime depends on:
+// A void .daytime may be substituted with:
 //
 // - .hour*, .minute, .second, .nanosecond
 //
-// An empty .year depends on:
+// A void .year may be substituted with:
 //
 // - .century, .year100
 //
-// An empty .hour depends on:
+// A void .hour may be substituted with:
 //
 // - .hour12, .ampm
 //
-// If not enough information was provided, [[insufficient]] is returned.
-// If invalid information was provided, [[invalid]] is returned.
+// If an insufficient combination was provided, [[insufficient]] is returned.
+// If invalid values were provided, [[invalid]] is returned.
 // Any [[zflag]]s assigned to the .zoff field affect the final result.
 export fn realize(
 	v: virtual,
-	locs: chrono::locality...
-) (date | insufficient | invalid | zfunresolved) = {
-	match (v.zoff) {
-	case void =>
-		return lack::ZOFF;
-	case time::duration =>
-		return realize_validzoff(v, locs...);
-	case let zf: zflag =>
-		let valid_dates = realize_validzoffs(v, locs...)?;
-		defer free(valid_dates);
-		switch (len(valid_dates)) {
-		case 0 =>
-			if (0 != zf & zflag::GAP_END) {
-				return realize_gapbounds(v).1;
-			} else if (0 != zf & zflag::GAP_START) {
-				return realize_gapbounds(v).0;
-			} else {
-				return false: zfunresolved;
-			};
-		case 1 =>
-			return valid_dates[0];
-		case =>
-			if (0 != zf & zflag::LAP_LATE) {
-				return valid_dates[len(valid_dates) - 1];
-			} else if (0 != zf & zflag::LAP_EARLY) {
-				return valid_dates[0];
-			} else {
-				return true: zfunresolved;
-			};
-		};
-	};
-};
-
-fn realize_validzoff(
-	v: virtual,
-	locs: chrono::locality...
-) (date | insufficient | invalid) = {
-	let d = realize_datetimezoff(v, locs...)?;
-
-	// verify zone offset
-	if (chrono::ozone(&d).zoff != v.zoff as time::duration) {
-		return invalid;
-	};
-
-	return d;
-};
-
-fn realize_datetimezoff(
-	v: virtual,
-	locs: chrono::locality...
-) (date | insufficient | invalid) = {
-	let lacking = 0u8;
-
+	locs: locality...
+) (date | insufficient | invalid | zfunresolved | nomem) = {
 	// determine .loc
-	if (v.vloc is chrono::locality) {
-		v.loc = v.vloc as chrono::locality;
+	if (v.vloc is locality) {
+		v.loc = v.vloc as locality;
 	} else if (v.locname is str) {
 		for (let loc .. locs) {
 			if (loc.name == v.locname as str) {
@@ -327,7 +276,7 @@ fn realize_datetimezoff(
 			};
 		};
 	} else {
-		lacking |= insufficient::LOCALITY;
+		return insufficient;
 	};
 
 	// try using .vsec .vnsec
@@ -342,12 +291,64 @@ fn realize_datetimezoff(
 	};
 
 	// try using .daydate, .daytime, .zoff
+	match (v.zoff) {
+	case void =>
+		return insufficient;
+	case time::duration =>
+		return realize_validzoff(v, locs...);
+	case let zf: zflag =>
+		let valid_dates = realize_validzoffs(v, locs...)?;
+		defer free(valid_dates);
+		switch (len(valid_dates)) {
+		case 0 =>
+			if (0 != zf & zflag::GAP_END) {
+				return realize_gapbounds(v).1;
+			} else if (0 != zf & zflag::GAP_START) {
+				return realize_gapbounds(v).0;
+			} else {
+				return zferror::GAP: zfunresolved;
+			};
+		case 1 =>
+			return valid_dates[0];
+		case =>
+			if (0 != zf & zflag::LAP_LATE) {
+				return valid_dates[len(valid_dates) - 1];
+			} else if (0 != zf & zflag::LAP_EARLY) {
+				return valid_dates[0];
+			} else {
+				return zferror::LAP: zfunresolved;
+			};
+		};
+	};
+};
+
+fn realize_validzoff(
+	v: virtual,
+	locs: locality...
+) (date | insufficient | invalid) = {
+	let d = realize_datetimezoff(v, locs...)?;
+
+	// verify zone offset
+	if (zone(&d).zoff != v.zoff as time::duration) {
+		return invalid;
+	};
+
+	return d;
+};
+
+// TODO: add .sundayweek to realize?
+
+fn realize_datetimezoff(
+	v: virtual,
+	locs: locality...
+) (date | insufficient | invalid) = {
+	let lacking = false;
 
 	// determine zone offset
 	if (v.zoff is i64) {
 		void;
 	} else {
-		lacking |= insufficient::ZOFF;
+		lacking = true;
 	};
 
 	// determine .daydate
@@ -403,7 +404,7 @@ fn realize_datetimezoff(
 			)?;
 		} else {
 			// cannot deduce daydate
-			lacking |= insufficient::DAYDATE;
+			lacking = true;
 		};
 	};
 
@@ -419,7 +420,7 @@ fn realize_datetimezoff(
 				const pm = v.ampm as bool;
 				yield if (pm) hr * 2 else hr;
 			} else {
-				lacking |= insufficient::DAYTIME;
+				lacking = true;
 				yield :daytime;
 			};
 
@@ -435,29 +436,29 @@ fn realize_datetimezoff(
 				v.nanosecond as int,
 			)?;
 		} else {
-			lacking |= insufficient::DAYTIME;
+			lacking = true;
 		};
 	};
 
-	if (lacking != 0u8) {
-		return lacking: insufficient;
+	if (lacking) {
+		return insufficient;
 	};
 
 	// determine .sec, .nsec
-	const d = from_moment(chrono::from_datetime(
+	const d = from_datetime(
 		v.loc,
 		v.zoff as time::duration,
 		v.daydate as i64,
 		v.daytime as i64,
-	));
+	);
 
 	return d;
 };
 
 fn realize_validzoffs(
 	v: virtual,
-	locs: chrono::locality...
-) ([]date | insufficient | invalid) = {
+	locs: locality...
+) ([]date | insufficient | invalid | nomem) = {
 	// check if only zoff is missing
 	v.zoff = 0o0;
 	match (realize_validzoff(v, locs...)) {
@@ -468,26 +469,13 @@ fn realize_validzoffs(
 	};
 	v.zoff = void;
 
+	let ok = false;
 	let dates: []date = [];
-
-	// determine .loc
-	if (v.vloc is chrono::locality) {
-		v.loc = v.vloc as chrono::locality;
-	} else if (v.locname is str) {
-		for (let loc .. locs) {
-			if (loc.name == v.locname as str) {
-				v.loc = loc;
-				v.vloc = loc;
-				break;
-			};
-		};
-	} else {
-		return insufficient::LOCALITY;
-	};
+	defer if (!ok) free(dates);
 
 	// try matching zone abbreviation
 	if (v.zabbr is str) {
-		for (let zone .. v.loc.zones) {
+		for (let zone .. v.loc.phases) {
 			if (v.zabbr as str == zone.abbr) {
 				v.zoff = zone.zoff;
 				match (realize_validzoff(v, locs...)) {
@@ -498,8 +486,8 @@ fn realize_validzoffs(
 					case size =>
 						void;
 					case void =>
-						append(dates, d);
-						sort::sort(dates, size(date), &cmpdates);
+						append(dates, d)?;
+						sort::sort(dates, size(date), &cmpdates)?;
 					};
 				case invalid =>
 					continue;
@@ -513,7 +501,7 @@ fn realize_validzoffs(
 	};
 
 	// try zone offsets from locality
-	for (let zone .. v.loc.zones) {
+	for (let zone .. v.loc.phases) {
 		v.zoff = zone.zoff;
 		match (realize_validzoff(v, locs...)) {
 		case let d: date =>
@@ -521,8 +509,8 @@ fn realize_validzoffs(
 			case size =>
 				void;
 			case void =>
-				append(dates, d);
-				sort::sort(dates, size(date), &cmpdates);
+				append(dates, d)?;
+				sort::sort(dates, size(date), &cmpdates)?;
 			};
 		case invalid =>
 			continue;
@@ -531,6 +519,7 @@ fn realize_validzoffs(
 		};
 	};
 
+	ok = true;
 	return dates;
 };
 
@@ -541,11 +530,11 @@ fn cmpdates(a: const *opaque, b: const *opaque) int = {
 };
 
 fn realize_gapbounds(v: virtual) (date, date) = {
-	let loc = v.vloc as chrono::locality;
+	let loc = v.loc;
 
-	let zlo: time::duration =  48 * time::HOUR;
-	let zhi: time::duration = -48 * time::HOUR;
-	for (let zone .. loc.zones) {
+	let zlo: time::duration = 2 *  loc.daylength;
+	let zhi: time::duration = 2 * -loc.daylength;
+	for (let zone .. loc.phases) {
 		if (zone.zoff > zhi) {
 			zhi = zone.zoff;
 		};
@@ -577,8 +566,6 @@ fn realize_gapbounds(v: virtual) (date, date) = {
 
 	let gapstart = from_instant(loc, time::add(t, -time::NANOSECOND));
 	let gapend   = from_instant(loc, t);
-
-	// TODO: check if original v falls within gapstart & gapend?
 
 	return (gapstart, gapend);
 };

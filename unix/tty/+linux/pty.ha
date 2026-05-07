@@ -48,7 +48,9 @@ fn get_slave(master: io::file) (io::file | fs::error) = {
 	};
 };
 
-// Returns the filename of the pseudoterminal slave.
+// Returns the filename of the pseudoterminal slave. The return value is
+// statically allocated and will be overwritten on subsequent calls to this
+// function.
 export fn ptsname(master: io::file) (str | error) = {
 	let pty = 0;
 	match (rt::ioctl(master, rt::TIOCGPTN, &pty)) {
@@ -63,7 +65,7 @@ export fn ptsname(master: io::file) (str | error) = {
 		};
 	case =>
 		static let buf: [9 + 20]u8 = [0...];
-		return fmt::bsprintf(buf[..len(buf)], "/dev/pts/{}", pty);
+		return fmt::bsprintf(buf[..len(buf)], "/dev/pts/{}", pty)!;
 	};
 };
 

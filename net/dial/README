@@ -1,3 +1,5 @@
+dial: high-level support for establishing network connections
+
 net::dial provides a single function to facilitate the establishment of outgoing
 network connections. It handles port selection, address parsing, protocol and
 service lookup, DNS lookup (via /etc/hosts, /etc/resolv.conf, etc), SRV record

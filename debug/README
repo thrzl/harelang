@@ -1,3 +1,5 @@
+debug: runtime debugging support
+
 The debug module implements various runtime debugging services. It is enabled by
 default when you build programs in debug mode (you can disable this by building
 in release mode with the -R flag to hare(1)). It provides detailed backtraces in

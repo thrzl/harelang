@@ -2,14 +2,16 @@
 // (c) Hare authors <https://harelang.org>
 
 use errors;
+use fs;
 use io;
 use os;
 use path;
 use strings;
 
-// Prepares a [[command]] based on its name and a list of arguments. The argument
-// list should not start with the command name; it will be added for you. The
-// argument list is borrowed from the strings you pass into this command.
+// Prepares a [[command]] based on its name and a list of arguments. The
+// argument list should not start with the command name; it will be added for
+// you. The argument list is borrowed from the strings you pass into this
+// command.
 //
 // If 'name' does not contain a '/', the $PATH will be consulted to find the
 // correct executable. If path resolution fails, [[nocmd]] is returned.
@@ -20,7 +22,7 @@ use strings;
 //	assert(exec::check(&status) is void);
 //
 // By default, the new command will inherit the current process's environment.
-export fn cmd(name: str, args: str...) (command | error) = {
+export fn cmd(name: str, args: str...) (command | error | nomem) = {
 	let platcmd = if (strings::contains(name, '/')) {
 		yield match (open(name)) {
 		case let p: platform_cmd =>
@@ -38,39 +40,49 @@ export fn cmd(name: str, args: str...) (command | error) = {
 			yield p;
 		};
 	};
-	let cmd = command {
+
+	let argv = platform_newargv(name, args...)?;
+
+	let env = match (platform_dup_env(os::getenvs())) {
+	case let env: platform_env =>
+		yield env;
+	case nomem =>
+		platform_free_argv(argv);
+		return nomem;
+	};
+
+	return command {
 		platform = platcmd,
-		argv = alloc([], len(args) + 1),
-		env = strings::dupall(os::getenvs()),
 		files = [],
 		dir = "",
+		argv = argv,
+		env = env,
+		...
 	};
-	append(cmd.argv, name);
-	append(cmd.argv, args...);
-	return cmd;
-};
-
-// Sets the 0th value of argv for this command. It is uncommon to need this.
-export fn setname(cmd: *command, name: str) void = {
-	cmd.argv[0] = name;
 };
 
 // Frees state associated with a command. You only need to call this if you do
-// not execute the command with [[exec]] or [[start]]; in those cases the state is
-// cleaned up for you.
+// not execute the command with [[exec]] or [[start]]; in those cases the state
+// is cleaned up for you.
 export fn finish(cmd: *command) void = {
 	platform_finish(cmd);
-	free(cmd.argv);
+	platform_free_argv(cmd.argv);
+	platform_free_env(cmd.env);
 	free(cmd.files);
-	strings::freeall(cmd.env);
 };
 
 // Executes a prepared command in the current address space, overwriting the
 // running process with the new command.
-export fn exec(cmd: *command) never = {
+//
+// This function will only return if an error occurs.
+//
+//	const cmd = exec::cmd("/bin/sh", "-c", "echo hello world")?;
+//	const err = exec::exec(&cmd);
+//	// This only runs if exec failed:
+//	fmt::fatal("exec /bin/sh:", exec::strerror(err));
+export fn exec(cmd: *command) error = {
 	defer finish(cmd); // Note: doesn't happen if exec succeeds
-	platform_exec(cmd): void;
-	abort("os::exec::exec failed");
+	return platform_exec(cmd);
 };
 
 // Starts a prepared command in a new process.
@@ -87,32 +99,32 @@ export fn start(cmd: *command) (process | error) = {
 // Empties the environment variables for the command. By default, the command
 // inherits the environment of the parent process.
 export fn clearenv(cmd: *command) void = {
-	strings::freeall(cmd.env);
-	cmd.env = [];
+	platform_free_env(cmd.env);
+	cmd.env = platfrom_newenv();
+};
+
+// Adds or sets a variable in the command environment. This does not affect the
+// current process environment. The key may not contain '=' or '\0'.
+export fn setenv(
+	cmd: *command,
+	key: str,
+	value: str
+) (void | errors::invalid | nomem) = {
+	if (strings::contains(value, '\0')) return errors::invalid;
+	unsetenv(cmd, key)?;
+	return platform_setenv(cmd, key, value);
 };
 
 // Removes a variable in the command environment. This does not affect the
 // current process environment. The key may not contain '=' or '\0'.
 export fn unsetenv(cmd: *command, key: str) (void | errors::invalid) = {
 	if (strings::contains(key, '=', '\0')) return errors::invalid;
-
-	// XXX: This can be a binary search
-	for (let i = 0z; i < len(cmd.env); i += 1) {
-		if (strings::cut(cmd.env[i], "=").0 == key) {
-			free(cmd.env[i]);
-			delete(cmd.env[i]);
-			break;
-		};
-	};
+	return platform_unsetenv(cmd, key);
 };
 
-// Adds or sets a variable in the command environment. This does not affect the
-// current process environment. The key may not contain '=' or '\0'.
-export fn setenv(cmd: *command, key: str, value: str) (void | errors::invalid) = {
-	if (strings::contains(value, '\0')) return errors::invalid;
-	unsetenv(cmd, key)?;
-	append(cmd.env, strings::join("=", key, value));
-};
+// Sets the 0th value of argv for this command. It is uncommon to need this.
+export fn setname(cmd: *command, name: str) (void | nomem) =
+	platform_setname(cmd, name);
 
 // Configures a file in the child process's file table, such that the file
 // described by the 'source' parameter is mapped onto file descriptor slot
@@ -137,25 +149,25 @@ export fn addfile(
 	cmd: *command,
 	child: io::file,
 	source: (io::file | nullfd | closefd),
-) void = {
-	append(cmd.files, (source, child));
+) (void | nomem) = {
+	append(cmd.files, (source, child))?;
 };
 
 // Closes all standard files (stdin, stdout, and stderr) in the child process.
 // Many programs do not work well under these conditions; you may want
 // [[nullstd]] instead.
-export fn closestd(cmd: *command) void = {
-	addfile(cmd, os::stdin_file, closefd);
-	addfile(cmd, os::stdout_file, closefd);
-	addfile(cmd, os::stderr_file, closefd);
+export fn closestd(cmd: *command) (void | nomem) = {
+	addfile(cmd, os::stdin_file, closefd)?;
+	addfile(cmd, os::stdout_file, closefd)?;
+	addfile(cmd, os::stderr_file, closefd)?;
 };
 
 // Redirects all standard files (stdin, stdout, and stderr) to /dev/null or the
 // platform-specific equivalent.
-export fn nullstd(cmd: *command) void = {
-	addfile(cmd, os::stdin_file, nullfd);
-	addfile(cmd, os::stdout_file, nullfd);
-	addfile(cmd, os::stderr_file, nullfd);
+export fn nullstd(cmd: *command) (void | nomem) = {
+	addfile(cmd, os::stdin_file, nullfd)?;
+	addfile(cmd, os::stdout_file, nullfd)?;
+	addfile(cmd, os::stderr_file, nullfd)?;
 };
 
 // Configures the child process's working directory. This does not affect the
@@ -165,15 +177,14 @@ export fn chdir(cmd: *command, dir: str) void = {
 	cmd.dir = dir;
 };
 
-// Similar to [[lookup]] but TOCTOU-proof
-fn lookup_open(name: str) (platform_cmd | void | error) = {
+// Similar to [[lookup]] but TOCTOU-proof.
+fn lookup_open(name: str, path: str = "") (platform_cmd | void | error) = {
 	static let buf = path::buffer { ... };
 	path::set(&buf)!;
 
 	// Try to open file directly
 	if (strings::contains(name, "/")) {
 		match (open(name)) {
-		case (errors::noaccess | errors::noentry) => void;
 		case let err: error =>
 			return err;
 		case let p: platform_cmd =>
@@ -181,11 +192,13 @@ fn lookup_open(name: str) (platform_cmd | void | error) = {
 		};
 	};
 
-	const path = match (os::getenv("PATH")) {
-	case void =>
-		return;
-	case let s: str =>
-		yield s;
+	if (path == "") {
+		match (os::getenv("PATH")) {
+		case void =>
+			return;
+		case let s: str =>
+			path = s;
+		};
 	};
 
 	let tok = strings::tokenize(path, ":");
@@ -203,12 +216,14 @@ fn lookup_open(name: str) (platform_cmd | void | error) = {
 	};
 };
 
-// Looks up an executable by name in the system PATH. The return value is
-// statically allocated.
+// Looks up an executable by name in the path. Consults the $PATH environment
+// variable if no path argument is provided.
 //
 // The use of this function is lightly discouraged if [[cmd]] is suitable;
 // otherwise you may have a TOCTOU issue.
-export fn lookup(name: str) (str | void) = {
+//
+// The return value is statically allocated.
+export fn lookup(name: str, path: str = "") (str | fs::error) = {
 	static let buf = path::buffer { ... };
 	path::set(&buf)!;
 
@@ -217,17 +232,22 @@ export fn lookup(name: str) (str | void) = {
 		match (os::access(name, os::amode::X_OK)) {
 		case let exec: bool =>
 			if (exec) {
-				return name;
+				path::set(&buf, name)!;
+				return path::string(&buf);
 			};
-		case => void; // Keep looking
+			return errors::noaccess;
+		case =>
+			return errors::noentry;
 		};
 	};
 
-	const path = match (os::getenv("PATH")) {
-	case void =>
-		return;
-	case let s: str =>
-		yield s;
+	if (path == "") {
+		match (os::getenv("PATH")) {
+		case void =>
+			return errors::noentry;
+		case let s: str =>
+			path = s;
+		};
 	};
 
 	let tok = strings::tokenize(path, ":");
@@ -242,4 +262,6 @@ export fn lookup(name: str) (str | void) = {
 		case => void; // Keep looking
 		};
 	};
+
+	return errors::noentry;
 };

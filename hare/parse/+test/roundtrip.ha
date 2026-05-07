@@ -16,6 +16,7 @@ fn roundtrip(src: str) void = {
 	if (unsrc != src) {
 		fmt::errorfln("=== wanted\n{}", src)!;
 		fmt::errorfln("=== got\n{}", unsrc)!;
+		fmt::errorln("=== end\n")!;
 		abort();
 	};
 };
@@ -31,12 +32,14 @@ fn _roundtrip(src: str) str = {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>", lex::flag::COMMENTS);
+	defer lex::finish(&lexer);
 	let u = ast::subunit {
 		imports = [],
 		decls: []ast::decl = match (decls(&lexer)) {
 		case let decls: []ast::decl =>
 			yield decls;
 		case let err: error =>
+			fmt::errorln(src)!;
 			fmt::errorln(strerror(err))!;
 			abort();
 		},

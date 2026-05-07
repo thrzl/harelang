@@ -8,7 +8,6 @@ use hare::ast;
 use hare::lex;
 use hare::module;
 use hare::parse;
-use hare::parse::doc;
 use io;
 use os::exec;
 
@@ -40,7 +39,7 @@ export fn strerror(err: error) str = {
 			return ERRMSG;
 		};
 		static let buf: [len(ERRMSG) + 64 + 3]u8 = [0...];
-		return fmt::bsprintf(buf, "{} '{}'", ERRMSG, err);
+		return fmt::bsprintf(buf, "{} '{}'", ERRMSG, err)!;
 	};
 };
 
@@ -51,9 +50,10 @@ export type context = struct {
 	ambiguous: bool,
 	parse_errs: []lex::syntax,
 	srcs: module::srcset,
-	submods: []str,
+	submods: []submodule,
 	summary: summary,
 	template: bool,
+	show_lineno: bool,
 	show_undocumented: bool,
 	readme: (io::file | void),
 	out: io::handle,
@@ -69,25 +69,9 @@ export type summary = struct {
 };
 
 export fn finish_summary(s: summary) void = {
-	for (let c .. s.constants) {
-		free(c.decl as []ast::decl_const);
-	};
 	free(s.constants);
-
-	for (let e .. s.errors) {
-		free(e.decl as []ast::decl_type);
-	};
 	free(s.errors);
-
-	for (let t .. s.types) {
-		free(t.decl as []ast::decl_type);
-	};
 	free(s.types);
-
-	for (let g .. s.globals) {
-		free(g.decl as []ast::decl_global);
-	};
 	free(s.globals);
-
 	free(s.funcs);
 };

@@ -1,3 +1,5 @@
+glob: pattern matching on file paths
+
 The glob module provides an implementation of file globbing compatible with the
 behavior described by POSIX.
 

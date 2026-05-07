@@ -108,3 +108,28 @@ export fn signi(n: int) i64 = {
 	assert(signi(-2) == -1);
 	assert(signi(0) == 0);
 };
+
+// Return x to the power of n (a positive integer)
+export fn powi64(x: i64, n: uint) i64 = {
+	if (n == 0) {
+		return 1;
+	};
+	let y: i64 = 1;
+	for (n > 1) {
+		if (n % 2 == 1) {
+			y = x * y;
+			n = n - 1;
+		};
+		x = x * x;
+		n = n / 2;
+	};
+	return x * y;
+};
+
+@test fn power() void = {
+	assert(powi64(2,2) == 4i64);
+	assert(powi64(-2,2) == 4i64);
+	assert(powi64(-3,3) == -27i64);
+	assert(powi64(2,0) == 1i64);
+	assert(powi64(2,15) == 32768);
+};

@@ -87,8 +87,8 @@ export fn scalarmult(
 	let f: elem = [0...];
 
 	for (let i = 254i; i >= 0; i -= 1) {
-		let iz = i : size;
-		let bit = ((clamped[iz >> 3] >> (iz & 7)) & 1) : i64;
+		let iz = i: size;
+		let bit = ((clamped[iz >> 3] >> (iz & 7)) & 1): i64;
 		swap25519(&a, &b, bit);
 		swap25519(&c, &d, bit);
 		addfe(&e, &a, &c);
@@ -195,7 +195,7 @@ fn invfe(out: *elem, a: const *elem) void = {
 // part of a secret value, this function cannot use a simple if statement,
 // because that would not be constant-time
 fn swap25519(p: *elem, q: *elem, bit: i64) void = {
-	let c = ~(bit : u64 - 1) : i64;
+	let c = ~(bit: u64 - 1): i64;
 	for (let i = 0z; i < FIELDSZ; i += 1) {
 		let t = c & (p[i] ^ q[i]);
 		p[i] ^= t;
@@ -224,7 +224,7 @@ fn pack25519(out: []u8, a: const *elem) void = {
 	};
 
 	for (let i = 0z; i < FIELDSZ; i += 1) {
-		out[2 * i] = (t[i] & 0xff) : u8;
-		out[2 * i + 1] = (t[i] >> 8) : u8;
+		out[2 * i] = (t[i] & 0xff): u8;
+		out[2 * i + 1] = (t[i] >> 8): u8;
 	};
 };

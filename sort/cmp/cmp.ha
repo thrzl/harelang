@@ -95,3 +95,13 @@ export fn strs(a: const *opaque, b: const *opaque) int = {
 	};
 	return if (len(a) == len(b)) 0 else ln.1;
 };
+
+// [[sort::cmpfunc]] for use with NUL-terminated C strings
+// (*const [[types::c::char]]). Sorting is done in the same manner as in
+// [[types::c::strcmp]].
+export fn cstrs(a: const *opaque, b: const *opaque) int = {
+	const a = *(a: const **[*]u8), b = *(b: const **[*]u8);
+	let i = 0z;
+	for (a[i] == b[i] && a[i] != '\0'; i += 1) void;
+	return a[i]: int - b[i]: int;
+};

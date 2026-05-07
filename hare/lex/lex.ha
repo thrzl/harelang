@@ -14,33 +14,46 @@ use strconv;
 use strings;
 use types;
 
+// A function which implements an annotation. The state of the lexer at the time
+// of the callback will be immediately following the identifier, and the
+// callback should lex all tokens up to and including the terminating ']'.
+//
+// 	#[example::annotation(...)]
+// 	                     ^------- start of callback
+// 	                           ^- end of callback
+//
+// The lifetime of the id parameter is only that of the callback's execution
+// duration.
+export type annotatefn = fn(id: []str, lex: *lexer, user: nullable *opaque) (void | error);
+
 export type lexer = struct {
 	in: *bufio::scanner,
 	path: str,
-	loc: (uint, uint),
-	prevrloc: (uint, uint),
+	loc: (uint, uint, io::off),
+	prevrloc: (uint, uint, io::off),
 	un: token, // ltok::EOF when no token was unlexed
-	prevunlocs: [2]((uint, uint), (uint, uint)),
+	prevunlocs: [2]((uint, uint, io::off), (uint, uint, io::off)),
 	flags: flag,
 	comment: str,
 	require_int: bool,
+	annotations: []([]str, *annotatefn, nullable *opaque),
 };
 
-// Flags which apply to this lexer
+// Flags which apply to this lexer.
 export type flag = enum uint {
 	NONE = 0,
-	// Enables lexing comments
+	// Enables lexing comments.
 	COMMENTS = 1 << 0,
 };
 
-// A syntax error
+// A syntax error.
 export type syntax = !(location, str);
 
-// All possible lexer errors
+// All possible lexer errors.
 export type error = !(io::error | syntax);
 
-// Returns a human-friendly string for a given error. The result may be
-// statically allocated.
+// Returns a human-friendly string for a given error. The result is statically
+// allocated.
 export fn strerror(err: error) const str = {
 	static let buf: [2048]u8 = [0...];
 	match (err) {
@@ -48,33 +61,83 @@ export fn strerror(err: error) const str = {
 		return io::strerror(err);
 	case let s: syntax =>
 		return fmt::bsprintf(buf, "{}:{}:{}: syntax error: {}",
-			s.0.path, s.0.line, s.0.col, s.1);
+			s.0.path, s.0.line, s.0.col, s.1)!;
 	};
 };
 
 // Initializes a new lexer for the given [[bufio::scanner]]. The path is
-// borrowed.
+// borrowed and must remain valid for the lifetime of the lexer. The user must
+// free resources associated with the lexer using [[finish]] after use.
 export fn init(
 	in: *bufio::scanner,
 	path: str,
 	flags: flag = flag::NONE,
 ) lexer = {
-	const loc = location { path = path, line = 1, col = 1 };
+	const loc = location {
+		path = path,
+		line = 1,
+		col = 1,
+		off = 0,
+	};
 	return lexer {
 		in = in,
 		path = path,
-		loc = (1, 1),
-		prevrloc = (1, 1),
+		loc = (1, 1, 0),
+		prevrloc = (1, 1, 0),
 		un = (ltok::EOF, void, loc),
-		prevunlocs = [((1, 1), (1, 1))...],
+		prevunlocs = [((1, 1, 0), (1, 1, 0))...],
 		flags = flags,
 		...
 	};
 };
 
-// Returns the current value of the comment buffer, or empty string if unset (or
-// if [[flag::COMMENTS]] was not enabled for this lexer).
-export fn comment(lex: *lexer) str = lex.comment;
+// Frees resources associated with a [[lexer]]
+export fn finish(lex: *lexer) void = {
+	free(lex.annotations);
+};
+
+// A restore point for a lexer.
+export type restore_point = struct {
+	off: io::off,
+	state: lexer,
+};
+
+// Saves the state of a [[lexer]], to be restored later with [[restore]]. The
+// underlying I/O source must be seekable.
+export fn save(lex: *lexer) (restore_point | io::error) = {
+	return restore_point {
+		off = io::tell(lex.in)?,
+		state = *lex,
+	};
+};
+
+// Restores a lexer to a state previously recorded with [[save]].
+export fn restore(lex: *lexer, rp: *restore_point) (void | io::error) = {
+	io::seek(lex.in, rp.off, io::whence::SET)?;
+	*lex = rp.state;
+};
+
+// Registers an annotation callback with this lexer for the given identifier.
+// The id is borrowed for the lifetime of the lexer. Unregistered annotations
+// are silently discarded by the lexer.
+export fn register_annotation(
+	lex: *lexer,
+	id: []str,
+	cb: *annotatefn,
+	user: nullable *opaque,
+) void = {
+	append(lex.annotations, (id, cb, user))!;
+};
+
+// Returns, and resets, the current value of the comment buffer.
+//
+// The empty string is returned if the buffer is unset or if [[flag::COMMENTS]]
+// was not enabled for this lexer.
+export fn comment(lex: *lexer) str = {
+	let c = lex.comment;
+	lex.comment = "";
+	return c;
+};
 
 // Returns the next token from the lexer.
 export fn lex(lex: *lexer) (token | error) = {
@@ -88,16 +151,25 @@ export fn lex(lex: *lexer) (token | error) = {
 		const prev = prevloc(lex);
 		const loc = mkloc(lex);
 		lex.prevunlocs[0] = (
-			(prev.line, prev.col),
-			(loc.line, loc.col),
+			(prev.line, prev.col, prev.off),
+			(loc.line, loc.col, loc.off),
 		);
 	};
 
-	let r = match (nextw(lex)?) {
-	case io::EOF =>
-		return (ltok::EOF, void, mkloc(lex));
-	case let r: (rune, location) =>
-		yield r;
+	let r: (rune, location) = ('\0', location { ... });
+	for (true) {
+		r = match (nextw(lex)?) {
+		case io::EOF =>
+			return (ltok::EOF, void, mkloc(lex));
+		case let r: (rune, location) =>
+			yield r;
+		};
+
+		if (r.0 == '#') {
+			lex_annotation(lex)?;
+		} else {
+			break;
+		};
 	};
 
 	if (ascii::isdigit(r.0)) {
@@ -152,6 +224,126 @@ export fn lex(lex: *lexer) (token | error) = {
 fn is_name(r: rune, num: bool) bool =
 	ascii::isalpha(r) || r == '_' || r == '@' || (num && ascii::isdigit(r));
 
+fn lex_annotation(l: *lexer) (void | error) = {
+	static let in_annotation = false;
+	if (in_annotation) {
+		return syntaxerr(mkloc(l), "cannot nest annotations");
+	};
+	in_annotation = true;
+	defer in_annotation = false;
+
+	match (next(l)?) {
+	case let n: (rune, location) =>
+		const (r, l) = n;
+		if (r != '[') {
+			return syntaxerr(l, "invalid annotation; expected #[...]");
+		};
+	case io::EOF =>
+		return syntaxerr(mkloc(l), "invalid annotation; expected #[...]");
+	};
+
+	let id: []str = [];
+	defer strings::freeall(id);
+
+	let tokens = false;
+	for (true) {
+		let tok = lex(l)?;
+		if (tok.0 != ltok::NAME) {
+			return syntaxerr(tok.2, "invalid annotation, expected identifier");
+		};
+		append(id, tok.1 as str)!;
+
+		tok = lex(l)?;
+		switch (tok.0) {
+		case ltok::LPAREN, ltok::RBRACKET =>
+			unlex(l, tok);
+			break;
+		case ltok::DOUBLE_COLON =>
+			yield;
+		case =>
+			return syntaxerr(tok.2, "invalid annotation, expected identifier");
+		};
+	};
+
+	let user: nullable *opaque = null;
+	let cb: *annotatefn = &annotate_fallback;
+	for :outer (let i = 0z; i < len(l.annotations); i += 1) {
+		const annot = l.annotations[i];
+		const name = annot.0;
+
+		if (len(name) != len(id)) {
+			continue;
+		};
+		for (let j = 0z; j < len(name); j += 1) {
+			if (name[j] != id[j]) {
+				continue :outer;
+			};
+		};
+
+		cb = annot.1;
+		user = annot.2;
+		break;
+	};
+	cb(id, l, user)?;
+};
+
+fn annotate_fallback(
+	id: []str,
+	l: *lexer,
+	user: nullable *opaque,
+) (void | error) = {
+	let tok = lex(l)?;
+	switch (tok.0) {
+	case ltok::RBRACKET =>
+		return;
+	case ltok::LPAREN =>
+		yield;
+	case =>
+		return syntaxerr(tok.2, "invalid annotation (expected '(' or ']')");
+	};
+
+	def STACKSZ: int = 32;
+	let stack: [STACKSZ]ltok = [ltok::EOF...];
+	let stack = stack[..0];
+	let sp = 0;
+
+	static append(stack, ltok::LPAREN)!;
+	for (sp >= 0) {
+		if (sp + 1 >= STACKSZ) {
+			return syntaxerr(tok.2, "annotation depth exceeds token stack limit");
+		};
+
+		tok = lex(l)?;
+		let want = ltok::EOF;
+		switch (tok.0) {
+		case ltok::LPAREN, ltok::LBRACKET, ltok::LBRACE =>
+			static append(stack, tok.0)!;
+			sp += 1;
+		case ltok::RPAREN =>
+			want = ltok::LPAREN;
+		case ltok::RBRACKET =>
+			want = ltok::LBRACKET;
+		case ltok::RBRACE =>
+			want = ltok::LBRACE;
+		case => void;
+		};
+
+		if (want != ltok::EOF) {
+			let have = stack[sp];
+			static delete(stack[sp]);
+			sp -= 1;
+			if (have != want) {
+				return syntaxerr(tok.2, "unbalanced tokens in annotation");
+			};
+		};
+	};
+
+	tok = lex(l)?;
+	if (tok.0 != ltok::RBRACKET) {
+		return syntaxerr(tok.2, "invalid annotation (expected ']')");
+	};
+};
+
 fn lex_unicode(lex: *lexer, loc: location, n: size) (rune | error) = {
 	assert(n < 9);
 	let buf: [8]u8 = [0...];
@@ -170,7 +362,11 @@ fn lex_unicode(lex: *lexer, loc: location, n: size) (rune | error) = {
 		buf[i] = r: u8;
 	};
 	let s = strings::fromutf8_unsafe(buf[..n]);
-	return strconv::stou32(s, strconv::base::HEX) as u32: rune;
+	let u = strconv::stou32(s, strconv::base::HEX) as u32;
+	if (u > 0x10FFFF || (u >= 0xD800 && u < 0xE000)) {
+		return syntaxerr(loc, "invalid unicode codepoint in escape");
+	};
+	return u: rune;
 };
 
 fn lex_rune(lex: *lexer, loc: location) (rune | error) = {
@@ -226,23 +422,20 @@ fn lex_rune(lex: *lexer, loc: location) (rune | error) = {
 fn lex_string(lex: *lexer, loc: location, delim: rune) (token | error) = {
 	let ret: token = (ltok::LIT_STR, "", loc);
 	let buf = memio::dynamic();
-	for (true) match (next(lex)?) {
-	case io::EOF =>
-		return syntaxerr(loc, "unexpected EOF scanning string literal");
-	case let r: (rune, location) =>
-		if (r.0 == delim) break
-		else if (delim == '"' && r.0 == '\\') {
+	for (let r => next(lex)?) {
+		if (r.0 == delim) {
+			break;
+		} else if (delim == '"' && r.0 == '\\') {
 			unget(lex, r.0);
 			let r = lex_rune(lex, loc)?;
 			memio::appendrune(&buf, r)?;
 		} else {
 			memio::appendrune(&buf, r.0)?;
 		};
+	} else {
+		return syntaxerr(loc, "unexpected EOF scanning string literal");
 	};
-	for (true) match (nextw(lex)?) {
-	case io::EOF =>
-		break;
-	case let r: (rune, location) =>
+	for (let r => nextw(lex)?) {
 		switch (r.0) {
 		case '"', '`' =>
 			const tok = lex_string(lex, loc, r.0)?;
@@ -272,6 +465,7 @@ fn lex_string(lex: *lexer, loc: location, delim: rune) (token | error) = {
 	return (ltok::LIT_STR, memio::string(&buf)!, loc);
 };
 
+// lex a rune- or string-literal
 fn lex_rn_str(lex: *lexer) (token | error) = {
 	const loc = mkloc(lex);
 	let r = match (next(lex)) {
@@ -312,9 +506,7 @@ fn lex_name(lex: *lexer, loc: location) (token | error) = {
 		abort();
 	};
 
-	for (true) match (next(lex)?) {
-	case io::EOF => break;
-	case let r: (rune, location) =>
+	for (let r => next(lex)?) {
 		if (!is_name(r.0, true)) {
 			unget(lex, r.0);
 			break;
@@ -360,17 +552,13 @@ fn line_comment(lex: *lexer) (void | error) = {
 		return;
 	};
 
-	free(lex.comment);
-	lex.comment = "";
+	free(comment(lex));
 	lex_comment(lex)?;
 };
 
 fn lex_comment(lexr: *lexer) (void | error) = {
 	if (lexr.flags & flag::COMMENTS != flag::COMMENTS) {
-		for (true) match (next(lexr)?) {
-		case io::EOF =>
-			break;
-		case let r: (rune, location) =>
+		for (let r => next(lexr)?) {
 			if (r.0 == '\n') {
 				break;
 			};
@@ -380,23 +568,21 @@ fn lex_comment(lexr: *lexer) (void | error) = {
 
 	let buf = memio::dynamic();
 	defer io::close(&buf)!;
-	for (true) match (next(lexr)?) {
-	case io::EOF =>
-		break;
-	case let r: (rune, location) =>
+	for (let r => next(lexr)?) {
 		memio::appendrune(&buf, r.0)!;
 		if (r.0 == '\n') {
 			break;
 		};
 	};
 	let bytes = strings::toutf8(lexr.comment);
-	append(bytes, strings::toutf8(memio::string(&buf)!)...);
+	append(bytes, strings::toutf8(memio::string(&buf)!)...)!;
 	lexr.comment = strings::fromutf8(bytes)!;
 };
 
 fn lex_literal(lex: *lexer) (token | error) = {
 	const loc = mkloc(lex);
 	let chars: []u8 = [];
+	defer free(chars);
 	let r = match (next(lex)?) {
 	case io::EOF =>
 		return (ltok::EOF, void, loc);
@@ -407,7 +593,7 @@ fn lex_literal(lex: *lexer) (token | error) = {
 	let started = false;
 	let base = strconv::base::DEC;
 	if (r.0 == '0') {
-		append(chars, utf8::encoderune(r.0)...);
+		append(chars, utf8::encoderune(r.0)...)!;
 		r = match (next(lex)?) {
 		case io::EOF =>
 			return (ltok::LIT_ICONST, 0u64, loc);
@@ -487,7 +673,7 @@ fn lex_literal(lex: *lexer) (token | error) = {
 					};
 					unget(lex, r.0);
 					float = true;
-					append(chars, utf8::encoderune('.')...);
+					append(chars, utf8::encoderune('.')...)!;
 				};
 			case 'e', 'E', 'p', 'P' =>
 				if (!started) {
@@ -504,7 +690,7 @@ fn lex_literal(lex: *lexer) (token | error) = {
 					break;
 				} else {
 					if (end == 0) end = len(chars);
-					append(chars, utf8::encoderune(r.0)...);
+					append(chars, utf8::encoderune(r.0)...)!;
 					exp = len(chars);
 					r = match (next(lex)?) {
 					case io::EOF =>
@@ -514,7 +700,7 @@ fn lex_literal(lex: *lexer) (token | error) = {
 					};
 					switch (r.0) {
 					case '+', '-' =>
-						append(chars, utf8::encoderune(r.0)...);
+						append(chars, utf8::encoderune(r.0)...)!;
 					case =>
 						unget(lex, r.0);
 					};
@@ -533,7 +719,7 @@ fn lex_literal(lex: *lexer) (token | error) = {
 				} else {
 					suff = len(chars);
 					if (end == 0) end = len(chars);
-					append(chars, utf8::encoderune(r.0)...);
+					append(chars, utf8::encoderune(r.0)...)!;
 					basechrs = "0123456789";
 				};
 			case '_' =>
@@ -556,7 +742,7 @@ fn lex_literal(lex: *lexer) (token | error) = {
 			};
 		} else {
 			last_rune_was_separator = false;
-			append(chars, utf8::encoderune(r.0)...);
+			append(chars, utf8::encoderune(r.0)...)!;
 		};
 		started = true;
 	};
@@ -776,23 +962,19 @@ fn next(lex: *lexer) ((rune, location) | syntax | io::EOF | io::error) = {
 };
 
 fn nextw(lex: *lexer) ((rune, location) | io::EOF | error) = {
-	for (true) match (next(lex)?) {
-	case io::EOF =>
-		return io::EOF;
-	case let r: (rune, location) =>
-		if (ascii::isspace(r.0)) {
+	for (let r => next(lex)?) {
+		if (r.0 == ' ' || r.0 == '\n' || r.0 == '\t') {
 			if (r.0 == '\n') {
-				free(lex.comment);
-				lex.comment = "";
+				free(comment(lex));
 			};
 			continue;
 		};
 		if (!is_name(r.0, true) && r.0 != '/') {
-			free(lex.comment);
-			lex.comment = "";
+			free(comment(lex));
 		};
 		return r;
 	};
+	return io::EOF;
 };
 
 fn try(
@@ -827,10 +1009,12 @@ fn unget(lex: *lexer, r: rune) void = {
 
 	lex.loc = lex.prevrloc;
 	lex.prevrloc.1 -= 1;
+	lex.prevrloc.2 -= 1;
 };
 
 fn lexloc(lex: *lexer, r: rune) void = {
 	lex.prevrloc = lex.loc;
+	lex.loc.2 += 1;
 	switch (r) {
 	case '\n' =>
 		lex.loc.0 += 1;
@@ -842,6 +1026,7 @@ fn lexloc(lex: *lexer, r: rune) void = {
 	};
 };
 
+// The lexer's current location.
 export fn mkloc(lex: *lexer) location = {
 	const loc = if (lex.un.0 == ltok::EOF) lex.loc
 		else lex.prevunlocs[1].1;
@@ -849,9 +1034,11 @@ export fn mkloc(lex: *lexer) location = {
 		path = lex.path,
 		line = loc.0,
 		col = loc.1,
+		off = loc.2,
 	};
 };
 
+// The location of the previous rune.
 export fn prevloc(lex: *lexer) location = {
 	const loc = if (lex.un.0 == ltok::EOF) lex.prevrloc
 		else lex.prevunlocs[1].0;
@@ -859,9 +1046,11 @@ export fn prevloc(lex: *lexer) location = {
 		path = lex.path,
 		line = loc.0,
 		col = loc.1,
+		off = loc.2,
 	};
 };
 
+// Builds a lexer syntax error from a location and a reason string.
 export fn syntaxerr(loc: location, why: str) error = {
 	static let buf = path::buffer{...};
 	path::set(&buf, loc.path)!;

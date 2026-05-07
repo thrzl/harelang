@@ -1,3 +1,5 @@
+rt: low-level runtime support
+
 The rt (runtime) module provides low-level, non-portable access to the host, and
 support code for the Hare compiler and standard library. The use of this module
 is not recommended for most user programs, and any program which uses rt is

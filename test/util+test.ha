@@ -11,19 +11,19 @@ let want_abort = false;
 // Expect the currently running test to abort. The test will fail if it doesn't
 // abort.
 export fn expectabort() void = {
-	if (rt::jmp == null) {
+	if (jmp == null) {
 		abort("Attempted to call test::expectabort outside of @test function");
 	};
 	want_abort = true;
 };
 
 // Skip the currently running test.
-export fn skip(reason: str) never = {
-	if (rt::jmp == null) {
+export fn skip(why: str) never = {
+	if (jmp == null) {
 		abort("Attempted to call test::skip outside of @test function");
 	};
-	rt::reason = rt::abort_reason {
-		msg = reason,
+	reason = abort_reason {
+		msg = why,
 		...
 	};
 	rt::longjmp(&jmp_buf, status::SKIP);
@@ -42,11 +42,24 @@ export fn require(keywords: str...) void = {
 					continue :keywords;
 				};
 			case done =>
-				skip(fmt::asprintf(
-					"Requires HARETEST_INCLUDE='{}'",
-					strings::join(" ", keywords...),
-				));
+				let joined = strings::join(" ", keywords...)!;
+				let msg = fmt::asprintf(
+					"Requires HARETEST_INCLUDE='{}'", joined)!;
+				free(joined);
+				skip(msg);
 			};
 		};
+	};
+};
+
+let _current: nullable *test = null;
+
+// Returns the name of the currently running test.
+export fn current() str = {
+	match (_current) {
+	case let t: *test =>
+		return t.name;
+	case null =>
+		abort("Attempted to call test::current outside of @test function");
 	};
 };

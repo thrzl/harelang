@@ -1,3 +1,5 @@
+endian: endian conversion utilities
+
 The endian module provides support functions for converting the byte encoding
 ("endianness") of integers. The following abbreviations are used throughout the
 module:

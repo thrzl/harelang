@@ -22,8 +22,10 @@ use strings;
 const help: []getopt::help = [
 	"reads and formats Hare documentation",
 	('a', "show undocumented members (only applies to -Ftty)"),
-	('t', "disable HTML template (requires postprocessing)"),
 	('F', "format", "specify output format (tty or html)"),
+	('n', "include file paths and line numbers"),
+	('N', "print symbol path and line number and exit"),
+	('t', "disable HTML template (requires postprocessing)"),
 	('T', "tagset", "set/unset build tags"),
 	"[identifier|path]",
 ];
@@ -56,6 +58,8 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 	let html = false;
 	let template = true;
 	let show_undocumented = false;
+	let show_lineno = false;
+	let only_lineno = false;
 	let tags: []str = default_tags();
 	defer free(tags);
 
@@ -74,6 +78,10 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 			merge_tags(&tags, v)?;
 		case 't' =>
 			template = false;
+		case 'n' =>
+			show_lineno = true;
+		case 'N' =>
+			only_lineno = true;
 		case 'a' =>
 			show_undocumented = true;
 		case => abort();
@@ -108,40 +116,47 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 
 	if (len(cmd.args) == 0) {
 		let (p, s) = module::find(&ctx, []: ast::ident)?;
-		modpath = strings::dup(p);
+		modpath = strings::dup(p)!;
 		modsrcs = s;
-	} else match (parseident(cmd.args[0])) {
-	case let ident: (ast::ident, bool) =>
-		id = ident.0;
-		const trailing = ident.1;
-		if (!trailing) {
-			// check if it's an ident inside a module
-			match (module::find(&ctx, id[..len(id)-1])) {
+	} else {
+		const buf = memio::fixed(strings::toutf8(cmd.args[0]));
+		const scan = bufio::newscanner(&buf);
+		defer bufio::finish(&scan);
+		const lex = lex::init(&scan, "<argv>");
+		defer lex::finish(&lex);
+		match (parse::ident_trailing(&lex)) {
+		case let ident: (ast::ident, bool) =>
+			id = ident.0;
+			const trailing = ident.1;
+			if (!trailing) {
+				// check if it's an ident inside a module
+				match (module::find(&ctx, id[..len(id)-1])) {
+				case let s: (str, module::srcset) =>
+					declpath = strings::dup(s.0)!;
+					declsrcs = s.1;
+				case let e: module::error =>
+					module::finish_error(e);
+				};
+			};
+			// check if it's a module
+			match (module::find(&ctx, id)) {
 			case let s: (str, module::srcset) =>
-				declpath = strings::dup(s.0);
-				declsrcs = s.1;
+				modpath = strings::dup(s.0)!;
+				modsrcs = s.1;
 			case let e: module::error =>
 				module::finish_error(e);
+				if (declpath == "") {
+					const id = unparse::identstr(id);
+					fmt::fatalf("Could not find {}{}", id,
+						if (trailing) "::" else "");
+				};
 			};
+		case lex::error =>
+			let buf = path::init(cmd.args[0])?;
+			let (p, s) = module::find(&ctx, &buf)?;
+			modpath = strings::dup(p)!;
+			modsrcs = s;
 		};
-		// check if it's a module
-		match (module::find(&ctx, id)) {
-		case let s: (str, module::srcset) =>
-			modpath = strings::dup(s.0);
-			modsrcs = s.1;
-		case let e: module::error =>
-			module::finish_error(e);
-			if (declpath == "") {
-				const id = unparse::identstr(id);
-				fmt::fatalf("Could not find {}{}", id,
-					if (trailing) "::" else "");
-			};
-		};
-	case void =>
-		let buf = path::init(cmd.args[0])?;
-		let (p, s) = module::find(&ctx, &buf)?;
-		modpath = strings::dup(p);
-		modsrcs = s;
 	};
 
 	let decls: []ast::decl = [];
@@ -171,15 +186,15 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 				};
 				match (err) {
 				case let err: lex::syntax =>
-					const msg = strings::dup(err.1);
-					append(parse_errs, (err.0, msg));
+					const msg = strings::dup(err.1)!;
+					append(parse_errs, (err.0, msg))!;
 					continue;
 				case =>
 					return err;
 				};
 			};
 			defer free(d);
-			append(decls, d...);
+			append(decls, d...)!;
 		};
 
 		let matching: []ast::decl = [];
@@ -187,12 +202,12 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 
 		for (let decl .. decls) {
 			if (has_decl(decl, id[len(id) - 1])) {
-				append(matching, decl);
+				append(matching, decl)!;
 			} else {
-				append(notmatching, decl);
+				append(notmatching, decl)!;
 			};
 		};
-		get_init_funcs(&matching, &notmatching);
+		include_related(&matching, &notmatching);
 
 		for (let decl .. notmatching) {
 			ast::decl_finish(decl);
@@ -231,15 +246,15 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 				};
 				match (err) {
 				case let err: lex::syntax =>
-					const msg = strings::dup(err.1);
-					append(parse_errs, (err.0, msg));
+					const msg = strings::dup(err.1)!;
+					append(parse_errs, (err.0, msg))!;
 					continue;
 				case =>
 					return err;
 				};
 			};
 			defer free(d);
-			append(decls, d...);
+			append(decls, d...)!;
 		};
 
 		const rpath = match (path::init(modpath, "README")) {
@@ -256,14 +271,31 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 		};
 	};
 
-	const submods: []str = if (!ambiguous && modpath != "") {
-		yield match (doc::submodules(modpath, show_undocumented)) {
-		case let s: []str =>
-			yield s;
-		case doc::error =>
-			yield [];
+	const submods: []doc::submodule =
+		if (!ambiguous && modpath != "") {
+			yield match (doc::submodules(modpath, show_undocumented)) {
+			case let s: []doc::submodule =>
+				yield s;
+			case doc::error =>
+				yield [];
+			};
+		} else [];
+
+	if (only_lineno) {
+		if (len(decls) == 0) {
+			const id = unparse::identstr(id);
+			fmt::fatalf("Error: {}: symbol not found", id);
+		} else if (len(decls) != 1) {
+			const id = unparse::identstr(id);
+			fmt::fatalf("Error: {} matches more than one symbol", id);
 		};
-	} else [];
+		const decl = decls[0];
+		fmt::printfln("{}:{}",
+			doc::cwdpath(decl.loc.start.path),
+			decl.loc.start.line)?;
+		return;
+	};
+
 	const srcs = if (!ambiguous && modpath != "") modsrcs else declsrcs;
 	const summary = doc::sort_decls(decls);
 	defer doc::finish_summary(summary);
@@ -278,6 +310,7 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 		summary = summary,
 		template = template,
 		readme = readme,
+		show_lineno = show_lineno,
 		show_undocumented = show_undocumented,
 		out = os::stdout,
 		pager = void,
@@ -299,53 +332,6 @@ fn doc(name: str, cmd: *getopt::command) (void | error) = {
 
 	// TODO: remove ? (harec bug workaround)
 	return ret?;
-};
-
-// Nearly identical to parse::identstr, except alphanumeric lexical tokens are
-// converted to strings and there must be no trailing tokens that don't belong
-// to the ident in the string. For example, this function will parse `rt::abort`
-// as a valid identifier.
-fn parseident(in: str) ((ast::ident, bool) | void) = {
-	let buf = memio::fixed(strings::toutf8(in));
-	let sc = bufio::newscanner(&buf);
-	defer bufio::finish(&sc);
-	let lexer = lex::init(&sc, "<string>");
-	let success = false;
-	let ident: ast::ident = [];
-	defer if (!success) ast::ident_free(ident);
-	let trailing = false;
-	let z = 0z;
-	for (true) {
-		const tok = lex::lex(&lexer)!;
-		const name = if (tok.0 == lex::ltok::NAME) {
-			yield tok.1 as str;
-		} else if (tok.0 < lex::ltok::LAST_KEYWORD) {
-			yield strings::dup(lex::tokstr(tok));
-		} else if (tok.0 == lex::ltok::EOF && len(ident) > 0) {
-			trailing = true;
-			break;
-		} else {
-			lex::unlex(&lexer, tok);
-			return;
-		};
-		append(ident, name);
-		z += len(name);
-		const tok = lex::lex(&lexer)!;
-		switch (tok.0) {
-		case lex::ltok::EOF =>
-			break;
-		case lex::ltok::DOUBLE_COLON =>
-			z += 1;
-		case =>
-			lex::unlex(&lexer, tok);
-			return;
-		};
-	};
-	if (z > ast::IDENT_MAX) {
-		return;
-	};
-	success = true;
-	return (ident, trailing);
 };
 
 fn init_tty(ctx: *doc::context) io::handle = {
@@ -373,7 +359,7 @@ fn init_tty(ctx: *doc::context) io::handle = {
 
 	const pipe = exec::pipe();
 	defer io::close(pipe.0)!;
-	exec::addfile(&pager, os::stdin_file, pipe.0);
+	exec::addfile(&pager, os::stdin_file, pipe.0)!;
 	// Get raw flag in if possible
 	exec::setenv(&pager, "LESS", os::tryenv("LESS", "FRX"))!;
 	exec::setenv(&pager, "MORE", os::tryenv("MORE", "R"))!;
@@ -387,100 +373,62 @@ fn has_decl(decl: ast::decl, name: str) bool = {
 	};
 
 	match (decl.decl) {
-	case let consts: []ast::decl_const =>
-		for (let d .. consts) {
-			if (len(d.ident) == 1 && d.ident[0] == name) {
-				return true;
-			};
+	case let d: ast::decl_const =>
+		if (len(d.ident) == 1 && d.ident[0] == name) {
+			return true;
 		};
 	case let d: ast::decl_func =>
 		if (len(d.ident) == 1 && d.ident[0] == name) {
 			return true;
 		};
-		let tok = strings::rtokenize(d.symbol, ".");
-		match (strings::next_token(&tok)) {
-		case done => void;
-		case let s: str =>
-			return s == name;
+	case let d: ast::decl_global =>
+		if (len(d.ident) == 1 && d.ident[0] == name) {
+			return true;
 		};
-	case let globals: []ast::decl_global =>
-		for (let d .. globals) {
-			if (len(d.ident) == 1 && d.ident[0] == name) {
-				return true;
-			};
-			let tok = strings::rtokenize(d.symbol, ".");
-			match (strings::next_token(&tok)) {
-			case done => void;
-			case let s: str =>
-				return s == name;
-			};
-		};
-	case let types: []ast::decl_type =>
-		for (let d .. types) {
-			if (len(d.ident) == 1 && d.ident[0] == name) {
-				return true;
-			};
+	case let d: ast::decl_type =>
+		if (len(d.ident) == 1 && d.ident[0] == name) {
+			return true;
 		};
 	case ast::assert_expr => void;
 	};
 	return false;
 };
 
-@test fn parseident() void = {
-	let (ident, trailing) = parseident("hare::lex") as (ast::ident, bool);
-	defer ast::ident_free(ident);
-	assert(ast::ident_eq(ident, ["hare", "lex"]));
-	assert(!trailing);
-
-	let (ident, trailing) = parseident("rt::abort") as (ast::ident, bool);
-	defer ast::ident_free(ident);
-	assert(ast::ident_eq(ident, ["rt", "abort"]));
-	assert(!trailing);
-
-	let (ident, trailing) = parseident("foo::bar::") as (ast::ident, bool);
-	defer ast::ident_free(ident);
-	assert(ast::ident_eq(ident, ["foo", "bar"]));
-	assert(trailing);
-	assert(parseident("strings::dup*{}&@") is void);
-	assert(parseident("") is void);
-	assert(parseident("::") is void);
-};
-
-fn get_init_funcs(matching: *[]ast::decl, notmatching: *[]ast::decl) void = {
+fn include_related(matching: *[]ast::decl, notmatching: *[]ast::decl) void = {
 	if (len(matching) != 1) {
 		return;
 	};
-	let ident = match (matching[0].decl) {
-	case let d: []ast::decl_type =>
-		if (len(d) != 1 || len(d[0].ident) != 1) {
+	let decl = match (matching[0].decl) {
+	case let d: ast::decl_type =>
+		if (len(d.ident) != 1) {
 			return;
 		};
-		if (d[0]._type.flags & ast::type_flag::ERROR != 0) {
+		if (d._type.repr is ast::error_type) {
 			return;
 		};
-		match (d[0]._type.repr) {
+		match (d._type.repr) {
 		case let repr: ast::builtin_type =>
 			if (repr == ast::builtin_type::VOID) {
 				return;
 			};
 		case => void;
 		};
-		yield d[0].ident;
+		yield d;
 	case =>
 		return;
 	};
 
 	for (let i = 0z; i < len(notmatching); i += 1) {
 		let _type = match (notmatching[i].decl) {
-		case let d: []ast::decl_const =>
-			yield match (d[0]._type) {
+		case let d: ast::decl_const =>
+			yield match (d._type) {
 			case let t: *ast::_type =>
 				yield t;
 			case null =>
 				continue;
 			};
-		case let d: []ast::decl_global =>
-			yield match (d[0]._type) {
+		case let d: ast::decl_global =>
+			yield match (d._type) {
 			case let t: *ast::_type =>
 				yield t;
 			case null =>
@@ -488,43 +436,187 @@ fn get_init_funcs(matching: *[]ast::decl, notmatching: *[]ast::decl) void = {
 			};
 		case let d: ast::decl_func =>
 			let _type = d.prototype.repr as ast::func_type;
+			if (signature_matches(decl._type, d.prototype)) {
+				append(matching, notmatching[i])!;
+				delete(notmatching[i]);
+				i -= 1;
+				continue;
+			};
 			yield _type.result;
 		case =>
 			continue;
 		};
 
-		if (is_init_type(ident, _type)) {
-			append(matching, notmatching[i]);
+		if (is_init_type(decl.ident, _type)) {
+			append(matching, notmatching[i])!;
 			delete(notmatching[i]);
 			i -= 1;
 		};
 	};
 };
 
+fn signature_matches(want: *ast::_type, prototype: *ast::_type) bool = {
+	for (true) {
+		match (want.repr) {
+		case let repr: ast::pointer_type =>
+			want = repr.referent;
+		case =>
+			break;
+		};
+	};
+	return want.repr is ast::func_type && type_eq(want, prototype);
+};
+
+// This isn't perfect, but it's correct 99% of the time
+fn type_eq(a: *ast::_type, b: *ast::_type) bool = {
+	match (a.repr) {
+	case let arepr: ast::alias_type =>
+		match (b.repr) {
+		case let brepr: ast::alias_type =>
+			return ast::ident_eq(arepr, brepr);
+		case =>
+			return false;
+		};
+	case let arepr: ast::builtin_type =>
+		match (b.repr) {
+		case let brepr: ast::builtin_type =>
+			return arepr == brepr;
+		case =>
+			return false;
+		};
+	case ast::enum_type =>
+		return false; // code is invalid
+	case let e: ast::error_type =>
+		match (b.repr) {
+		case let brepr: ast::error_type =>
+			return type_eq(e: *ast::_type, brepr: *ast::_type);
+		case =>
+			return false;
+		};
+	case let arepr: ast::func_type =>
+		const brepr = match (b.repr) {
+		case let brepr: ast::func_type =>
+			yield brepr;
+		case =>
+			return false;
+		};
+
+		if (len(arepr.params) != len(brepr.params)
+				|| arepr.variadism != brepr.variadism) {
+			return false;
+		};
+		for (let i = 0z; i < len(arepr.params); i += 1) {
+			if (!type_eq(arepr.params[i]._type,
+					brepr.params[i]._type)) {
+				return false;
+			};
+		};
+		return type_eq(arepr.result, brepr.result);
+	case let arepr: ast::list_type =>
+		const brepr = match (b.repr) {
+		case let brepr: ast::list_type =>
+			yield brepr;
+		case =>
+			return false;
+		};
+
+		if (!type_eq(arepr.members, brepr.members)) {
+			return false;
+		};
+		match (arepr.length) {
+		case *ast::expr =>
+			// It's not really worth it to check that the lengths
+			// are equal, since that would require checking
+			// expressions for equality, which isn't possible to do
+			// 100% correctly anyway (without an actual type
+			// checker). I can't imagine false positives will be
+			// very common here.
+			return brepr.length is *ast::expr;
+		case ast::len_slice =>
+			return brepr.length is ast::len_slice;
+		case ast::len_unbounded =>
+			return brepr.length is ast::len_unbounded;
+		case ast::len_contextual =>
+			return brepr.length is ast::len_contextual;
+		};
+	case let arepr: ast::pointer_type =>
+		match (b.repr) {
+		case let brepr: ast::pointer_type =>
+			return arepr.flags == brepr.flags
+				&& type_eq(arepr.referent, brepr.referent);
+		case =>
+			return false;
+		};
+	case (ast::struct_type | ast::union_type) =>
+		// This pretty much won't ever happen in real-world code, and
+		// checking for equality is more effort than it's worth
+		return false;
+	case let arepr: ast::tagged_type =>
+		let brepr = match (b.repr) {
+		case let brepr: ast::tagged_type =>
+			yield brepr;
+		case =>
+			return false;
+		};
+		if (len(arepr) != len(brepr)) {
+			return false;
+		};
+		for (let i = 0z; i < len(arepr); i += 1) {
+			if (arepr[i].1 != brepr[i].1) {
+				return false;
+			};
+			if (!type_eq(arepr[i].0, brepr[i].0)) {
+				return false;
+			};
+		};
+		return true;
+	case let arepr: ast::tuple_type =>
+		match (b.repr) {
+		case let brepr: ast::tuple_type =>
+			return types_eq(arepr, brepr);
+		case =>
+			return false;
+		};
+	};
+};
+
+fn types_eq(a: []*ast::_type, b: []*ast::_type) bool = {
+	if (len(a) != len(b)) {
+		return false;
+	};
+
+	for (let i = 0z; i < len(a); i += 1) {
+		if (!type_eq(a[i], b[i])) {
+			return false;
+		};
+	};
+	return true;
+};
+
 fn is_init_type(ident: ast::ident, _type: *ast::_type) bool = {
 	let type_ident = match (_type.repr) {
 	case let repr: ast::alias_type =>
-		yield repr.ident;
+		yield repr;
 	case let repr: ast::list_type =>
 		if (!(repr.length is ast::len_slice)) {
 			return false;
 		};
 		yield match (repr.members.repr) {
 		case let repr: ast::alias_type =>
-			yield repr.ident;
+			yield repr;
 		case =>
 			return false;
 		};
 	case let repr: ast::pointer_type =>
 		yield match (repr.referent.repr) {
 		case let repr: ast::alias_type =>
-			yield repr.ident;
+			yield repr;
 		case =>
 			return false;
 		};
 	case let repr: ast::tagged_type =>
 		for (let t .. repr) {
-			if (is_init_type(ident, t)) {
+			if (is_init_type(ident, t.0)) {
 				return true;
 			};
 		};

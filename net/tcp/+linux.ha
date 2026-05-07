@@ -51,7 +51,7 @@ export fn connect(
 			return errors::errno(err);
 		};
 		assert(f & rt::SOCK_NONBLOCK == rt::SOCK_NONBLOCK);
-	case int => void;
+	case void => void;
 	};
 	return io::fdopen(sockfd);
 };
@@ -103,7 +103,7 @@ export fn listen(
 	match (rt::bind(sockfd, &sockaddr, size(rt::sockaddr): u32)) {
 	case let err: rt::errno =>
 		return errors::errno(err);
-	case int => void;
+	case void => void;
 	};
 	match (rt::listen(sockfd, bk)) {
 	case let err: rt::errno =>

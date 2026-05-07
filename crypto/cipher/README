@@ -1,3 +1,5 @@
+cipher: block cipher encryption modes
+
 The crypto::cipher module provides block cipher encryption modes. The [[block]]
 type provides an abstraction over a block cipher algorithm, and functions like
 [[cbc_decryptor]] create encryptors or decryptors for specific block encryption

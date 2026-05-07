@@ -9,16 +9,20 @@ use hare::unparse;
 use io;
 use os;
 use strings;
+use unix::tty;
 
 let no_color: bool = false;
 
 // Formats output as Hare source code (prototypes) with syntax highlighting
 export fn emit_tty(ctx: *context) (void | error) = {
-	if (os::tryenv("NO_COLOR", "") == "") {
+	if (os::tryenv("FORCE_COLOR", "") != "" ||
+		(os::tryenv("NO_COLOR", "") == "" &&
+		tty::isatty(os::stdout_file))) {
 		init_colors()?;
 	} else {
 		no_color = true;
 	};
+
 	const summary = ctx.summary;
 
 	if (ctx.ambiguous) {
@@ -117,6 +121,17 @@ export fn emit_tty(ctx: *context) (void | error) = {
 };
 
 fn emit_submodules_tty(ctx: *context) (void | error) = {
+	const ident = unparse::identstr(ctx.ident);
+	defer free(ident);
+
+	let max_submod = 0z;
+	for (let submod .. ctx.submods) {
+		const ln = len(submod.name);
+		if (max_submod < ln) {
+			max_submod = ln;
+		};
+	};
+
 	if (len(ctx.submods) != 0) {
 		if (!firstline) {
 			fmt::fprintln(ctx.out)?;
@@ -129,17 +144,27 @@ fn emit_submodules_tty(ctx: *context) (void | error) = {
 		} else {
 			fmt::fprintln(ctx.out, "// Submodules")?;
 		};
-		for (let submodule .. ctx.submods) {
-			let submodule = if (len(ctx.ident) != 0) {
-				const s = unparse::identstr(ctx.ident);
-				defer free(s);
-				yield strings::concat(s, "::", submodule);
+		for (let submod .. ctx.submods) {
+			const id = if (len(ident) != 0) {
+				yield strings::concat(ident, "::", submod.name)!;
 			} else {
-				yield strings::dup(submodule);
+				yield strings::dup(submod.name)!;
 			};
-			defer free(submodule);
+			defer free(id);
 
-			fmt::fprintfln(ctx.out, "// - [[{}::]]", submodule)?;
+			if (submod.desc != "") {
+				const padding = max_submod - len(submod.name);
+				fmt::fprintfln(ctx.out, "// - [[{}::]] {%}{}",
+					id,
+					"", &fmt::mods {
+						pad = ' ',
+						width = padding,
+						...
+					},
+					submod.desc)?;
+			} else {
+				fmt::fprintfln(ctx.out, "// - [[{}::]]", id)?;
+			};
 		};
 	};
 };
@@ -155,8 +180,22 @@ fn details_tty(ctx: *context, decl: *ast::decl) (bool | error) = {
 	};
 	firstline = false;
 
+	match (&decl.decl) {
+	case let d: *ast::decl_func =>
+		d.symbol = "";
+	case => void;
+	};
+
 	unparse::decl(ctx.out, &syn_tty, decl)?;
 	fmt::fprintln(ctx.out)?;
+
+	if (ctx.show_lineno) {
+		if (!no_color) fmt::fprintf(ctx.out, "\x1b[{}m",
+			color(unparse::synkind::COMMENT))?;
+		fmt::fprintfln(ctx.out, "// See {}:{}",
+			cwdpath(decl.loc.start.path), decl.loc.start.line)?;
+	};
+
 	return true;
 };
 

@@ -1,3 +1,5 @@
+chacha: Chacha20 and XChacha20 stream cipher support
+
 crypto::chacha provides an implementation of the Chacha20 and XChacha20 stream
 ciphers.
 

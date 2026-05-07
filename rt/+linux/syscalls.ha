@@ -14,13 +14,13 @@ export fn syscall(num: u64, args: u64...) u64 = {
 	};
 };
 
-fn syscall0(u64) u64;
-fn syscall1(u64, u64) u64;
-fn syscall2(u64, u64, u64) u64;
-fn syscall3(u64, u64, u64, u64) u64;
-fn syscall4(u64, u64, u64, u64, u64) u64;
-fn syscall5(u64, u64, u64, u64, u64, u64) u64;
-fn syscall6(u64, u64, u64, u64, u64, u64, u64) u64;
+fn syscall0(_: u64) u64;
+fn syscall1(_: u64, _: u64) u64;
+fn syscall2(_: u64, _: u64, _: u64) u64;
+fn syscall3(_: u64, _: u64, _: u64, _: u64) u64;
+fn syscall4(_: u64, _: u64, _: u64, _: u64, _: u64) u64;
+fn syscall5(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
+fn syscall6(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
 
 export def PATH_MAX: size = 4096z;
 export type path = (str | []u8 | *const u8);
@@ -88,6 +88,23 @@ export fn openat2(
 	how_sz: size,
 ) (int | errno) = {
 	let path = kpath(path)?;
+	match (wrap_return(syscall4(SYS_openat2,
+		dirfd: u64,
+		path: uintptr: u64,
+		how: uintptr: u64,
+		how_sz: u64))) {
+	case let i: u64 =>
+		return i: int;
+	case let err: errno =>
+		if (err != ENOSYS) {
+			return err;
+		};
+	};
+
+	// Fallback if the requested behavior is compatible with openat(2)
+	if (how.resolve != 0) {
+		return ENOSYS;
+	};
 	return openat(dirfd, path, how.flags: int, how.mode: uint);
 };
 
@@ -318,6 +335,18 @@ export fn wait4(
 		options: u64, rusage: uintptr: u64))?: pid_t;
 };
 
+export fn waitid(
+	idtype: int,
+	id: id_t,
+	info: *siginfo,
+	options: int,
+	rusage: nullable *rusage,
+) (void | errno) = {
+	wrap_return(syscall5(SYS_waitid,
+		idtype: u64, id: u64, info: uintptr: u64,
+		options: u64, rusage: uintptr: u64))?;
+};
+
 export fn sendfile(
 	out: int,
 	in: int,
@@ -484,9 +513,26 @@ export fn clock_settime(clock_id: int, tp: *const timespec) (void | errno) = {
 		clock_id: u64, tp: uintptr: u64))?;
 };
 
-export fn nanosleep(req: *const timespec, rem: *timespec) (void | errno) = {
+export fn nanosleep(
+	req: *const timespec,
+	rem: nullable *timespec,
+) (void | errno) = {
 	wrap_return(syscall2(SYS_nanosleep,
 		req: uintptr: u64, rem: uintptr: u64))?;
+};
+
+export fn clock_nanosleep(
+	clock_id: int,
+	flags: int,
+	requested: *timespec,
+	remaining: nullable *timespec,
+) (void | errno) = {
+	wrap_return(syscall4(SYS_clock_nanosleep,
+		clock_id: u64,
+		flags: u64,
+		requested: uintptr: u64,
+		remaining: uintptr: u64
+	))?;
 };
 
 export fn uname(uts: *utsname) (void | errno) = {
@@ -640,17 +686,17 @@ export fn socketpair(
 	sv: *[2]int
 ) (int | errno) = {
 	return wrap_return(syscall4(SYS_socketpair, domain: u64,
-		type_: u64, protocol: u64, sv: uintptr : u64))?: int;
+		type_: u64, protocol: u64, sv: uintptr: u64))?: int;
 };
 
-export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {
-	return wrap_return(syscall3(SYS_connect,
-		sockfd: u64, addr: uintptr: u64, addrlen: u64))?: int;
+export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (void | errno) = {
+	wrap_return(syscall3(SYS_connect, sockfd: u64,
+		addr: uintptr: u64, addrlen: u64))?;
 };
 
-export fn bind(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {
-	return wrap_return(syscall3(SYS_bind,
-		sockfd: u64, addr: uintptr: u64, addrlen: u64))?: int;
+export fn bind(sockfd: int, addr: *const sockaddr, addrlen: u32) (void | errno) = {
+	wrap_return(syscall3(SYS_bind, sockfd: u64,
+		addr: uintptr: u64, addrlen: u64))?;
 };
 
 export fn listen(sockfd: int, backlog: u32) (int | errno) = {
@@ -830,21 +876,21 @@ export fn io_uring_enter2(
 };
 
 export fn mlock2(addr: *opaque, length: size, flags: uint) (void | errno) = {
-	return wrap_return(syscall3(SYS_mlock2, addr: uintptr: u64,
-		length: u64, flags: u64))?: void;
+	wrap_return(syscall3(SYS_mlock2, addr: uintptr: u64,
+		length: u64, flags: u64))?;
 };
 
 export fn munlock(addr: *opaque, length: size) (void | errno) = {
-	return wrap_return(syscall2(SYS_munlock, addr: uintptr: u64,
-		length: u64))?: void;
+	wrap_return(syscall2(SYS_munlock, addr: uintptr: u64,
+		length: u64))?;
 };
 
 export fn mlockall(flags: uint) (void | errno) = {
-	return wrap_return(syscall1(SYS_mlockall, flags: u64))?: void;
+	wrap_return(syscall1(SYS_mlockall, flags: u64))?;
 };
 
 export fn munlockall() (void | errno) = {
-	return wrap_return(syscall0(SYS_munlockall))?: void;
+	wrap_return(syscall0(SYS_munlockall))?;
 };
 
 export fn prctl(
@@ -887,7 +933,7 @@ export fn getsid(pid: pid_t) (pid_t | errno) = {
 };
 
 export fn setsid() (void | errno) = {
-	return wrap_return(syscall0(SYS_setsid))?: void;
+	wrap_return(syscall0(SYS_setsid))?;
 };
 
 export fn mount(
@@ -1097,4 +1143,61 @@ export fn fdatasync(fd: int) (void | errno) = {
 export fn sigqueueinfo(tgid: pid_t, sig: int, info: *siginfo) (void | errno) = {
 	wrap_return(syscall3(SYS_rt_sigqueueinfo, tgid: u64,
 		sig: u64, info: uintptr: u64))?;
+};
+
+export fn pidfd_open(pid: pid_t, flags: uint) (int | errno) = {
+	return wrap_return(syscall2(SYS_pidfd_open,
+			pid: u64, flags: u64))?: int;
+};
+
+export fn pidfd_getfd(pidfd: int, targetfd: int, flags: uint) (int | errno) = {
+	return wrap_return(syscall3(SYS_pidfd_getfd,
+		pidfd: u64, targetfd: u64, flags: u64))?: int;
+};
+
+export fn pidfd_send_signal(
+	pidfd: int,
+	sig: int,
+	info: nullable *siginfo,
+	flags: uint,
+) (void | errno) = {
+	wrap_return(syscall4(
+		SYS_pidfd_send_signal,
+		pidfd: u64,
+		sig: u64,
+		info: uintptr: u64,
+		flags: u64,
+	))?;
+};
+
+export fn clone3(cl_args: *clone_args) (pid_t | errno) = {
+	return wrap_return(syscall2(
+		SYS_clone3,
+		cl_args: uintptr: u64,
+		size(clone_args)))?: pid_t;
+};
+
+// Scheduling
+export fn sched_getscheduler(pid: pid_t) (int | errno) = {
+	return wrap_return(syscall1(SYS_sched_getscheduler,
+		pid: u64))?: int;
+};
+
+export fn sched_setscheduler(pid: pid_t, policy: int, params: *sched_param) (int | errno) = {
+	return wrap_return(syscall3(SYS_sched_setscheduler,
+		pid: u64, policy: u64, params: uintptr: u64))?: int;
+};
+
+export fn sched_getattr(pid: pid_t, attr: *sched_attr, size_: uint, flags: uint) (void | errno) = {
+	wrap_return(syscall4(SYS_sched_getattr,
+		pid: u64, attr: uintptr: u64, size_: u64, flags: u64))?;
+};
+
+export fn sched_setattr(pid: pid_t, attr: *sched_attr, flags: uint) (void | errno) = {
+	wrap_return(syscall3(SYS_sched_setattr,
+		pid: u64, attr: uintptr: u64, flags: u64))?;
+};
+
+export fn sched_yield() void = {
+	syscall0(SYS_sched_yield);
 };

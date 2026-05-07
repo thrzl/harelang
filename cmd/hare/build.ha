@@ -3,7 +3,6 @@
 
 use bufio;
 use cmd::hare::build;
-use crypto::sha256;
 use errors;
 use fmt;
 use fs;
@@ -12,7 +11,6 @@ use hare::ast;
 use hare::lex;
 use hare::module;
 use hare::parse;
-use hash;
 use io;
 use memio;
 use os::exec;
@@ -20,6 +18,7 @@ use os;
 use path;
 use strconv;
 use strings;
+use time;
 use unix::tty;
 
 fn build(name: str, cmd: *getopt::command) (void | error) = {
@@ -64,7 +63,8 @@ fn build(name: str, cmd: *getopt::command) (void | error) = {
 			let sc = bufio::newscanner(&buf, len(opt.1));
 			defer bufio::finish(&sc);
 			let lexer = lex::init(&sc, "<-D argument>");
-			append(ctx.defines, parse::define(&lexer)?);
+			defer lex::finish(&lexer);
+			append(ctx.defines, parse::define(&lexer)?)!;
 		case 'F' =>
 			ctx.freestanding = true;
 		case 'j' =>
@@ -84,9 +84,9 @@ fn build(name: str, cmd: *getopt::command) (void | error) = {
 				fmt::fatal("Number of jobs must be non-zero");
 			};
 		case 'L' =>
-			append(ctx.libdirs, opt.1);
+			append(ctx.libdirs, opt.1)!;
 		case 'l' =>
-			append(ctx.libs, opt.1);
+			append(ctx.libs, opt.1)!;
 		case 'N' =>
 			ast::ident_free(ctx.ns);
 			ctx.ns = [];
@@ -155,32 +155,28 @@ fn build(name: str, cmd: *getopt::command) (void | error) = {
 		ctx.cmds[build::stage::BIN] = os::tryenv("CC", arch.cc_cmd);
 	};
 
-	let h = sha256::sha256();
-	defer hash::close(&h);
 	for (let i = 1z; i < len(ctx.cmds); i += 1) {
-		defer hash::reset(&h);
 		const cmd_path = match (exec::lookup(ctx.cmds[i])) {
-		case let cmd_path: str => yield cmd_path;
-		case void =>
+		case let cmd_path: str =>
+			yield cmd_path;
+		case =>
 			fmt::fatalf("Error: Command not found: {}", ctx.cmds[i]);
 		};
-		const cmd_file = match (os::open(cmd_path)) {
-		case let file: io::file => yield file;
+
+		const stat = match (os::stat(cmd_path)) {
+		case let stat: fs::filestat =>
+			yield stat;
 		case let err: fs::error =>
-			fmt::fatalf("Error: {}", fs::strerror(err));
+			fmt::fatalf("Error: Failed to stat {}: {}", ctx.cmds[i],
+				fs::strerror(err));
 		};
-		defer io::close(cmd_file)!;
-		let b: [sha256::BLOCKSZ]u8 = [0...];
-		for (let s => io::read(cmd_file, &b)!) {
-			hash::write(&h, b[..s]);
-		};
-		hash::sum(&h, ctx.cmd_hashes[i]);
+		ctx.cmd_mtimes[i] = stat.mtime;
 	};
 
 	const input = if (len(cmd.args) == 0) os::getcwd() else cmd.args[0];
 
 	ctx.mods = build::gather(&ctx, os::realpath(input)?)?;
-	append(ctx.hashes, [[void...]...], len(ctx.mods));
+	append(ctx.hashes, [[void...]...], len(ctx.mods))!;
 
 	let built = build::execute(&ctx)?;
 	defer free(built);
@@ -194,6 +190,22 @@ fn build(name: str, cmd: *getopt::command) (void | error) = {
 
 	let dest = os::stdout_file;
 	if (output != "-") {
+		match (os::stat(output)) {
+		case let output_stat: fs::filestat =>
+			let output_mtime = output_stat.mtime;
+			match (os::stat(built)) {
+			case let built_stat: fs::filestat =>
+				let built_mtime = built_stat.mtime;
+				// Avoid replacing the destination file if it's
+				// already up-to-date
+				if (time::compare(output_mtime, built_mtime) >= 0) {
+					return;
+				};
+			case fs::error => void;
+			};
+		case fs::error => void;
+		};
+
 		let mode: fs::mode = 0o644;
 		if (ctx.goal == build::stage::BIN) {
 			mode |= 0o111;
@@ -201,7 +213,7 @@ fn build(name: str, cmd: *getopt::command) (void | error) = {
 		// in the case that we are outputting to a binary that is
 		// currently beeing executed, we need to remove it first or
 		// otherwise os::create() will fail
-		os::remove(output): void;
+		_ = os::remove(output);
 		dest = match (os::create(output, mode)) {
 		case let f: io::file =>
 			yield f;
@@ -226,8 +238,9 @@ fn run(name: str, path: str, args: []str) error = {
 	case let c: exec::command =>
 		yield c;
 	};
-	exec::setname(&cmd, name);
-	exec::exec(&cmd);
+	exec::setname(&cmd, name)!;
+	const err = exec::exec(&cmd);
+	fmt::fatalf("exec {}: {}", path, exec::strerror(err));
 };
 
 fn get_output(goal: build::stage, input: str) (str | error) = {
@@ -257,9 +270,13 @@ fn get_output(goal: build::stage, input: str) (str | error) = {
 		// XXX: double cast here (and below) shouldn't be necessary
 		return output: output_exists: error;
 	};
-	if (!fs::isfile(stat.mode)
-			|| fs::mode_perm(stat.mode) & fs::mode::USER_X == 0) {
+	if (fs::mode_perm(stat.mode) & fs::mode::USER_X == 0
+			&& goal == build::stage::BIN) {
 		return output: output_exists: error;
 	};
+	if (!fs::isfile(stat.mode)) {
+		return output: output_exists: error;
+	};
+
 	return output;
 };

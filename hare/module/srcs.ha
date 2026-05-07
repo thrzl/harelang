@@ -82,7 +82,7 @@ export fn find(ctx: *context, loc: location) ((str, srcset) | error) = {
 				return (path::string(&buf), s);
 			case not_found => void;
 			case let e: error =>
-				return attach(strings::dup(path::string(&buf)), e);
+				return attach(strings::dup(path::string(&buf))!, e);
 			};
 		};
 		return attach(locstr(ident), not_found);
@@ -109,7 +109,7 @@ fn path_find(ctx: *context, buf: *path::buffer) (srcset | error) = {
 	_findsrcs(buf, ctx.tags, &srcs, &res, 0)?;
 	for (let i = 0z; i < len(srcs); i += 1) {
 		if (len(srcs[i].3) != 1) {
-			return alloc(srcs[i].3...): file_conflict;
+			return alloc(srcs[i].3...)!: file_conflict;
 		};
 		let out = switch (srcs[i].1) {
 		case "ha" =>
@@ -122,7 +122,7 @@ fn path_find(ctx: *context, buf: *path::buffer) (srcset | error) = {
 			yield &res.sc;
 		case => abort();
 		};
-		append(out, srcs[i].3[0]);
+		append(out, srcs[i].3[0])!;
 	};
 
 	// module needs either a hare source file or a README in order to be
@@ -137,11 +137,11 @@ fn path_find(ctx: *context, buf: *path::buffer) (srcset | error) = {
 		};
 	};
 
-	sort::sort(res.dirs, size(str), &cmp::strs);
-	sort::sort(res.ha, size(str), &cmp::strs);
-	sort::sort(res.s, size(str), &cmp::strs);
-	sort::sort(res.o, size(str), &cmp::strs);
-	sort::sort(res.sc, size(str), &cmp::strs);
+	sort::sort(res.dirs, size(str), &cmp::strs)!;
+	sort::sort(res.ha, size(str), &cmp::strs)!;
+	sort::sort(res.s, size(str), &cmp::strs)!;
+	sort::sort(res.o, size(str), &cmp::strs)!;
+	sort::sort(res.sc, size(str), &cmp::strs)!;
 	return res;
 };
 
@@ -230,7 +230,7 @@ fn _findsrcs(
 		case let tags: []tag =>
 			yield tags;
 		case let e: error =>
-			return attach(strings::dup(path::string(buf)), e);
+			return attach(strings::dup(path::string(buf))!, e);
 		};
 		defer free(wanttags);
 		if (!seentags_compat(in_tags, wanttags, &res.seentags)) {
@@ -249,23 +249,23 @@ fn _findsrcs(
 					strings::freeall(srcs[i].3);
 					srcs[i].3 = [];
 				};
-				append(srcs[i].3, strings::dup(bufstr));
+				append(srcs[i].3, strings::dup(bufstr)!)!;
 				return;
 			};
 		};
 
 		append(srcs, (
-			strings::dup(base),
-			strings::dup(ext),
+			strings::dup(base)!,
+			strings::dup(ext)!,
 			ntags,
-			alloc([strings::dup(bufstr)]),
-		));
+			alloc([strings::dup(bufstr)!])!,
+		))!;
 		return;
 	};
 
 	if (!fs::isdir(stat.mode)) return; // ignore special files
 
-	append(res.dirs, strings::dup(pathstr));
+	append(res.dirs, strings::dup(pathstr)!)!;
 	if (time::compare(res.mtime, stat.mtime) < 0) {
 		res.mtime = stat.mtime;
 	};
@@ -274,7 +274,7 @@ fn _findsrcs(
 	case let i: *fs::iterator =>
 		yield i;
 	case let e: fs::error =>
-		return attach(strings::dup(pathstr), e);
+		return attach(strings::dup(pathstr)!, e);
 	};
 	defer fs::finish(iter);
 
@@ -290,7 +290,7 @@ fn _findsrcs(
 			case let tags: []tag =>
 				yield tags;
 			case let e: error =>
-				return attach(strings::dup(path::string(buf)), e);
+				return attach(strings::dup(path::string(buf))!, e);
 			};
 			defer free(wanttags);
 			if (!seentags_compat(in_tags, wanttags, &res.seentags)) {
@@ -328,7 +328,7 @@ export fn parse_tags(s: str) ([]tag | error) = {
 		append(tags, tag {
 			name = strings::fromutf8_unsafe(bs[start+1..end]),
 			include = bs[start] == '+',
-		});
+		})!;
 		start = end;
 	};
 	return tags;
@@ -337,14 +337,11 @@ export fn parse_tags(s: str) ([]tag | error) = {
 // Checks if a set of tags are compatible with a tag requirement.
 export fn tags_compat(have: []str, want: []tag) bool = {
 	for (let t .. want) {
-		let found = false;
-
-		for (let ht .. have) {
+		let found = for (let ht .. have) {
 			if (ht == t.name) {
-				found = true;
-				break;
+				break true;
 			};
-		};
+		} else false;
 
 		if (t.include ^^ found) {
 			return false;
@@ -357,15 +354,12 @@ export fn tags_compat(have: []str, want: []tag) bool = {
 // for use in _findsrcs.
 fn seentags_compat(have: []str, want: []tag, seen: *[]str) bool = {
 	for (let t .. want) {
-		let found = false;
-
-		for (let ht .. have) {
+		let found = for (let ht .. have) {
 			if (ht == t.name) {
 				insert_uniq(seen, t.name);
-				found = true;
-				break;
+				break true;
 			};
-		};
+		} else false;
 
 		if (t.include ^^ found) {
 			return false;

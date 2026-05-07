@@ -6,7 +6,7 @@ use io;
 use time;
 
 // Provides an implementation of [[fs::fs]] for the current working directory.
-export let cwd: *fs::fs = null: *fs::fs;
+export let cwd: *fs::fs = @undefined;
 
 // Removes a file.
 export fn remove(path: str) (void | fs::error) = fs::remove(cwd, path);
@@ -23,13 +23,14 @@ export fn move(oldpath: str, newpath: str) (void | fs::error) =
 	fs::move(cwd, oldpath, newpath);
 
 // Creates an [[fs::iterator]] for a given directory to read its contents. The
-// user should call [[fs::next]] to enumerate entries, and [[fs::finish]] when
-// done using the object.
+// order in which entries are returned is undefined. The user should call
+// [[fs::next]] to enumerate entries, and [[fs::finish]] when done iterating.
 export fn iter(path: str) (*fs::iterator | fs::error) = fs::iter(cwd, path);
 
 // Reads all entries from a directory. The caller must free the return value
 // with [[fs::dirents_free]].
-export fn readdir(path: str) ([]fs::dirent | fs::error) = fs::readdir(cwd, path);
+export fn readdir(path: str) ([]fs::dirent | fs::error | nomem) =
+	fs::readdir(cwd, path);
 
 // Returns file information for a given path. If the target is a symlink,
 // information is returned about the link, not its target.
@@ -108,6 +109,9 @@ export fn symlink(target: str, path: str) (void | fs::error) =
 //
 // [[fs::flag::CREATE]] isn't very useful with this function, since the new
 // file's mode is set to zero. For this use-case, use [[create]] instead.
+//
+// The return value is an unbuffered [[io::file]]. For buffered I/O, see
+// [[open_buffered]].
 export fn open(
 	path: str,
 	flags: fs::flag = fs::flag::RDONLY,
@@ -119,7 +123,8 @@ export fn open(
 // Only the permission bits of the mode are used. If other bits are set, they
 // are discarded.
 //
-// To create a file without opening it, see [[mkfile]].
+// The return value is an unbuffered [[io::file]]. For buffered I/O, see
+// [[create_buffered]]. To create a file without opening it, see [[mkfile]].
 export fn create(
 	path: str,
 	mode: fs::mode,

@@ -2,7 +2,6 @@
 // (c) Hare authors <https://harelang.org>
 
 use crypto::argon2;
-use errors;
 
 // Given a password, derive a key. Given the same password, salt, memory, and
 // passes, this function will always produce the same key. This function is
@@ -41,7 +40,7 @@ export fn derivekey(
 	password: []u8,
 	mem: (u32 | []u64),
 	passes: u32,
-) (void | errors::nomem) = {
+) (void | nomem) = {
 	const config = argon2::conf {
 		mem = mem,
 		parallel = 1,

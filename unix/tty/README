@@ -1,3 +1,5 @@
+tty: basic tty and termios support
+
 unix::tty provides an interface for interacting with and manipulating a
 terminal environment, based on the termios interface defined by POSIX.
 

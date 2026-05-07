@@ -6,26 +6,26 @@ use errors;
 use io;
 
 const vtable_r: io::vtable = io::vtable {
-	closer = &close_static,
+	closer = &close_buffered,
 	reader = &read,
 	...
 };
 
 const vtable_w: io::vtable = io::vtable {
-	closer = &close_static,
+	closer = &close_buffered,
 	writer = &write,
 	...
 };
 
 const vtable_rw: io::vtable = io::vtable {
-	closer = &close_static,
+	closer = &close_buffered,
 	reader = &read,
 	writer = &write,
 	...
 };
 
 export type stream = struct {
-	stream: io::stream,
+	vtable: io::stream,
 	source: io::handle,
 	rbuffer: []u8,
 	wbuffer: []u8,
@@ -33,6 +33,25 @@ export type stream = struct {
 	ravail: size,
 	wavail: size,
 	flush: []u8,
+	flags: flag,
+};
+
+// Flags to tune the behavior of [[bufio::stream]].
+export type flag = enum uint {
+	NONE = 0,
+	// If set, the underling [[io::handle]] for a [[bufio::stream]] is
+	// closed when [[io::close]] is called on the [[bufio::stream]] object.
+	MANAGED_HANDLE = 1 << 0,
+	// If set, the read buffer for a [[bufio::stream]] is freed when
+	// [[io::close]] is called on the [[bufio::stream]] object.
+	MANAGED_RDBUF  = 1 << 1,
+	// If set, the write buffer for a [[bufio::stream]] is freed when
+	// [[io::close]] is called on the [[bufio::stream]] object.
+	MANAGED_WRBUF  = 1 << 2,
+	// The [[io::handle]] and the read and write buffers are owned by the
+	// [[bufio::stream]] object and will be disposed of (closed or freed
+	// respectively) when closing the [[bufio::stream]].
+	MANAGED = MANAGED_HANDLE | MANAGED_RDBUF | MANAGED_WRBUF,
 };
 
 // Creates a stream which buffers reads and writes for the underlying stream.
@@ -44,9 +63,6 @@ export type stream = struct {
 // the desired buffer, or empty slices if read or write functionality is
 // disabled. The same buffer may not be used for both reads and writes.
 //
-// The caller is responsible for closing the underlying stream, and freeing the
-// provided buffers if necessary, after the buffered stream is closed.
-//
 // 	let rbuf: [os::BUFSZ]u8 = [0...];
 // 	let wbuf: [os::BUFSZ]u8 = [0...];
 // 	let buffered = bufio::init(source, rbuf, wbuf);
@@ -54,29 +70,36 @@ export fn init(
 	src: io::handle,
 	rbuf: []u8,
 	wbuf: []u8,
+	flags: flag = flag::NONE,
 ) stream = {
 	static let flush_default = ['\n': u8];
 
-	let st =
-		if (len(rbuf) != 0 && len(wbuf) != 0) {
-			assert(rbuf: *[*]u8 != wbuf: *[*]u8,
-				"Cannot use same buffer for reads and writes");
-			yield &vtable_rw;
-		} else if (len(rbuf) != 0) {
-			yield &vtable_r;
-		} else if (len(wbuf) != 0) {
-			yield &vtable_w;
-		} else {
-			abort("Must provide at least one buffer");
-		};
+	let vtable: nullable *io::vtable = null;
+	if (len(rbuf) != 0 && len(wbuf) != 0) {
+		assert(rbuf: *[*]u8 != wbuf: *[*]u8,
+			"Cannot use same buffer for reads and writes");
+		vtable = &vtable_rw;
+	} else if (len(rbuf) != 0) {
+		vtable = &vtable_r;
+	} else if (len(wbuf) != 0) {
+		vtable = &vtable_w;
+	};
+
+	const vtable = match (vtable) {
+	case let vt: *io::vtable =>
+		yield vt;
+	case null =>
+		abort("Must provide at least one buffer");
+	};
 
 	return stream {
-		stream = st,
+		vtable = vtable,
 		source = src,
 		rbuffer = rbuf,
 		wbuffer = wbuf,
 		flush = flush_default,
 		rpos = len(rbuf), // necessary for unread() before read()
+		flags = flags,
 		...
 	};
 };
@@ -162,10 +185,20 @@ export fn isbuffered(in: io::handle) bool = {
 	};
 };
 
-fn close_static(s: *io::stream) (void | io::error) = {
-	assert(s.closer == &close_static);
-	if (s.writer != null) {
+fn close_buffered(s: *io::stream) (void | io::error) = {
+	const s = s: *stream;
+	assert(s.vtable.closer == &close_buffered);
+	if (s.vtable.writer != null) {
 		flush(s: *stream)?;
+	};
+	if (s.flags & flag::MANAGED_HANDLE != 0) {
+		io::close(s.source)?;
+	};
+	if (s.flags & flag::MANAGED_RDBUF != 0) {
+		free(s.rbuffer);
+	};
+	if (s.flags & flag::MANAGED_WRBUF != 0) {
+		free(s.wbuffer);
 	};
 };
 

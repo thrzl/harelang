@@ -1,2 +1,1 @@
-math::complex provides functions for working with complex floating-point
-numbers.
+complex: complex (imaginary) floating-point number support

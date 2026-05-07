@@ -18,6 +18,7 @@ export type blksize_t = i32;
 export type nfds_t = uint;
 export type mode_t = u32;
 export type sigset = uint;
+export type rlim_t = u64;
 
 // Passing this to a pledge() promise specifies to not change the current value.
 export type nullpromise = void;
@@ -221,7 +222,7 @@ export type dirent = struct {
 	d_reclen: u16,
 	d_type: u8,
 	d_namlen: u8,
-	__d_padding: [4]u8,
+	_: [4]u8, // padding
 	d_name: [*]u8,
 };
 
@@ -255,7 +256,7 @@ export def POLLRDBAND: i16 = 0x80;
 export def POLLWRBAND: i16 = 0x100;
 
 export type iovec = struct {
-	iov_base: *opaque,
+	iov_base: nullable *opaque,
 	iov_len: size,
 };
 
@@ -263,8 +264,9 @@ export def NSIG: int = 32;
 
 export type sigact = struct {
 	union {
-		sa_handler: nullable *fn (int) void,
-		sa_sigaction: nullable *fn (int, *siginfo, *opaque) void,
+		sa_handler: nullable *fn (_: int) void,
+		sa_sigaction: nullable *fn (_: int,
+			_: *siginfo, _: *opaque) void,
 	},
 	sa_mask: sigset,
 	sa_flags: int,
@@ -275,7 +277,7 @@ export type siginfo = struct {
 	si_code: int,
 	si_errno: int,
 	_data: union {
-		_pad: [128/4 - 3]int,
+		_: [128/4 - 3]int, // padding
 		_proc: struct {
 			_pid: pid_t,
 			_uid: uid_t,
@@ -444,6 +446,7 @@ export type cc = enum u8 {
 };
 
 export def TIOCSPGRP: u64 = 0x80047476;
+export def TIOCGPGRP: u64 = 0x40047477;
 export def TIOCGWINSZ: u64 = 0x40087468;
 export def TIOCSWINSZ: u64 = 0x80087467;
 export def TIOCGETA: u64 = 0x402c7413;
@@ -513,6 +516,23 @@ export def LOCK_SH: int = 1;
 export def LOCK_EX: int = 2;
 export def LOCK_NB: int = 4;
 export def LOCK_UN: int = 8;
+
+export type rlimit = struct {
+	rlim_cur: rlim_t,
+	rlim_max: rlim_t,
+};
+
+export def RLIM_INFINITY: rlim_t = -1;
+
+export def RLIMIT_CPU: int = 0;
+export def RLIMIT_FSIZE: int = 1;
+export def RLIMIT_DATA: int = 2;
+export def RLIMIT_STACK: int = 3;
+export def RLIMIT_CORE: int = 4;
+export def RLIMIT_RSS: int = 5;
+export def RLIMIT_MEMLOCK: int = 6;
+export def RLIMIT_NPROC: int = 7;
+export def RLIMIT_NOFILE: int = 8;
 
 // sysctl
 export def CTL_KERN: int = 1;

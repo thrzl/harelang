@@ -2,7 +2,7 @@
 // (c) Hare authors <https://harelang.org>
 
 export type sigcontext = struct {
-	__sc_unused: int,
+	_: int, // unused
 	sc_mask: int,
 	sc_sp: u64,
 	sc_lr: u64,
@@ -12,4 +12,4 @@ export type sigcontext = struct {
 	sc_cookie: u64,
 };
 
-export type ucontext = sigcontext;
+export type ucontext_t = sigcontext;

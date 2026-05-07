@@ -14,13 +14,13 @@ export fn syscall(num: u64, args: u64...) u64 = {
 	};
 };
 
-fn syscall0(u64) u64;
-fn syscall1(u64, u64) u64;
-fn syscall2(u64, u64, u64) u64;
-fn syscall3(u64, u64, u64, u64) u64;
-fn syscall4(u64, u64, u64, u64, u64) u64;
-fn syscall5(u64, u64, u64, u64, u64, u64) u64;
-fn syscall6(u64, u64, u64, u64, u64, u64, u64) u64;
+fn syscall0(_: u64) u64;
+fn syscall1(_: u64, _: u64) u64;
+fn syscall2(_: u64, _: u64, _: u64) u64;
+fn syscall3(_: u64, _: u64, _: u64, _: u64) u64;
+fn syscall4(_: u64, _: u64, _: u64, _: u64, _: u64) u64;
+fn syscall5(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
+fn syscall6(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
 
 export def NAME_MAX: size = 255z;
 export def PATH_MAX: size = 1024z;
@@ -418,9 +418,26 @@ export fn clock_settime(clock_id: int, tp: *const timespec) (void | errno) = {
 		clock_id: u64, tp: uintptr: u64))?;
 };
 
-export fn nanosleep(req: *const timespec, rem: *timespec) (void | errno) = {
+export fn nanosleep(
+	req: *const timespec,
+	rem: nullable *timespec,
+) (void | errno) = {
 	wrap_return(syscall2(SYS_nanosleep,
 		req: uintptr: u64, rem: uintptr: u64))?;
+};
+
+export fn clock_nanosleep(
+	clock_id: int,
+	flags: int,
+	requested: *timespec,
+	remaining: nullable *timespec,
+) (void | errno) = {
+	wrap_return(syscall4(SYS_clock_nanosleep,
+		clock_id: u64,
+		flags: u64,
+		requested: uintptr: u64,
+		remaining: uintptr: u64
+	))?;
 };
 
 export fn getrandom(buf: *opaque, bufln: size, flags: uint) (size | errno) = {
@@ -474,17 +491,17 @@ export fn socketpair(
 	sv: *[*]int,
 ) (int | errno) = {
 	return wrap_return(syscall4(SYS_socketpair, domain: u64,
-		type_: u64, protocol: u64, sv: uintptr : u64))?: int;
+		type_: u64, protocol: u64, sv: uintptr: u64))?: int;
 };
 
-export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {
-	return wrap_return(syscall3(SYS_connect,
-		sockfd: u64, addr: uintptr: u64, addrlen: u64))?: int;
+export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (void | errno) = {
+	wrap_return(syscall3(SYS_connect, sockfd: u64,
+		addr: uintptr: u64, addrlen: u64))?;
 };
 
-export fn bind(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {
-	return wrap_return(syscall3(SYS_bind,
-		sockfd: u64, addr: uintptr: u64, addrlen: u64))?: int;
+export fn bind(sockfd: int, addr: *const sockaddr, addrlen: u32) (void | errno) = {
+	wrap_return(syscall3(SYS_bind, sockfd: u64,
+		addr: uintptr: u64, addrlen: u64))?;
 };
 
 export fn listen(sockfd: int, backlog: u32) (int | errno) = {
@@ -665,4 +682,31 @@ export fn fsync(fd: int) (void | errno) = {
 
 export fn fdatasync(fd: int) (void | errno) = {
 	wrap_return(syscall1(SYS_fdatasync, fd: u64))?;
+};
+
+// Scheduling
+export fn sched_getscheduler(pid: pid_t) (int | errno) = {
+	return wrap_return(syscall1(SYS_sched_getscheduler,
+		pid: u64))?: int;
+};
+
+export fn sched_setscheduler(pid: pid_t, policy: int, params: *sched_param) (int | errno) = {
+	return wrap_return(syscall3(SYS_sched_setscheduler,
+		pid: u64, policy: u64, params: uintptr: u64))?: int;
+};
+
+export fn sched_yield() void = {
+	syscall0(SYS_sched_yield);
+};
+
+export fn kqueue() (int | errno) = {
+	return wrap_return(syscall0(SYS_kqueue))?: int;
+};
+
+export fn kqueuex(flags: uint) (int | errno) = {
+	return wrap_return(syscall1(SYS_kqueuex, flags: u64))?: int;
+};
+
+export fn kevent(kq: int, changelist: const *kevent_t, nchanges: int, eventlist: *kevent_t, nevents: int, timeout: const nullable *timespec) (int | errno) = {
+	return wrap_return(syscall6(SYS_kevent, kq: u64, changelist: uintptr, nchanges: u64, eventlist: uintptr, nevents: u64, timeout: uintptr))?: int;
 };

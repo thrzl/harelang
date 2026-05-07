@@ -52,7 +52,7 @@ export fn dirfdopen(
 	fd: io::file,
 	resolve_flags: resolve_flag = resolve_flag::NORMAL,
 ) *fs::fs = {
-	let ofs = alloc(os_filesystem { resolve = resolve_flags, ... });
+	let ofs = alloc(os_filesystem { resolve = resolve_flags, ... })!;
 	let fs = static_dirfdopen(fd, ofs);
 	fs.close = &fs_close;
 	return fs;
@@ -99,9 +99,9 @@ export fn dirfs_clone(
 ) *fs::fs = {
 	assert(fs.open == &fs_open);
 	let fs = fs: *os_filesystem;
-	let new = alloc(*fs);
-	fs.resolve |= resolve_flags;
-	new.dirfd = rt::fcntl(new.dirfd, rt::F_DUPFD_CLOEXEC, 0) as int;
+	let new = alloc(*fs)!;
+	new.resolve |= resolve_flags;
+	new.dirfd = io::dup(new.dirfd)!;
 	return &new.fs;
 };
 
@@ -150,7 +150,6 @@ fn _fs_open(
 	oh: *rt::open_how,
 ) (io::file | fs::error) = {
 	let fs = fs: *os_filesystem;
-
 	oh.resolve = fs.resolve;
 
 	let fd = match (rt::openat2(fs.dirfd, path, oh, size(rt::open_how))) {
@@ -168,6 +167,7 @@ fn fs_open_file(
 	path: str,
 	flags: fs::flag,
 ) (io::file | fs::error) = {
+	let fs = fs: *os_filesystem;
 	flags ^= fs::flag::CTTY | fs::flag::NOCLOEXEC; // invert NOCTTY/CLOEXEC
 
 	if ((flags & fs::flag::DIRECTORY) == fs::flag::DIRECTORY) {
@@ -449,11 +449,12 @@ fn fs_iter(fs: *fs::fs, path: str) (*fs::iterator | fs::error) = {
 		yield fd;
 	};
 
+	// TODO: handle allocation failure
 	let buf = match (rt::malloc(fs.getdents_bufsz)) {
 	case let v: *opaque =>
 		yield v: *[*]u8;
 	case null =>
-		return errors::nomem;
+		abort("out of memory");
 	};
 	let iter = alloc(os_iterator {
 		iter = fs::iterator {
@@ -463,7 +464,7 @@ fn fs_iter(fs: *fs::fs, path: str) (*fs::iterator | fs::error) = {
 		fd = fd,
 		buf = buf[..fs.getdents_bufsz],
 		...
-	});
+	})!;
 	return &iter.iter;
 };
 

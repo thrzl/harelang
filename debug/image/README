@@ -1,3 +1,5 @@
+image: executable file format introspection
+
 This module implements functionality for examining executable files. It provides
 some support code for working with memory-mapped ELF executables.
 

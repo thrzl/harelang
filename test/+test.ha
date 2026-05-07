@@ -3,6 +3,8 @@
 
 use ascii;
 use bufio;
+use debug;
+use debug::image;
 use encoding::hex;
 use encoding::utf8;
 use fmt;
@@ -12,6 +14,7 @@ use math;
 use memio;
 use os;
 use rt;
+use sort;
 use strings;
 use time;
 use unix::signal;
@@ -30,9 +33,17 @@ type status = enum {
 	SEGV,
 };
 
+type abort_reason = struct {
+	path: nullable *str,
+	line: u64,
+	col: u64,
+	msg: str,
+};
+
 type failure = struct {
 	test: str,
-	reason: rt::abort_reason,
+	reason: abort_reason,
+	trace: u64,
 };
 
 type skipped = struct {
@@ -80,22 +91,22 @@ fn colored() bool = {
 		&& tty::isatty(os::stdout_file);
 };
 
-let jmp_buf = rt::jmp_buf { ... };
-
-const @symbol("__test_array_start") test_start: [*]test;
-const @symbol("__test_array_end") test_end: [*]test;
+@symbol("__test_array_start") const test_start: [*]test;
+@symbol("__test_array_end") const test_end: [*]test;
 
 export @symbol("__test_main") fn main() size = {
 	const ntest = (&test_end: uintptr - &test_start: uintptr): size / size(test);
 	const tests = test_start[..ntest];
+	sort::sort(tests, size(test), &test_cmp)!;
+
 	let enabled_tests: []test = [];
 	defer free(enabled_tests);
 	if (len(os::args) == 1) {
-		append(enabled_tests, tests...);
+		append(enabled_tests, tests...)!;
 	} else for (let i = 0z; i < ntest; i += 1) {
 		for (let arg .. os::args) {
 			if (fnmatch::fnmatch(arg, tests[i].name)) {
-				append(enabled_tests, tests[i]);
+				append(enabled_tests, tests[i])!;
 				break;
 			};
 		};
@@ -117,14 +128,14 @@ export @symbol("__test_main") fn main() size = {
 		stderr = memio::dynamic(),
 		maxname = maxname,
 		default_round = math::getround(),
-		cwd = strings::dup(os::getcwd()),
+		cwd = strings::dup(os::getcwd())!,
 		...
 	};
 	defer finish_context(&ctx);
 
 	fmt::printfln("Running {}/{} tests:\n", len(enabled_tests), ntest)!;
 	reset(&ctx);
-	for (let test .. enabled_tests) {
+	for (let test &.. enabled_tests) {
 		do_test(&ctx, test);
 	};
 	fmt::println()!;
@@ -140,6 +151,17 @@ export @symbol("__test_main") fn main() size = {
 	};
 
 	if (len(ctx.failures) > 0) {
+		const image = match (image::self()) {
+		case let img: image::image =>
+			yield img;
+		case => yield;
+		};
+		defer match (&image) {
+		case let img: *image::image =>
+			image::close(img);
+		case void => void;
+		};
+
 		fmt::println("Failures:")!;
 		for (let failure .. ctx.failures) {
 			match (failure.reason.path) {
@@ -155,6 +177,22 @@ export @symbol("__test_main") fn main() size = {
 					failure.reason.col,
 					failure.reason.msg)!;
 			};
+
+			if (failure.trace == 0) continue;
+
+			const image = match (&image) {
+			case let img: *image::image =>
+				yield img;
+			case void => continue;
+			};
+
+			const trace = match (debug::trace_by_id(failure.trace)) {
+			case let frame: debug::stackframe =>
+				yield frame;
+			case void => continue;
+			};
+
+			debug::backtrace(image, trace);
 		};
 		fmt::println()!;
 	};
@@ -195,6 +233,12 @@ export @symbol("__test_main") fn main() size = {
 	return len(ctx.failures);
 };
 
+fn test_cmp(a: const *opaque, b: const *opaque) int = {
+	const a = a: const *test;
+	const b = b: const *test;
+	return strings::compare(a.name, b.name);
+};
+
 fn reset(ctx: *context) void = {
 	math::setround(ctx.default_round);
 	math::clearexcept(math::fexcept::ALL);
@@ -203,7 +247,7 @@ fn reset(ctx: *context) void = {
 	want_abort = false;
 };
 
-fn do_test(ctx: *context, test: test) void = {
+fn do_test(ctx: *context, test: *test) void = {
 	signal::handle(signal::sig::SEGV, &handle_segv,
 		signal::flag::NODEFER | signal::flag::ONSTACK);
 	memio::reset(&ctx.stdout);
@@ -228,13 +272,16 @@ fn do_test(ctx: *context, test: test) void = {
 			test = test.name,
 			stdout = stdout,
 			stderr = stderr,
-		});
+		})!;
+	} else {
+		free(stdout);
+		free(stderr);
 	};
 
 	reset(ctx);
 };
 
-fn run_test(ctx: *context, test: test) status = {
+fn run_test(ctx: *context, test: *test) status = {
 	fmt::print(test.name)!;
 	dots(ctx.maxname - len(test.name) + 3);
 	bufio::flush(os::stdout)!; // write test name before test runs
@@ -243,15 +290,23 @@ fn run_test(ctx: *context, test: test) status = {
 	let orig_stderr = os::stderr;
 	os::stdout = &ctx.stdout;
 	os::stderr = &ctx.stderr;
-	defer rt::jmp = null;
+
+	trace = 0u64;
+
+	default_abort = rt::onabort(&onabort);
+	defer rt::onabort(default_abort);
+
+	defer jmp = null;
 	const n = rt::setjmp(&jmp_buf): status;
 	if (n == status::RETURN) {
-		rt::jmp = &jmp_buf;
+		jmp = &jmp_buf;
+		_current = test;
 		test.func();
 	};
 
 	os::stdout = orig_stdout;
 	os::stderr = orig_stderr;
+	_current = null;
 	return n;
 };
 
@@ -261,7 +316,7 @@ fn printable(buf: []u8) str = {
 		let it = strings::iter(s);
 		for (true) match (strings::next(&it)) {
 		case done =>
-			return strings::dup(s);
+			return strings::dup(s)!;
 		case let r: rune =>
 			if (ascii::valid(r) && !ascii::isprint(r)
 					&& r != '\t' && r != '\n') {
@@ -290,11 +345,12 @@ fn interpret_status(ctx: *context, test: str, status: status) bool = {
 			styled_print(91, "FAIL");
 			append(ctx.failures, failure {
 				test = test,
-				reason = rt::abort_reason {
+				reason = abort_reason {
 					msg = "Expected test to abort",
 					...
 				},
-			});
+				trace = 0,
+			})!;
 			return true;
 		} else {
 			styled_print(92, "PASS");
@@ -308,26 +364,28 @@ fn interpret_status(ctx: *context, test: str, status: status) bool = {
 			styled_print(91, "FAIL");
 			append(ctx.failures, failure {
 				test = test,
-				reason = rt::reason,
-			});
+				reason = reason,
+				trace = trace,
+			})!;
 			return true;
 		};
 	case status::SKIP =>
 		styled_print(37, "SKIP");
 		append(ctx.skipped, skipped {
 			test = test,
-			reason = rt::reason.msg,
-		});
+			reason = reason.msg,
+		})!;
 		return false;
 	case status::SEGV =>
 		styled_print(91, "FAIL");
 		append(ctx.failures, failure {
 			test = test,
-			reason = rt::abort_reason {
+			reason = abort_reason {
 				msg = "Segmentation fault",
 				...
 			},
-		});
+			trace = trace,
+		})!;
 		return true;
 	};
 };
@@ -340,10 +398,42 @@ fn styled_print(color: int, result: fmt::formattable) void = {
 	};
 };
 
+let jmp_buf = rt::jmp_buf { ... };
+let jmp: nullable *rt::jmp_buf = null;
+let reason: abort_reason = abort_reason { ... };
+let trace = 0u64;
+let default_abort: *rt::abort_handler = @undefined;
+
+fn onabort(
+	path: *str,
+	line: u64,
+	col: u64,
+	msg: str,
+) never = {
+	match (jmp) {
+	case let j: *rt::jmp_buf =>
+		let frame = debug::walk();
+		// Skip rt:: and test:: frames
+		frame = debug::next(frame) as debug::stackframe;
+		frame = debug::next(frame) as debug::stackframe;
+
+		trace = debug::trace_store(frame)!;
+		reason = abort_reason {
+			path = path,
+			line = line,
+			col = col,
+			msg = msg,
+		};
+		rt::longjmp(j, status::ABORT);
+	case null =>
+		default_abort(path, line, col, msg);
+	};
+};
+
 fn handle_segv(
 	sig: signal::sig,
 	info: *signal::siginfo,
-	ucontext: *opaque,
+	uctx: *opaque,
 ) void = {
 	rt::longjmp(&jmp_buf, status::SEGV);
 };

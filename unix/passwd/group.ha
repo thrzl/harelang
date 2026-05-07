@@ -40,7 +40,7 @@ export fn groups_finish(rd: *groupreader) void = {
 	bufio::finish(&rd.scan);
 };
 
-// Reads a Unix-like group entry from a [[groupreader]]. The return value is
+// Reads a Unix-like group entry from a [[grreader]]. The return value is
 // borrowed from the scanner.
 export fn nextgr(rd: *groupreader) (grent | io::EOF | io::error | invalid) = {
 	const line = match (bufio::scan_line(&rd.scan)) {
@@ -95,10 +95,20 @@ export fn grents_free(ents: []grent) void = {
 	free(ents);
 };
 
-fn grent_dup(ent: *grent) void = {
-	ent.name = strings::dup(ent.name);
-	ent.password = strings::dup(ent.password);
-	ent.userlist = strings::dup(ent.userlist);
+fn grent_dup(ent: *grent) (void | nomem) = {
+	let dup = grent {
+		gid = ent.gid,
+		...
+	};
+	let ok = false;
+	defer if (!ok) grent_finish(&dup);
+
+	dup.name = strings::dup(ent.name)!;
+	dup.password = strings::dup(ent.password)!;
+	dup.userlist = strings::dup(ent.userlist)!;
+
+	*ent = dup;
+	ok = true;
 };
 
 // Looks up a group by name in a Unix-like group file. It expects a such file at
@@ -108,7 +118,7 @@ fn grent_dup(ent: *grent) void = {
 // associated with the group.
 //
 // See [[nextgr]] for low-level parsing API.
-export fn getgroup(name: str) (grent | void) = {
+export fn getgroup(name: str) (grent | void | nomem) = {
 	const file = match (os::open("/etc/group")) {
 	case let f: io::file =>
 		yield f;
@@ -121,7 +131,7 @@ export fn getgroup(name: str) (grent | void) = {
 	defer groups_finish(&rd);
 	for (const ent => nextgr(&rd)!) {
 		if (ent.name == name) {
-			grent_dup(&ent);
+			grent_dup(&ent)?;
 			return ent;
 		};
 	};
@@ -134,7 +144,7 @@ export fn getgroup(name: str) (grent | void) = {
 // associated with the group.
 //
 // See [[nextgr]] for low-level parsing API.
-export fn getgid(gid: unix::gid) (grent | void) = {
+export fn getgid(gid: unix::gid) (grent | void | nomem) = {
 	const file = match (os::open("/etc/group")) {
 	case let f: io::file =>
 		yield f;
@@ -147,7 +157,7 @@ export fn getgid(gid: unix::gid) (grent | void) = {
 	defer groups_finish(&rd);
 	for (const ent => nextgr(&rd)!) {
 		if (ent.gid == gid) {
-			grent_dup(&ent);
+			grent_dup(&ent)?;
 			return ent;
 		};
 	};
@@ -155,10 +165,10 @@ export fn getgid(gid: unix::gid) (grent | void) = {
 
 // Looks up groups by user name in a Unix-like group file. It expects a such
 // file at /etc/group. Aborts if that file doesn't exist or is not properly
-// formatted. The caller must pass the return value to [[grent_finish]].
+// formatted. The caller must pass the return value to [[grents_free]].
 //
 // See [[nextgr]] for low-level parsing API.
-export fn getgroups(name: str) []grent = {
+export fn getgroups(name: str) ([]grent | nomem) = {
 	const file = match (os::open("/etc/group")) {
 	case let f: io::file =>
 		yield f;
@@ -171,16 +181,25 @@ export fn getgroups(name: str) []grent = {
 	defer groups_finish(&rd);
 
 	let groups: []grent = [];
+	let ok = false;
+	defer if (!ok) grents_free(groups);
+
 	for (const ent => nextgr(&rd)!) {
 		const tok = strings::tokenize(ent.userlist, ",");
 		for (const tok => strings::next_token(&tok)) {
 			if (tok == name) {
-				grent_dup(&ent);
-				append(groups, ent);
+				grent_dup(&ent)?;
+				match (append(groups, ent)) {
+				case void => void;
+				case nomem =>
+					grent_finish(&ent);
+					return nomem;
+				};
 			};
 		};
 	};
 
+	ok = true;
 	return groups;
 };
 

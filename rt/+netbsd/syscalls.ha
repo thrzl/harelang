@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
-fn syscall0(u64) u64;
-fn syscall1(u64, u64) u64;
-fn syscall2(u64, u64, u64) u64;
-fn syscall3(u64, u64, u64, u64) u64;
-fn syscall4(u64, u64, u64, u64, u64) u64;
-fn syscall5(u64, u64, u64, u64, u64, u64) u64;
-fn syscall6(u64, u64, u64, u64, u64, u64, u64) u64;
-fn __sigtramp_siginfo_2(u64) u64;
+fn syscall0(_: u64) u64;
+fn syscall1(_: u64, _: u64) u64;
+fn syscall2(_: u64, _: u64, _: u64) u64;
+fn syscall3(_: u64, _: u64, _: u64, _: u64) u64;
+fn syscall4(_: u64, _: u64, _: u64, _: u64, _: u64) u64;
+fn syscall5(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
+fn syscall6(_: u64, _: u64, _: u64, _: u64, _: u64, _: u64, _: u64) u64;
+
+fn __sigtramp_siginfo_2(_: u64) u64;
 
 let pathbuf: [PATH_MAX]u8 = [0...];
 
@@ -300,9 +301,26 @@ export fn ftruncate(fd: int, ln: off_t) (void | errno) = {
 	wrap_return(syscall2(SYS_ftruncate, fd: u64, ln: u32))?;
 };
 
-export fn nanosleep(req: *const timespec, rem: *timespec) (void | errno) = {
+export fn nanosleep(
+	req: *const timespec,
+	rem: nullable *timespec,
+) (void | errno) = {
 	wrap_return(syscall2(SYS___nanosleep50,
 		req: uintptr: u64, rem: uintptr: u64))?;
+};
+
+export fn clock_nanosleep(
+	clock_id: int,
+	flags: int,
+	requested: *timespec,
+	remaining: nullable *timespec,
+) (void | errno) = {
+	wrap_return(syscall4(SYS_clock_nanosleep,
+		clock_id: u64,
+		flags: u64,
+		requested: uintptr: u64,
+		remaining: uintptr: u64
+	))?;
 };
 
 export fn clock_gettime(clock_id: int, tp: *timespec) (void | errno) = {
@@ -452,6 +470,17 @@ export fn sigprocmask(
 		how: u64, set: uintptr: u64, old: uintptr: u64))?: int;
 };
 
+export fn getrlimit(resource: int, rlim: *rlimit) (void | errno) = {
+	wrap_return(syscall2(SYS_getrlimit,
+		resource: u64, rlim: uintptr: u64))?;
+};
+
+export fn setrlimit(resource: int, rlim: *const rlimit) (void | errno) = {
+	wrap_return(syscall2(SYS_setrlimit,
+		resource: u64, rlim: uintptr: u64))?;
+};
+
+
 export fn open(
 	path: path,
 	flags: int,
@@ -566,14 +595,14 @@ export fn socket(domain: int, type_: int, protocol: int) (int | errno) = {
 		domain: u64, type_: u64, protocol: u64))?: int;
 };
 
-export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {
-	return wrap_return(syscall3(SYS_connect,
-		sockfd: u64, addr: uintptr: u64, addrlen: u64))?: int;
+export fn connect(sockfd: int, addr: *const sockaddr, addrlen: u32) (void | errno) = {
+	wrap_return(syscall3(SYS_connect, sockfd: u64,
+		addr: uintptr: u64, addrlen: u64))?;
 };
 
-export fn bind(sockfd: int, addr: *const sockaddr, addrlen: u32) (int | errno) = {
-	return wrap_return(syscall3(SYS_bind,
-		sockfd: u64, addr: uintptr: u64, addrlen: u64))?: int;
+export fn bind(sockfd: int, addr: *const sockaddr, addrlen: u32) (void | errno) = {
+	wrap_return(syscall3(SYS_bind, sockfd: u64,
+		addr: uintptr: u64, addrlen: u64))?;
 };
 
 export fn getsockname(sockfd: int, addr: nullable *sockaddr, addrlen: nullable *u32) (int | errno) = {
@@ -628,7 +657,7 @@ export fn socketpair(
 	sv: *[*]int,
 ) (int | errno) = {
 	return wrap_return(syscall4(SYS_socketpair, domain: u64,
-		type_: u64, protocol: u64, sv: uintptr : u64))?: int;
+		type_: u64, protocol: u64, sv: uintptr: u64))?: int;
 };
 
 export fn fsync(fd: int) (void | errno) = {
@@ -637,4 +666,36 @@ export fn fsync(fd: int) (void | errno) = {
 
 export fn fdatasync(fd: int) (void | errno) = {
 	wrap_return(syscall1(SYS_fdatasync, fd: u64))?;
+};
+
+// Scheduling
+// netbsd-specific scheduler access functions
+export fn _sched_getparam(pid: pid_t, lwpid: lwpid_t, policy: *int, sp: *sched_param) (void | errno) = {
+	wrap_return(syscall4(SYS__sched_getparam,
+		pid: u64, lwpid: u64, policy: uintptr: u64, sp: uintptr: u64))?;
+};
+
+export fn _sched_setparam(pid: pid_t, lwpid: lwpid_t, policy: int, sp: *sched_param) (void | errno) = {
+	wrap_return(syscall4(SYS__sched_setparam,
+		pid: u64, lwpid: u64, policy: u64, sp: uintptr: u64))?;
+};
+
+// The POSIX functions are defined in terms of the netbsd functions.
+export fn sched_getscheduler(pid: pid_t) (int | errno) = {
+	let policy: int = 0;
+	let sp = sched_param{...};
+	_sched_getparam(pid, P_ALL_LWPS, &policy, &sp)?;
+	return policy;
+};
+
+export fn sched_setscheduler(pid: pid_t, policy: int, params: *sched_param) (int | errno) = {
+	let old_policy: int = 0;
+	let old_sp = sched_param{...};
+	_sched_getparam(pid, P_ALL_LWPS, &old_policy, &old_sp)?;
+	_sched_setparam(pid, P_ALL_LWPS, policy, params)?;
+	return old_policy;
+};
+
+export fn sched_yield() void = {
+	syscall0(SYS_sched_yield);
 };

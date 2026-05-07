@@ -1,3 +1,5 @@
+x25519: curve25519-based key derivation support
+
 The crypto::x25519 module provides functions to generate key pairs and to
 derive shared keys between them, based on curve25519.
 

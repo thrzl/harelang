@@ -20,7 +20,8 @@ fn version(name: str, cmd: *getopt::command) (void | error) = {
 
 	let build_arch = os::arch_name(os::architecture());
 	let build_arch = get_arch(build_arch)!;
-	let build_platform = ascii::strlower(os::sysname());
+	let build_platform = ascii::strlower(os::sysname())!;
+	const toolpaths = os::tryenv("HARE_TOOLPATH", TOOLDIR);
 
 	switch (verbose) {
 	case 0 =>
@@ -28,8 +29,17 @@ fn version(name: str, cmd: *getopt::command) (void | error) = {
 	case 1 =>
 		fmt::printfln("hare {}", VERSION)!;
 
-		fmt::printfln("build tags:\n\t+{}\n\t+{}\nHAREPATH{}:",
-			build_arch.name, build_platform,
+		fmt::printfln("build tags:\n\t+{}\n\t+{}",
+			build_arch.name, build_platform)?;
+
+		fmt::printfln("tool paths{}:",
+			if (os::getenv("HARE_TOOLPATH") is str) " (from environment)" else "")!;
+		let tok = strings::tokenize(toolpaths, ":");
+		for (let s => strings::next_token(&tok)) {
+			fmt::printfln("\t{}", s)?;
+		};
+
+		fmt::printfln("HAREPATH{}:",
 			if (os::getenv("HAREPATH") is str) " (from environment)" else "")?;
 
 		let tok = strings::tokenize(harepath(), ":");
@@ -49,24 +59,27 @@ fn version(name: str, cmd: *getopt::command) (void | error) = {
 		defer free(version);
 		const harepath = shlex::quotestr(harepath());
 		defer free(harepath);
+		const toolpaths = shlex::quotestr(toolpaths);
+		defer free(toolpaths);
 
 		fmt::printfln(`VERSION={}`, version)!;
 		fmt::printfln(`DEFAULT_TAGS="+{}+{}"`, build_arch.name, build_platform)!;
+		fmt::printfln(`HARE_TOOLPATH={}`, toolpaths)!;
 		fmt::printfln(`HAREPATH={}`, harepath)!;
 
 		let toolchains: []str = [];
 		defer free(toolchains);
 
 		for (let arch .. arches) {
-			append(toolchains, arch.name);
+			append(toolchains, arch.name)!;
 		};
 
-		const toolchains = strings::join(" ", toolchains...);
+		const toolchains = strings::join(" ", toolchains...)!;
 		defer free(toolchains);
 		fmt::printfln(`TOOLCHAINS="{}"`, toolchains)!;
 
 		for (let arch .. arches) {
-			const name = ascii::strupper(arch.name);
+			const name = ascii::strupper(arch.name)!;
 			const as_cmd = shlex::quotestr(arch.as_cmd);
 			const cc_cmd = shlex::quotestr(arch.cc_cmd);
 			const ld_cmd = shlex::quotestr(arch.ld_cmd);

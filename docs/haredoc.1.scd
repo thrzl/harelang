@@ -6,7 +6,7 @@ haredoc - read and format Hare documentation
 
 # SYNOPSIS
 
-*haredoc* [-hat] [-F _format_] [-T _tagset_] [_identifier_|_path_]
+*haredoc* [-hanNt] [-F _format_] [-T _tagset_] [_identifier_|_path_]
 
 # DESCRIPTION
 
@@ -31,6 +31,14 @@ RESOLUTION* in *hare-module*(5).
 
 *-F* _format_
 	Select output format (one of "html" or "tty"). The default is "tty".
+
+*-n*
+	Include file names and line numbers of symbol declarations in the output
+	(only applies to *-Ftty*).
+
+*-N*
+	Print the file name and line number of a single symbol to stdout, then
+	exit.
 
 *-t*
 	Disable HTML template (only applies to *-Fhtml*).
@@ -78,7 +86,7 @@ its corresponding default sequence is used.
 
 For example:
 
-	HAREDOC\_COLORS='comment=3 primary=1;4 attribute=41' haredoc log
+	HAREDOC\_COLORS='comment=3 primary=1;4 attribute=41' haredoc log::
 
 # ENVIRONMENT
 
@@ -90,6 +98,11 @@ The following environment variables affect *haredoc*'s execution:
 :  Disables all color output when set to a non-empty string.
 |  *HAREDOC_COLORS*
 :  See *CUSTOMIZING COLORS*.
+|  *HAREDOC_HTML_SRC*
+:  fmt:: string which expands to a URL where a symbol's source code is browsable
+   online (used for *-Fhtml*) when the file path relative to the working
+   directory and the line number is given as the first and second argument to
+   fmt:: respectively.
 
 # SEE ALSO
 

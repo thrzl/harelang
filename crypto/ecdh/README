@@ -1,3 +1,5 @@
+ecdh: Elliptic-Curve Diffie Hellman key generation
+
 The crypto::ecdh module implements elliptic-curve diffie hellman key generation
 for curves implemented in [[crypto::ec::]].
 

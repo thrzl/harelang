@@ -108,7 +108,7 @@ type stx = struct {
 	rdev_minor: u32,
 	dev_major:  u32,
 	dev_minor:  u32,
-	__reserved: [14]u64,
+	_: [14]u64, // reserved
 };
 
 // Note: the st type does not match the kernel API. The kernel API has a stat
@@ -271,6 +271,8 @@ export def CLOCK_BOOTTIME_ALARM: int		= 9;
 export def CLOCK_SGI_CYCLE: int			= 10;
 export def CLOCK_TAI: int			= 11;
 
+export def TIMER_ABSTIME: int = 1;
+
 export type open_how = struct {
 	flags: u64,
 	mode: u64,
@@ -333,7 +335,7 @@ export type rusage = struct {
 	ru_nsignals: u64,
 	ru_nvcsw: u64,
 	ru_nivcsw: u64,
-	__reserved: [16]u64,
+	_: [16]u64, // reserved
 };
 
 export type utsname = struct {
@@ -397,6 +399,55 @@ export def TFD_CLOEXEC: int = O_CLOEXEC;
 export def TFD_NONBLOCK: int = O_NONBLOCK;
 export def TFD_TIMER_ABSTIME: int = 1;
 export def TFD_TIMER_CANCEL_ON_SET: int = 2;
+
+export def PIDFD_NONBLOCK: uint = O_NONBLOCK: uint;
+
+export def CLONE_NEWTIME = 0x00000080;
+export def CLONE_VM = 0x00000100;
+export def CLONE_FS = 0x00000200;
+export def CLONE_FILES = 0x00000400;
+export def CLONE_SIGHAND = 0x00000800;
+export def CLONE_PIDFD = 0x00001000;
+export def CLONE_PTRACE = 0x00002000;
+export def CLONE_VFORK = 0x00004000;
+export def CLONE_PARENT = 0x00008000;
+export def CLONE_THREAD = 0x00010000;
+export def CLONE_NEWNS = 0x00020000;
+export def CLONE_SYSVSEM = 0x00040000;
+export def CLONE_SETTLS = 0x00080000;
+export def CLONE_PARENT_SETTID = 0x00100000;
+export def CLONE_CHILD_CLEARTID = 0x00200000;
+export def CLONE_DETACHED = 0x00400000;
+export def CLONE_UNTRACED = 0x00800000;
+export def CLONE_CHILD_SETTID = 0x01000000;
+export def CLONE_NEWCGROUP = 0x02000000;
+export def CLONE_NEWUTS = 0x04000000;
+export def CLONE_NEWIPC = 0x08000000;
+export def CLONE_NEWUSER = 0x10000000;
+export def CLONE_NEWPID = 0x20000000;
+export def CLONE_NEWNET = 0x40000000;
+export def CLONE_IO = 0x80000000;
+
+export type clone_args = struct {
+	flags: u64,
+	pidfd: u64,
+	child_tid: u64,
+	parent_tid: u64,
+	exit_signal: u64,
+	stack: u64,
+	stack_size: u64,
+	tls: u64,
+	set_tid: u64,
+	set_tid_size: u64,
+	cgroup: u64,
+};
+
+export type idtype = enum {
+	P_ALL = 0,
+	P_PID = 1,
+	P_PGID = 2,
+	P_PIDFD = 3,
+};
 
 export def SIG_BLOCK: int = 0;
 export def SIG_UNBLOCK: int = 1;
@@ -486,8 +537,9 @@ export type siginfo = union {
 			},
 		},
 	},
-	_si_pad: [SI_MAX_SIZE - 3 * size(int)]u8,
+	_: [SI_MAX_SIZE]u8,
 };
+static assert(size(siginfo) == SI_MAX_SIZE);
 
 export def SA_NOCLDSTOP: u64 = 0x00000001;
 export def SA_NOCLDWAIT: u64 = 0x00000002;
@@ -507,8 +559,9 @@ export def SIG_HOLD: uintptr = 2;
 
 export type sigact = struct {
 	union {
-		sa_handler: nullable *fn (int) void,
-		sa_sigaction: nullable *fn (int, *siginfo, *opaque) void,
+		sa_handler: nullable *fn (_: int) void,
+		sa_sigaction: nullable *fn (_: int,
+			_: *siginfo, _: *opaque) void,
 	},
 	sa_flags: u64,
 	sa_restorer: nullable *fn () void,
@@ -542,16 +595,16 @@ export type signalfd_siginfo = struct {
 	ssi_stime: u64,
 	ssi_addr: u64,
 	ssi_addr_lsb: u16,
-	__pad2: u16,
+	_: u16, // padding
 	ssi_syscall: i32,
 	ssi_call_addr: u64,
 	ssi_arch: u32,
 
-	__pad: [28]u8, // pad to 128 bytes
+	_: [28]u8, // pad to 128 bytes
 };
 
 export type iovec = struct {
-	iov_base: *opaque,
+	iov_base: nullable *opaque,
 	iov_len: size
 };
 
@@ -721,6 +774,7 @@ export type tcflag = enum uint {
 
 
 export def TIOCSPGRP: u64 = 0x5410;
+export def TIOCGPGRP: u64 = 0x540f;
 export def TIOCGWINSZ: u64 = 0x5413;
 export def TIOCSWINSZ: u64 = 0x5414;
 export def TIOCSCTTY: u64 = 0x540e;
@@ -921,7 +975,7 @@ export type io_uring_sqe = struct {
 		addr2: u64,
 		struct {
 			cmd_op: u32,
-			__pad1: u32,
+			_: u32, // padding
 		},
 	},
 	union {
@@ -962,13 +1016,13 @@ export type io_uring_sqe = struct {
 		file_index: u32,
 		struct {
 			addr_len: u16,
-			__pad3: [1]u16,
+			_: [1]u16, // padding
 		},
 	},
 	union {
 		struct {
 			addr3: u64,
-			__pad2: [1]u64,
+			_: [1]u64, // padding
 		},
 		cmd: [*]u8,
 	},
@@ -1332,3 +1386,48 @@ export type io_uring_recvmsg_out = struct {
 	payloadlen: u32,
 	flags: u32,
 };
+
+
+// Scheduling policies.
+export def SCHED_OTHER: int = 0;
+export def SCHED_FIFO: int = 1;
+export def SCHED_RR: int = 2;
+export def SCHED_NORMAL: int = 0;
+export def SCHED_BATCH: int = 3;
+export def SCHED_ISO: int = 4;
+export def SCHED_IDLE: int = 5;
+export def SCHED_DEADLINE: int = 6;
+export def SCHED_EXT: int = 7;
+// This flag can be ORed with policy values.
+// This is the reason why the above scheduling policies can't be an enum.
+export def SCHED_RESET_ON_FORK: int = 0x40000000;
+
+export type sched_param = struct {
+	sched_priority: int
+};
+
+// sched_attr support. (linux only)
+export type sched_attr = struct {
+	size_: u32,
+	sched_policy: u32,
+	sched_flags: u64,
+	sched_nice: i32,
+	sched_priority: u32,
+	sched_runtime: u64,
+	sched_deadline: u64,
+	sched_period: u64,
+	sched_util_min: u32,
+	sched_util_max: u32,
+	// Additional fields may be added at the end.
+};
+// Flags for the sched_flags field in struct sched_attr.
+export def SCHED_FLAG_RESET_ON_FORK: u64 = 0x01;
+export def SCHED_FLAG_RECLAIM: u64 = 0x02;
+export def SCHED_FLAG_DL_OVERRUN: u64 = 0x04;
+export def SCHED_FLAG_KEEP_POLICY: u64 = 0x08;
+export def SCHED_FLAG_KEEP_PARAMS: u64 = 0x10;
+export def SCHED_FLAG_UTIL_CLAMP_MIN: u64 = 0x20;
+export def SCHED_FLAG_UTIL_CLAMP_MAX: u64 = 0x40;
+// Combinations of sched_flags fields.
+export def SCHED_FLAG_KEEP_ALL = SCHED_FLAG_KEEP_POLICY | SCHED_FLAG_KEEP_PARAMS;
+export def SCHED_FLAG_UTIL_CLAMP = SCHED_FLAG_UTIL_CLAMP_MIN | SCHED_FLAG_UTIL_CLAMP_MAX;

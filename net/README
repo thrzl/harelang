@@ -1,3 +1,5 @@
+net: networking support
+
 The net module provides some general-purpose interfaces and support code, but
 generally users are directed to the submodules, where implementations of
 various network protocols are provided, such as [[net::tcp::]] or

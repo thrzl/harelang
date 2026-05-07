@@ -111,7 +111,12 @@ fn _expr(ctx: *context, syn: *synfunc, e: *ast::expr) (size | io::error) = {
 		return assert_expr(ctx, syn, &e);
 	case let e: ast::assign_expr =>
 		let z = 0z;
-		z += _expr(ctx, syn, e.object)?;
+		match (e.object) {
+		case null =>
+			z += syn(ctx, "_", synkind::OPERATOR)?;
+		case let e: *ast::expr =>
+			z += _expr(ctx, syn, e)?;
+		};
 		const op = match (e.op) {
 		case void =>
 			yield "=";
@@ -205,10 +210,19 @@ fn _expr(ctx: *context, syn: *synfunc, e: *ast::expr) (size | io::error) = {
 		return binding_expr(ctx, syn, &e, "=")?;
 	case let e: ast::break_expr =>
 		let z = syn(ctx, "break", synkind::KEYWORD)?;
-		if (e != "") {
+		if (e.label != "") {
 			z += space(ctx)?;
 			z += syn(ctx, ":", synkind::LABEL)?;
-			z += syn(ctx, e, synkind::LABEL)?;
+			z += syn(ctx, e.label, synkind::LABEL)?;
+		};
+		match (e.value) {
+		case null => void;
+		case let v: *ast::expr =>
+			if (e.label != "") {
+				z += syn(ctx, ",", synkind::PUNCTUATION)?;
+			};
+			z += space(ctx)?;
+			z += _expr(ctx, syn, v)?;
 		};
 		return z;
 	case let e: ast::call_expr =>
@@ -476,6 +490,8 @@ fn _expr(ctx: *context, syn: *synfunc, e: *ast::expr) (size | io::error) = {
 			z += _expr(ctx, syn, v)?;
 		};
 		return z;
+	case ast::undefined_expr =>
+		return syn(ctx, "@undefined", synkind::ATTRIBUTE)?;
 	};
 };
 
@@ -547,36 +563,63 @@ fn literal(
 	e: ast::literal_expr,
 ) (size | io::error) = {
 	match (e) {
-	case void =>
-		return syn(ctx, "void", synkind::KEYWORD)?;
-	case let v: ast::value =>
-		match (v) {
-		case void => abort();
+	case let p: ast::plain_literal =>
+		let val = match (p.value) {
+		case void =>
+			return syn(ctx, "void", synkind::KEYWORD)?;
 		case ast::_null =>
 			return syn(ctx, "null", synkind::KEYWORD)?;
 		case done =>
 			return syn(ctx, "done", synkind::KEYWORD)?;
+		case nomem =>
+			return syn(ctx, "nomem", synkind::KEYWORD)?;
 		case let b: bool =>
 			return syn(ctx, if (b) "true" else "false",
 				synkind::KEYWORD)?;
 		case let s: str =>
 			const s = strings::multireplace(s,
-				(`\`, `\\`), (`"`, `\"`));
+				(`\`, `\\`), (`"`, `\"`))!;
 			defer free(s);
-			const s = fmt::asprintf(`"{}"`, s);
+			const s = fmt::asprintf(`"{}"`, s)?;
 			defer free(s);
 			return syn(ctx, s, synkind::RUNE_STRING)?;
 		case let r: rune =>
 			// 4 for unicode codepoint + 2 's
 			let buf: [6]u8 = [0...];
 			if (r == '\'' || r == '\\') {
-				return syn(ctx, fmt::bsprintf(buf, `'\{}'`, r),
+				return syn(ctx, fmt::bsprintf(buf, `'\{}'`, r)!,
 					synkind::RUNE_STRING)?;
 			} else {
-				return syn(ctx, fmt::bsprintf(buf, "'{}'", r),
+				return syn(ctx, fmt::bsprintf(buf, "'{}'", r)!,
 					synkind::RUNE_STRING)?;
 			};
+		case let num: (u64 | f64) =>
+			yield num;
 		};
+		let suff = switch (p.storage) {
+		case ast::builtin_type::F32 => yield "f32";
+		case ast::builtin_type::F64 => yield "f64";
+		case ast::builtin_type::FCONST =>
+			let s = fmt::asprintf("{:F.}", p.value as f64)?;
+			defer free(s);
+			return syn(ctx, s, synkind::NUMBER)?;
+		case ast::builtin_type::I16 => yield "i16";
+		case ast::builtin_type::I32 => yield "i32";
+		case ast::builtin_type::I64 => yield "i64";
+		case ast::builtin_type::I8 => yield "i8";
+		case ast::builtin_type::ICONST => yield "";
+		case ast::builtin_type::INT => yield "i";
+		case ast::builtin_type::SIZE => yield "z";
+		case ast::builtin_type::U16 => yield "u16";
+		case ast::builtin_type::U32 => yield "u32";
+		case ast::builtin_type::U64 => yield "u64";
+		case ast::builtin_type::U8 => yield "u8";
+		case ast::builtin_type::UINT => yield "u";
+		case => abort(); // Invariant
+		};
+		let s = fmt::asprintf("{}{}", val, suff)?;
+		defer free(s);
+		return syn(ctx, s, synkind::NUMBER)?;
 	case let ac: ast::array_literal =>
 		let z = syn(ctx, "[", synkind::PUNCTUATION)?;
 		for (let i = 0z; i < len(ac.values); i += 1) {
@@ -591,42 +634,6 @@ fn literal(
 		};
 		z += syn(ctx, "]", synkind::PUNCTUATION)?;
 		return z;
-	case let v: ast::number_literal =>
-		const s = switch (v.suff) {
-		case ltok::LIT_U8 =>
-			yield fmt::asprintf("{}u8", v.value);
-		case ltok::LIT_U16 =>
-			yield fmt::asprintf("{}u16", v.value);
-		case ltok::LIT_U32 =>
-			yield fmt::asprintf("{}u32", v.value);
-		case ltok::LIT_U64 =>
-			yield fmt::asprintf("{}u64", v.value);
-		case ltok::LIT_UINT =>
-			yield fmt::asprintf("{}u", v.value);
-		case ltok::LIT_SIZE =>
-			yield fmt::asprintf("{}z", v.value);
-		case ltok::LIT_I8 =>
-			yield fmt::asprintf("{}i8", v.value);
-		case ltok::LIT_I16 =>
-			yield fmt::asprintf("{}i16", v.value);
-		case ltok::LIT_I32 =>
-			yield fmt::asprintf("{}i32", v.value);
-		case ltok::LIT_I64 =>
-			yield fmt::asprintf("{}i64", v.value);
-		case ltok::LIT_INT =>
-			yield fmt::asprintf("{}i", v.value);
-		case ltok::LIT_ICONST =>
-			yield fmt::asprint(v.value);
-		case ltok::LIT_FCONST =>
-			yield fmt::asprintf("{:F.}", v.value);
-		case ltok::LIT_F32 =>
-			yield fmt::asprintf("{}f32", v.value);
-		case ltok::LIT_F64 =>
-			yield fmt::asprintf("{}f64", v.value);
-		case => abort();
-		};
-		defer free(s);
-		return syn(ctx, s, synkind::NUMBER)?;
 	case let sc: ast::struct_literal =>
 		return struct_literal(ctx, syn, sc)?;
 	case let tu: ast::tuple_literal =>
@@ -678,7 +685,10 @@ fn struct_literal(
 		};
 		z += syn(ctx, ",", synkind::PUNCTUATION)?;
 	};
-	if (sc.autofill) {
+	if (sc.undefined) {
+		z += newline(ctx)?;
+		z += syn(ctx, "@undefined...", synkind::ATTRIBUTE)?;
+	} else if (sc.autofill) {
 		z += newline(ctx)?;
 		z += syn(ctx, "...", synkind::OPERATOR)?;
 	};
@@ -711,21 +721,21 @@ fn binding_expr(
 	for (let i = 0z; i < len(e.bindings); i += 1) {
 		let binding = e.bindings[i];
 
-		match (binding.name) {
-		case let s: str =>
-			z += syn(ctx, s, synkind::IDENT)?;
-		case let u: ast::binding_unpack =>
+		switch (len(binding.names)) {
+		case 0 =>
+			z += syn(ctx, "_", synkind::OPERATOR)?;
+		case 1 =>
+			z += syn(ctx, binding.names[0], synkind::IDENT)?;
+		case =>
 			z += syn(ctx, "(", synkind::PUNCTUATION)?;
-			for (let i = 0z; i < len(u); i += 1) {
-				match (u[i]) {
-				case let s: str =>
-					z += syn(ctx, s,
-						synkind::IDENT)?;
-				case void =>
-					z += syn(ctx, "_",
-						synkind::OPERATOR)?;
+			for (let i = 0z; i < len(binding.names); i += 1) {
+				let name = binding.names[i];
+				if (name != "") {
+					z += syn(ctx, name, synkind::IDENT)?;
+				} else {
+					z += syn(ctx, "_", synkind::OPERATOR)?;
 				};
-				if (i + 1 < len(u)) {
+				if (i + 1 < len(binding.names)) {
 					z += syn(ctx, ",",
 						synkind::PUNCTUATION)?;
 					z += space(ctx)?;
@@ -804,6 +814,17 @@ fn for_expr(
 	z += syn(ctx, ")", synkind::PUNCTUATION)?;
 	z += space(ctx)?;
 	z += _expr(ctx, syn, e.body)?;
+
+	match (e.else_branch) {
+	case let e: *ast::expr =>
+		z += space(ctx)?;
+		z += syn(ctx, "else", synkind::KEYWORD)?;
+		z += space(ctx)?;
+		z += _expr(ctx, syn, e)?;
+	case =>
+		yield;
+	};
+
 	return z;
 };
 
@@ -914,8 +935,8 @@ fn case_exprs(
 			z += syn(ctx, ";", synkind::PUNCTUATION)?;
 			return z;
 		};
-	case let e: ast::value =>
-		if (e is void) {
+	case let e: ast::plain_literal =>
+		if (e.storage == ast::builtin_type::VOID) {
 			z += space(ctx)?;
 			{
 				ctx.stack = &stack {
@@ -953,7 +974,7 @@ fn is_plain(e: *ast::expr) bool = {
 };
 
 fn is_postfix(e: *ast::expr) bool = {
-	if (is_plain(e)) {
+	if (is_builtin(e)) {
 		return true;
 	};
 
@@ -974,7 +995,7 @@ fn is_postfix(e: *ast::expr) bool = {
 };
 
 fn is_builtin(e: *ast::expr) bool = {
-	if (is_postfix(e)) {
+	if (is_plain(e)) {
 		return true;
 	};
 
@@ -1005,7 +1026,7 @@ fn is_builtin(e: *ast::expr) bool = {
 };
 
 fn is_unary(e: *ast::expr) bool = {
-	if (is_builtin(e)) {
+	if (is_postfix(e)) {
 		return true;
 	};
 

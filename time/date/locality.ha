@@ -3,10 +3,10 @@
 
 use time::chrono;
 
-// Creates an equivalent [[date]] with a different
-// [[time::chrono::locality]].
+// Creates a simultaneous [[date]] with a different [[locality]].
 //
-// The [[time::chrono::discontinuity]] rules from [[time::chrono::in]] apply here.
-export fn in(loc: chrono::locality, d: date) (date | chrono::discontinuity) = {
-	return from_moment(chrono::in(loc, *(&d: *chrono::moment))?);
+// [[time::chrono::tscmismatch]] is returned if the [[time::chrono::timescale]]s
+// of the given moment and the target [[locality]] are different.
+export fn in(loc: locality, d: date) (date | chrono::tscmismatch) = {
+	return from_moment(loc, to_moment(d));
 };

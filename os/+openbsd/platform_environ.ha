@@ -21,9 +21,9 @@ let args_static: [32]str = [""...];
 			args[i] = c::tostr(rt::argv[i]: *const c::char)!;
 		};
 	} else {
-		args = alloc([], rt::argc);
+		args = alloc([], rt::argc)!;
 		for (let i = 0z; i < rt::argc; i += 1) {
-			append(args, c::tostr(rt::argv[i]: *const c::char)!);
+			append(args, c::tostr(rt::argv[i]: *const c::char)!)!;
 		};
 	};
 };
@@ -41,12 +41,12 @@ export fn getenvs() []str = {
 	};
 	for (let i = 0z; rt::envp[i] != null; i += 1) {
 		let s = c::tostr(rt::envp[i]: *const c::char)!;
-		append(envp, strings::dup(s));
+		append(envp, strings::dup(s)!)!;
 	};
 	return envp;
 };
 
-// Returns the host kernel name
+// Returns the host kernel name.
 export fn sysname() const str = {
 	let name: [2]int = [rt::CTL_KERN, rt::KERN_OSTYPE];
 
@@ -57,7 +57,7 @@ export fn sysname() const str = {
 	return strings::fromutf8(buf[..(buf_sz -1)])!;
 };
 
-// Returns the host system hostname
+// Returns the host system hostname.
 export fn hostname() const str = {
 	let name: [2]int = [rt::CTL_KERN, rt::KERN_HOSTNAME];
 
@@ -68,7 +68,7 @@ export fn hostname() const str = {
 	return strings::fromutf8(buf[..(buf_sz -1)])!;
 };
 
-// Returns the host operating system version
+// Returns the host operating system version.
 export fn version() const str = {
 	let name: [2]int = [rt::CTL_KERN, rt::KERN_OSRELEASE];
 

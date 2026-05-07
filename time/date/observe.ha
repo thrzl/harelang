@@ -1,7 +1,59 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
-use time::chrono;
+// Observes a [[date]]'s [[zonephase]].
+export fn zone(d: *date) zonephase = {
+	match (d.zonephase) {
+	case let z: *zonephase =>
+		return *z;
+	case null =>
+		let lookup = match (d.loc.lookupzone) {
+		case let l: *zonelookuper =>
+			yield l;
+		case null =>
+			yield &lookupzone: *zonelookuper;
+		};
+		const z = lookup(d.loc, d);
+		d.zonephase = z;
+		return *z;
+	};
+};
+
+// Observes a [[date]]'s observed daydate (day number since epoch).
+//
+// For dates with a [[locality]] based on the UTC, TAI, GPS, and similar
+// [[time::chrono::timescale]]s, their epoch date should be interpreted as the
+// Unix epoch (1970 Janurary 1st). Other timescales may suggest their own
+// interpretations applicable to other chronologies.
+export fn daydate(d: *date) i64 = {
+	match (d.daydate) {
+	case let dd: i64 =>
+		return dd;
+	case void =>
+		const (dd, dt) = calc_datetime(
+			d.loc, to_instant(*d), zone(d).zoff,
+		);
+		d.daytime = dt;
+		d.daydate = dd;
+		return dd;
+	};
+};
+
+// Observes a [[date]]'s observed time-of-day (amount of daytime progressed in
+// a day) as nanoseconds.
+export fn daytime(d: *date) i64 = {
+	match (d.daytime) {
+	case let dt: i64 =>
+		return dt;
+	case void =>
+		const (dd, dt) = calc_datetime(
+			d.loc, to_instant(*d), zone(d).zoff,
+		);
+		d.daytime = dt;
+		d.daydate = dd;
+		return dt;
+	};
+};
 
 // These functions are renamed to avoid namespace conflicts, like in the
 // parameters of the [[new]] function.
@@ -66,7 +118,7 @@ fn _year(d: *date) int = {
 	match (d.year) {
 	case void =>
 		const ymd = calc_ymd(
-			chrono::daydate(d),
+			daydate(d),
 		);
 		d.year = ymd.0;
 		d.month = ymd.1;
@@ -81,7 +133,7 @@ fn _month(d: *date) int = {
 	match (d.month) {
 	case void =>
 		const ymd = calc_ymd(
-			chrono::daydate(d),
+			daydate(d),
 		);
 		d.year = ymd.0;
 		d.month = ymd.1;
@@ -96,7 +148,7 @@ fn _day(d: *date) int = {
 	match (d.day) {
 	case void =>
 		const ymd = calc_ymd(
-			chrono::daydate(d),
+			daydate(d),
 		);
 		d.year = ymd.0;
 		d.month = ymd.1;
@@ -111,7 +163,7 @@ fn _weekday(d: *date) int = {
 	match (d.weekday) {
 	case void =>
 		d.weekday = calc_weekday(
-			chrono::daydate(d),
+			daydate(d),
 		);
 		return d.weekday: int;
 	case let y: int =>
@@ -191,7 +243,7 @@ fn _hour(d: *date) int = {
 	match (d.hour) {
 	case void =>
 		const hmsn = calc_hmsn(
-			chrono::daytime(d),
+			daytime(d),
 		);
 		d.hour = hmsn.0;
 		d.minute = hmsn.1;
@@ -207,7 +259,7 @@ fn _minute(d: *date) int = {
 	match (d.minute) {
 	case void =>
 		const hmsn = calc_hmsn(
-			chrono::daytime(d),
+			daytime(d),
 		);
 		d.hour = hmsn.0;
 		d.minute = hmsn.1;
@@ -223,7 +275,7 @@ fn _second(d: *date) int = {
 	match (d.second) {
 	case void =>
 		const hmsn = calc_hmsn(
-			chrono::daytime(d),
+			daytime(d),
 		);
 		d.hour = hmsn.0;
 		d.minute = hmsn.1;
@@ -239,7 +291,7 @@ fn _nanosecond(d: *date) int = {
 	match (d.nanosecond) {
 	case void =>
 		const hmsn = calc_hmsn(
-			chrono::daytime(d),
+			daytime(d),
 		);
 		d.hour = hmsn.0;
 		d.minute = hmsn.1;

@@ -26,6 +26,7 @@
 	x &&= true;
 	x ||= true;
 	x ^^= true;
+	_ = void;
 };
 ");
 };
@@ -43,6 +44,10 @@
 	def X: int = 1337, y = 7331;
 	static let p: int = 62893, o = 39826;
 	static const w: int = 62893, t = 39826;
+	let _ = 0, x = 1;
+	let x = 1, _: int = 0;
+	static let _ = 0;
+	let x: int = @undefined;
 };
 ");
 };
@@ -50,13 +55,15 @@
 @test fn builtin() void = {
 	roundtrip(`export fn main() void = {
 	align(u32);
-	alloc(1234);
-	alloc(1234...);
-	alloc(4321, 1234);
-	append(x, 10);
-	append(x, [10]...);
-	append(x, [10...], 20);
-	static append(x, 10);
+	alloc(1234)!;
+	let x: (*int | nomem) = alloc(1234...);
+	alloc(4321, 1234)!;
+	append(x, 10)!;
+	append(x, [10]...)!;
+	append(x, [10...], 20)!;
+	static append(x, 10)!;
+	let y: (void | nomem) = append(x, 10);
+	let y: (void | nomem) = static append(x, 10);
 	abort();
 	abort("surprize");
 	static abort();
@@ -71,10 +78,11 @@
 	delete(x.y.z[..]);
 	static delete(x[10]);
 	free(x);
-	insert(x[0], foo);
-	insert(x[0], foo...);
-	insert(x[0], foo, bar);
-	static insert(x[0], foo);
+	let x: (void | nomem) = insert(x[0], foo);
+	let x: (void | nomem) = static insert(x[0], foo);
+	insert(x[0], foo...)!;
+	insert(x[0], foo, bar)!;
+	static insert(x[0], foo)!;
 	len([1, 2, 3, 4]);
 	offset(foo.bar);
 	size(u32);
@@ -117,6 +125,8 @@
 	[1, 2, 3, 4];
 	[1, 2, 3, 4...];
 	(1, 2, 3);
+	(1, 2, @undefined);
+	[1, 2, @undefined...];
 	struct {
 		x: int = 10,
 		y: int = 20,
@@ -150,6 +160,13 @@
 	};
 	coords {
 		...
+	};
+	coords {
+		@undefined...
+	};
+	coords {
+		x = 10,
+		@undefined...
 	};
 	0.0;
 	0f32;
@@ -188,6 +205,8 @@
 	roundtrip("export fn main() void = {
 	break;
 	break :foo;
+	break :foo, 2;
+	break 2;
 	continue;
 	continue :foo;
 	return;
@@ -231,6 +250,18 @@ export fn main() void = {
 	for (let x &.. [1, 2, 3]) {
 		x;
 	};
+	for (let _ => next()) {
+		x;
+	};
+	for (let _ .. [1, 2, 3]) {
+		x;
+	};
+	for (let _ &.. [1, 2, 3]) {
+		x;
+	};
+	for (true) {
+		x;
+	} else y;
 };
 ");
 };
@@ -346,7 +377,7 @@ export fn main() void = {
 		"export fn main() void = -((2 + 2) * 2);\n\n"
 		"export fn main() void = &(1: uint);\n\n"
 		"export fn main() void = **x;\n\n"
-		"export fn main() void = *alloc(2);\n\n"
+		"export fn main() void = *alloc(2)!;\n\n"
 		"export fn main() void = &(&x);\n\n"
 		"export fn main() void = &*&*&x;\n\n"
 		"export fn main() void = x: int: uint: u8;\n\n"

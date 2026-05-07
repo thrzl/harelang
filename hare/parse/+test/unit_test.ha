@@ -76,6 +76,7 @@ fn tup_to_import(tup: import_tuple) ast::import = ast::import {
 	let sc = bufio::newscanner(&buf);
 	defer bufio::finish(&sc);
 	let lexer = lex::init(&sc, "<test>");
+	defer lex::finish(&lexer);
 	let mods = imports(&lexer)!;
 	defer ast::imports_finish(mods);
 
@@ -104,23 +105,26 @@ fn tup_to_import(tup: import_tuple) ast::import = ast::import {
 };
 
 @test fn decls() void = {
-	roundtrip("export type foo::bar = *int, baz = const void;\n\n"
-		"type foo = ...bar;\n\n"
-		"type foo = nullable *fn(x: rune, int) void;\n\n"
-		"export let @symbol(\"_\") foo::bar: int = void, baz: int = void, bat = void;\n\n"
+	roundtrip("export type foo::bar = *int;\n\n"
+		"type baz = !void;\n\n"
+		"type foo = bar;\n\n"
+		"type foo = nullable *fn(x: rune, _: int) void;\n\n"
+		"export @symbol(\"_\") let foo::bar: int = void;\n\n"
+		"@threadlocal let baz: int = void;\n\n"
+		"let bat = void;\n\n"
 		"def foo::bar: int = void;\n\n"
 		"def foo::bar = void;\n\n"
 		"@symbol(\".f9$oo\") fn foo(bar: int, baz: int...) void;\n\n"
-		"@test fn foo(int, ...) void;\n\n"
+		"@test fn foo(_: int, ...) void;\n\n"
 		"@test fn foo(...) void;\n\n"
-		"fn foo(bar) void;\n\n"
-		"fn foo(bar::baz) void;\n\n"
+		"fn foo(_: bar) void;\n\n"
+		"fn foo(_: bar::baz) void;\n\n"
 		"export fn main() void = void;\n\n"
 		"fn long(\n"
-			"\tfirst: *const void,\n"
+			"\tfirst: *!void,\n"
 			"\tsecond: (void | rune | str),\n"
 			"\tthird: size...\n"
-		") nullable *const void;\n\n"
+		") nullable *!void;\n\n"
 		"static abort();\n\n"
 		"static assert(true);\n");
 };

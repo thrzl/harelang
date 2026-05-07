@@ -31,33 +31,46 @@ export fn string(buf: *buffer) str = {
 };
 
 // Check if a path is an absolute path.
-export fn abs(path: (*buffer | str)) bool = match (path) {
-case let path: str => return strings::hasprefix(path, sepstr);
-case let buf: *buffer => return 0 < buf.end && buf.buf[0] == SEP;
+export fn abs(path: (*buffer | str)) bool = {
+	match (path) {
+	case let path: str =>
+		return strings::hasprefix(path, sepstr);
+	case let buf: *buffer =>
+		return 0 < buf.end && buf.buf[0] == SEP;
+	};
 };
 
 // Check if a path is the root directory.
-export fn isroot(path: (*buffer | str)) bool = match (path) {
-case let path: str => return path == sepstr;
-case let buf: *buffer => return buf.end == 1 && buf.buf[0] == SEP;
+export fn isroot(path: (*buffer | str)) bool = {
+	match (path) {
+	case let path: str =>
+		return path == sepstr;
+	case let buf: *buffer =>
+		return buf.end == 1 && buf.buf[0] == SEP;
+	};
 };
 
 // Replaces all instances of '/' in a string with [[SEP]]. The result is
 // statically-allocated.
-export fn local(path: str) str = {
+export fn local(path: str) (str | too_long) = {
 	static let buf: [MAX]u8 = [0...];
-	return _local(path, &buf);
+	match (_local(path, &buf)) {
+	case let s: str =>
+		return s;
+	case nomem =>
+		return too_long;
+	};
 };
 
-fn _local(path: str, buf: *[MAX]u8) str = {
+fn _local(path: str, buf: *[MAX]u8) (str | nomem) = {
 	let buf = buf[..0];
 	const bytes = strings::toutf8(path);
 
 	for (let byte .. bytes) {
 		if (byte == '/') {
-			static append(buf, SEP);
+			static append(buf, SEP)?;
 		} else {
-			static append(buf, byte);
+			static append(buf, byte)?;
 		};
 	};
 	return strings::fromutf8(buf)!;

@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // (c) Hare authors <https://harelang.org>
 
-use fs;
-use hare::ast;
 use hare::module;
-use os;
 use path;
 use strings;
 
 export fn gather(ctx: *context, input: str) ([]module::module | error) = {
 	let mods: []module::module = [];
 	path::set(&buf, input)!;
-	module::gather(&ctx.ctx, &mods, ["rt"])?;
+	if (ctx.goal == stage::BIN) {
+		module::gather(&ctx.ctx, &mods, ["rt"])?;
+	};
 	if (ctx.test) {
 		module::gather(&ctx.ctx, &mods, ["test"])?;
 	};
@@ -35,9 +34,9 @@ export fn gather(ctx: *context, input: str) ([]module::module | error) = {
 		// add a dummy module so the driver knows where in the cache to
 		// put the test runner binary
 		append(mods, module::module {
-			path = strings::dup(input),
+			path = strings::dup(input)!,
 			...
-		});
+		})!;
 		yield len(mods) - 1;
 	};
 	return mods;

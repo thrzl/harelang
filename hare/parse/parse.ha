@@ -4,6 +4,7 @@
 use fmt;
 use hare::lex;
 use hare::lex::{ltok};
+use hare::ast;
 use io;
 use memio;
 
@@ -20,13 +21,13 @@ fn syntaxerr(
 	args: fmt::field...
 ) lex::error = {
 	static let buf: [4096]u8 = [0...];
-	let why = fmt::bsprintf(buf, fmt, args...);
+	let why = fmt::bsprintf(buf, fmt, args...)!;
 	return lex::syntaxerr(loc, why);
 };
 
 // Requires the next token to have a matching ltok. Returns that token, or an
 // error.
-fn want(lexer: *lex::lexer, want: lex::ltok...) (lex::token | error) = {
+export fn want(lexer: *lex::lexer, want: lex::ltok...) (lex::token | error) = {
 	let tok = lex::lex(lexer)?;
 	if (len(want) == 0) {
 		return tok;
@@ -41,21 +42,21 @@ fn want(lexer: *lex::lexer, want: lex::ltok...) (lex::token | error) = {
 	defer io::close(&buf)!;
 	for (let i = 0z; i < len(want); i += 1) {
 		const tstr = if (want[i] == ltok::NAME) "name"
-			else lex::tokstr((want[i], void, lex::mkloc(lexer)));
+			else lex::tokstr((want[i], void, mkloc(lexer)));
 		fmt::fprintf(&buf, "'{}'", tstr)!;
 		if (i + 1 < len(want)) {
 			fmt::fprint(&buf, ", ")!;
 		};
 	};
 	lex::unlex(lexer, tok);
-	return syntaxerr(lex::mkloc(lexer), "Unexpected '{}', was expecting {}",
+	return syntaxerr(mkloc(lexer), "Unexpected '{}', was expecting {}",
 		lex::tokstr(tok), memio::string(&buf)!);
 };
 
 // Looks for a matching ltok from the lexer, and if not present, unlexes the
 // token and returns void. If found, the token is consumed from the lexer and is
 // returned.
-fn try(
+export fn try(
 	lexer: *lex::lexer,
 	want: lex::ltok...
 ) (lex::token | error | void) = {
@@ -71,7 +72,7 @@ fn try(
 
 // Looks for a matching ltok from the lexer, unlexes the token, and returns
 // it; or void if it was not an ltok.
-fn peek(
+export fn peek(
 	lexer: *lex::lexer,
 	want: lex::ltok...
 ) (lex::token | error | void) = {
@@ -88,8 +89,26 @@ fn peek(
 };
 
 // Returns a syntax error if cond is false and void otherwise
-fn synassert(loc: lex::location, cond: bool, msg: str) (void | error) = {
+export fn synassert(loc: lex::location, cond: bool, msg: str) (void | error) = {
 	if (!cond) {
 		return syntaxerr(loc, "{}", msg);
 	};
+};
+
+fn loc_from(lexer: *lex::lexer, start: lex::location) ast::location = {
+	return ast::location {
+		start = start,
+		end = lex::prevloc(lexer),
+	};
+};
+
+fn mkloc(lexer: *lex::lexer) lex::location = {
+	let tok = match (lex::lex(lexer)) {
+	case let t: lex::token =>
+		yield t;
+	case lex::error =>
+		return lex::mkloc(lexer);
+	};
+	lex::unlex(lexer, tok);
+	return tok.2;
 };

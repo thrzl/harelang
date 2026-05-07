@@ -1,4 +1,4 @@
-Implementation of the base64 encoding scheme as defined by RFC 4648.
+base64: RFC 4648 base64 encoding support
 
 A stream-based encoding and decoding interface is available via [[newencoder]]
 and [[newdecoder]], which transparently encode or decode bytes to or from base64

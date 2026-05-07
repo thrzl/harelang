@@ -19,7 +19,7 @@ export fn strerror(err: error) const str = {
 	case let err: exec::error =>
 		return exec::strerror(err);
 	case utf8::invalid =>
-		return "Word expansion returned invalid UTF-8 data";
+		return "Word expansion resulted in invalid UTF-8 data";
 	case sh_error =>
 		return "An error occured during shell expansion";
 	};

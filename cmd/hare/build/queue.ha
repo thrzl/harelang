@@ -39,10 +39,10 @@ export fn execute(ctx: *context) (str | error) = {
 	queue(ctx, &q, goal, ctx.top);
 	// sort by stage, harec then qbe then as then ld, and keep reverse
 	// topo sort within each stage
-	sort::sort(q, size(*task), &task_cmp);
+	sort::sort(q, size(*task), &task_cmp)!;
 	ctx.total = len(q);
 
-	let jobs: []job = alloc([], ctx.jobs);
+	let jobs: []job = alloc([], ctx.jobs)!;
 	defer free(jobs);
 
 	if (len(os::tryenv("NO_COLOR", "")) == 0
@@ -85,24 +85,24 @@ fn queue(ctx: *context, q: *[]*task, kind: stage, idx: size) *task = {
 		kind = kind,
 		idx = idx,
 		...
-	});
+	})!;
 	switch (kind) {
 	case stage::BIN =>
 		t.ndeps = len(ctx.mods);
 		for (let i = 0z; i < len(ctx.mods); i += 1) {
-			append(queue(ctx, q, stage::O, i).rdeps, t);
+			append(queue(ctx, q, stage::O, i).rdeps, t)!;
 		};
 	case stage::O, stage::S =>
 		t.ndeps = 1;
-		append(queue(ctx, q, kind - 1, idx).rdeps, t);
+		append(queue(ctx, q, kind - 1, idx).rdeps, t)!;
 	case stage::SSA =>
 		t.ndeps = len(ctx.mods[idx].deps);
 		for (let (dep_idx, _) .. ctx.mods[idx].deps) {
-			append(queue(ctx, q, stage::SSA, dep_idx).rdeps, t);
+			append(queue(ctx, q, stage::SSA, dep_idx).rdeps, t)!;
 		};
 	case stage::TD => abort();
 	};
-	append(q, t);
+	append(q, t)!;
 	return t;
 };
 
@@ -186,13 +186,13 @@ fn run_task(ctx: *context, jobs: *[]job, t: *task) (bool | error) = {
 	path::set(&buf, out)?;
 	let output = os::create(path::push_ext(&buf, "log")?, 0o644)?;
 	defer io::close(output)!;
-	exec::addfile(&cmd, os::stdout_file, output);
-	exec::addfile(&cmd, os::stderr_file, output);
+	exec::addfile(&cmd, os::stdout_file, output)!;
+	exec::addfile(&cmd, os::stderr_file, output)!;
 	static append(jobs, job {
 		pid = exec::start(&cmd)?,
 		task = t,
 		lock = lock,
-	});
+	})!;
 	return true;
 };
 
@@ -261,9 +261,9 @@ fn cleanup_task(ctx: *context, t: *task) (void | error) = {
 		cleanup_ssa_task(ctx, t, out)?;
 	};
 
-	let tmp = strings::concat(out, ".tmp");
+	let tmp = strings::concat(out, ".tmp")!;
 	defer free(tmp);
-	os::move(tmp, out)?;
+	os::rename(tmp, out)?;
 };
 
 fn cleanup_ssa_task(ctx: *context, t: *task, out: str) (void | error) = {
@@ -271,7 +271,7 @@ fn cleanup_ssa_task(ctx: *context, t: *task, out: str) (void | error) = {
 	// for other types of outputs, but it gets us better caching behavior
 	// for tds since we need to include the dependency tds in the ssa hash
 	// see design.txt for more details
-	let tmp = strings::concat(out, ".td.tmp");
+	let tmp = strings::concat(out, ".td.tmp")!;
 	defer free(tmp);
 
 	let f = match (os::create(tmp, 0o644, fs::flag::RDWR)) {
@@ -287,7 +287,7 @@ fn cleanup_ssa_task(ctx: *context, t: *task, out: str) (void | error) = {
 	hash::sum(&h, prefix);
 	ctx.hashes[t.idx][stage::TD] = prefix;
 
-	let ptr = strings::concat(out, ".td");
+	let ptr = strings::concat(out, ".td")!;
 	defer free(ptr);
 	let ptr = os::create(ptr, 0o644)?;
 	defer io::close(ptr)!;
@@ -306,7 +306,7 @@ fn cleanup_ssa_task(ctx: *context, t: *task, out: str) (void | error) = {
 fn get_td(ctx: *context, idx: size) (void | error) = {
 	let ssa = get_cache(ctx, idx, stage::SSA)?;
 	defer free(ssa);
-	let ptr = strings::concat(ssa, ".td");
+	let ptr = strings::concat(ssa, ".td")!;
 	defer free(ptr);
 	let ptr = match (os::open(ptr)) {
 	case fs::error =>
@@ -332,7 +332,7 @@ fn update_env(ctx: *context, idx: size) (str | error) = {
 	if (ctx.mode == output::VVERBOSE) {
 		fmt::errorfln("# HARE_TD_{}={}", ns, path)?;
 	};
-	let var = strings::concat("HARE_TD_", ns);
+	let var = strings::concat("HARE_TD_", ns)!;
 	defer free(var);
 	os::setenv(var, path)!;
 	return path;

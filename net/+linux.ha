@@ -13,7 +13,8 @@ export type socket = io::file;
 // Note that CLOEXEC is on by default, and NOCLOEXEC flag disables it.
 export type sockflag = enum int {
 	NOCLOEXEC = rt::SOCK_CLOEXEC,
-	NONBLOCK = rt::SOCK_NONBLOCK
+	NONBLOCK = rt::SOCK_NONBLOCK,
+	DGRAM = rt::SOCK_DGRAM,
 };
 
 // Accepts the next connection from a socket. Blocks until a new connection is
@@ -73,11 +74,13 @@ export fn recvmsg(sock: socket, msg: *msghdr) (size | error) = {
 // details.
 //
 // On Linux, this function is an alias for [[io::close]].
-export fn close(sock: socket) (void | error) = match (io::close(sock)) {
-case void => void;
-case io::underread => abort();
-case let err: errors::error =>
-	yield err;
+export fn close(sock: socket) (void | error) = {
+	match (io::close(sock)) {
+	case void => void;
+	case io::underread => abort();
+	case let err: errors::error =>
+		return err;
+	};
 };
 
 // Shuts down part of a full-duplex connection.

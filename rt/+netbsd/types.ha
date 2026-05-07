@@ -8,6 +8,7 @@ export type ino_t = u64;
 export type nlink_t = u64;
 export type id_t = uint;
 export type pid_t = u64;
+export type lwpid_t = i32;
 export type uid_t = u32;
 export type gid_t = u32;
 export type off_t = i64;
@@ -49,8 +50,9 @@ export def SIG_HOLD: uintptr = 3;
 
 export type sigact = struct {
 	union {
-		sa_handler: nullable *fn (int) void,
-		sa_sigaction: nullable *fn (int, *siginfo, *opaque) void,
+		sa_handler: nullable *fn (_: int) void,
+		sa_sigaction: nullable *fn (_: int, _: *siginfo,
+			_: *opaque) void,
 	},
 	sa_mask: sigset,
 	sa_flags: int,
@@ -119,12 +121,12 @@ export type st = struct {
 export type stat = struct {
 	st_dev: u64,
 	st_mode: mode_t,
-	__pad0: u32,
+	_: u32, // padding
 	st_ino: u64,
 	st_nlink: u32,
 	st_uid: uid_t,
 	st_gid: gid_t,
-	__pad1: u32,
+	_: u32, // padding
 	st_rdev: u64,
 	st_atim: timespec,
 	st_mtim: timespec,
@@ -193,7 +195,7 @@ export type statvfs = struct {
 	f_namemax:	u64,
 	// user that mounted the file system
 	f_owner:	uid_t,
-	__pad0:		u32,
+	_:		u32, // padding
 
 	// spare space
 	f_spare:	[4]u64,
@@ -221,7 +223,7 @@ export type dirent = struct {
 };
 
 export type iovec = struct {
-	iov_base: *opaque,
+	iov_base: nullable *opaque,
 	iov_len: size
 };
 
@@ -338,6 +340,7 @@ export def TIOCGETA: u64 = 0x402c7413;
 export def TIOCSETA: u64 = 0x802c7414;
 export def TIOCPTSNAME: u64 = 0x48087448;
 export def TIOCSPGRP: u64 = 0x80047476;
+export def TIOCGPGRP: u64 = 0x40047477;
 export def FIODGNAME: u64 = 0x80106678;
 
 export type ptmget = struct {
@@ -588,6 +591,8 @@ export def CLOCK_MONOTONIC: int = 3;
 export def CLOCK_THREAD_CPUTIME_ID: int = 0x20000000;
 export def CLOCK_PROCESS_CPUTIME_ID: int = 0x40000000;
 
+export def TIMER_ABSTIME: int = 1;
+
 export def WNOHANG: int = 1;
 export def WUNTRACED: int = 2;
 export def WSTOPPED: int = WUNTRACED;
@@ -661,3 +666,15 @@ export def SHMFS_OBJ_PREFIX =	".shmobj_";
 
 // Signal
 export def __SIGTRAMP_SIGINFO_VERSION = 2;
+
+// Scheduling
+export type sched_param = struct {
+	sched_priority: int
+};
+// Policies
+export def SCHED_NONE: int   = -1;
+export def SCHED_OTHER: int  = 0;
+export def SCHED_FIFO: int   = 1;
+export def SCHED_RR: int     = 2;
+// a special lwpid, used in _sched_{g,s}etparam(), referring to all LWPs in the process
+export def P_ALL_LWPS: lwpid_t = 0;

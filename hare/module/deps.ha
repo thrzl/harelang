@@ -21,9 +21,10 @@ export type module = struct {
 	ns: ast::ident,
 	path: str,
 	srcs: srcset,
-	// [](Index to the module, Identifier of of the module)
+	// [](index to the module, module's identifier)
 	deps: [](size, ast::ident),
 	is_dep: bool,
+	missing: bool,
 };
 
 // Get the list of dependencies referred to by a set of source files.
@@ -35,13 +36,14 @@ export fn parse_deps(files: str...) ([]ast::ident | error) = {
 		case let f: io::file =>
 			yield f;
 		case let e: fs::error =>
-			return attach(strings::dup(file), e);
+			return attach(strings::dup(file)!, e);
 		};
 		defer io::close(handle)!;
 
 		let sc = bufio::newscanner(handle);
 		defer bufio::finish(&sc);
 		let lexer = lex::init(&sc, file);
+		defer lex::finish(&lexer);
 		let imports = parse::imports(&lexer)?;
 		defer ast::imports_finish(imports);
 
@@ -50,7 +52,7 @@ export fn parse_deps(files: str...) ([]ast::ident | error) = {
 			let id = import.ident;
 			let idx = sort::rbisect(deps, size(ast::ident), &id, &idcmp);
 			if (idx == 0 || idcmp(&deps[idx - 1], &id) != 0) {
-				insert(deps[idx], ast::ident_dup(id));
+				insert(deps[idx], ast::ident_dup(id))!;
 			};
 		};
 	};
@@ -102,7 +104,7 @@ fn get_deps(cachedir: str, srcs: *srcset) ([]ast::ident | error) = {
 	} else {
 		let in = bufio::newscanner_static(depsfile, buf.buf);
 		for (let s => bufio::scan_line(&in)?) {
-			append(deps, parse::identstr(s)?);
+			append(deps, parse::identstr(s)?)!;
 		};
 	};
 	return deps;
@@ -122,11 +124,11 @@ export fn gather(
 	ctx: *context,
 	out: *[]module,
 	mod: location,
-	recursive: bool = true,
+	required: bool = true,
 ) (size | error) = {
 	let stack: []str = [];
 	defer free(stack);
-	return _gather(ctx, out, &stack, mod, false, recursive)?;
+	return _gather(ctx, out, &stack, mod, false, required)?;
 };
 
 // Gather submodules and by default all their dependencies, appending them to
@@ -139,7 +141,7 @@ export fn gather_submodules(
 	ctx: *context,
 	out: *[]module,
 	mod: location,
-	recursive: bool = true,
+	required: bool = true,
 ) (size | error) = {
 	let id: ast::ident = [];
 	defer ast::ident_free(id);
@@ -148,7 +150,7 @@ export fn gather_submodules(
 	case let b: *path::buffer =>
 		yield b;
 	case let m: ast::ident =>
-		append(id, m...);
+		append(id, m...)!;
 		static let b = path::buffer { ... };
 		let res = find(ctx, id)?;
 		defer finish_srcset(&res.1);
@@ -163,7 +165,7 @@ export fn gather_submodules(
 	};
 
 	let subpath = strings::concat(path::string(&srcdir), ":",
-		ctx.harepath);
+		ctx.harepath)!;
 	defer free(subpath);
 
 	let subctx = context {
@@ -171,15 +173,15 @@ export fn gather_submodules(
 		harecache = ctx.harecache,
 		tags = ctx.tags,
 	};
-	return _gather_submodules(&subctx, out, buf, &id, recursive);
+	return _gather_submodules(&subctx, out, buf, &id, required);
 };
 
-export fn _gather_submodules(
+fn _gather_submodules(
 	ctx: *context,
 	out: *[]module,
 	buf: *path::buffer,
 	mod: *ast::ident,
-	recursive: bool = true,
+	required: bool,
 ) (size | error) = {
 	let n = 0z;
 	let it = os::iter(path::string(buf))?;
@@ -190,9 +192,9 @@ export fn _gather_submodules(
 		defer free(stack);
 		path::push(buf, dir.name)?;
 		defer path::pop(buf);
-		append(mod, dir.name);
+		append(mod, dir.name)!;
 		defer delete(mod[len(mod) - 1]);
-		match (_gather(ctx, out, &stack, *mod, false, recursive)) {
+		match (_gather(ctx, out, &stack, *mod, false, required)) {
 		case size =>
 			n += 1;
 		case let e: error =>
@@ -200,7 +202,7 @@ export fn _gather_submodules(
 				return e;
 			};
 		};
-		n += _gather_submodules(ctx, out, buf, mod, recursive)?;
+		n += _gather_submodules(ctx, out, buf, mod, required)?;
 	};
 	return n;
 };
@@ -211,65 +213,83 @@ fn _gather(
 	stack: *[]str,
 	mod: location,
 	is_dep: bool,
-	recursive: bool,
+	required: bool,
 ) (size | error) = {
+	let missing = false;
 	let (modpath, srcs) = match (find(ctx, mod)) {
 	case let r: (str, srcset) =>
-		yield r;
+		yield (strings::dup(r.0)!, r.1);
 	case let e: error =>
-		if (len(stack) == 0) {
+		missing = unwrap_error(e) is not_found && is_dep;
+		if (!missing || required) {
+			if (len(stack) > 0) {
+				e = attach(strings::dup(
+					stack[len(stack) - 1])!, e);
+			};
 			return e;
 		};
-		return attach(strings::dup(stack[len(stack) - 1]), e);
+		yield (locstr(mod), srcset { ... });
 	};
-	modpath = strings::dup(modpath);
 	defer free(modpath);
 
+	let name = match (mod) {
+	case let mod: *path::buffer =>
+		yield strings::dup(path::string(mod))!;
+	case let mod: ast::ident =>
+		yield unparse::identstr(mod);
+	};
+	defer free(name);
+
 	for (let j = 0z; j < len(stack); j += 1) {
-		if (modpath == stack[j]) {
-			append(stack, modpath);
-			return strings::dupall(stack[j..]): dep_cycle;
+		if (name == stack[j]) {
+			append(stack, strings::dup(name)!)!;
+			return strings::dupall(stack[j..])!: dep_cycle;
 		};
 	};
 	for (let j = 0z; j < len(out); j += 1) {
-		if (modpath == out[j].path) {
+		if (name == out[j].name) {
+			if (out[j].missing && !is_dep) {
+				assert(out[j].is_dep);
+				return attach(strings::dup(modpath)!, not_found);
+			};
 			out[j].is_dep &&= is_dep;
 			return j;
 		};
 	};
-	append(stack, modpath);
+	append(stack, name)!;
 	defer delete(stack[len(stack) - 1]);
 
 	let cache = get_cache(ctx.harecache, modpath)?;
 	let depids = get_deps(cache, &srcs)?;
 	defer free(depids);
-	let deps: [](size, ast::ident) = alloc([], len(depids));
+	let deps: [](size, ast::ident) = alloc([], len(depids))!;
 
-	if (!is_dep || recursive) {
-		for (let depid .. depids) {
-			static append(deps, (_gather(ctx, out, stack, depid,
-						true, recursive)?, depid));
+	for (let depid .. depids) {
+		match (_gather(ctx, out, stack, depid, true, required)) {
+		case let s: size =>
+			static append(deps, (s, depid))!;
+		case let e: error =>
+			if (unwrap_error(e) is not_found) {
+				return depid: dep_missing;
+			};
+			return e;
 		};
 	};
 
 	append(out, module {
-		name = match (mod) {
-		case let mod: *path::buffer =>
-			yield strings::dup(path::string(mod));
-		case let mod: ast::ident =>
-			yield unparse::identstr(mod);
-		},
+		name = strings::dup(name)!,
 		ns = match (mod) {
 		case let mod: *path::buffer =>
 			yield [];
 		case let mod: ast::ident =>
 			yield ast::ident_dup(mod);
 		},
-		path = strings::dup(modpath),
+		path = strings::dup(modpath)!,
 		srcs = srcs,
 		deps = deps,
 		is_dep = is_dep,
-	});
+		missing = missing,
+	})!;
 	return len(out) - 1;
 };
 

@@ -12,6 +12,7 @@ def BUFSZ: size = 4096;
 
 const scanner_vtable = io::vtable {
 	reader = &scan_read,
+	seeker = &scan_seek,
 	...
 };
 
@@ -76,7 +77,7 @@ export fn newscanner(
 	return scanner {
 		stream = &scanner_vtable,
 		src = src,
-		buffer = alloc([0...], BUFSZ),
+		buffer = [],
 		maxread = maxread,
 		start = 0,
 		pending = [],
@@ -126,6 +127,33 @@ fn scan_read(s: *io::stream, buf: []u8) (size | io::EOF | io::error) = {
 	return n;
 };
 
+fn scan_seek(
+	s: *io::stream,
+	off: io::off,
+	w: io::whence,
+) (io::off | io::error) = {
+	let scan = s: *scanner;
+
+	if (w == io::whence::CUR) {
+		// Fast path for io::tell
+		if (off == 0) {
+			let new_off = io::tell(scan.src)?;
+			new_off -= len(scan.pending): io::off;
+			return new_off;
+		};
+
+		// Adjust offset to account for buffered data
+		off -= len(scan.pending): io::off;
+	};
+
+	const new_off = io::seek(scan.src, off, w)?;
+
+	// Discard read-ahead buffer
+	scan.start = 0;
+	scan.pending = scan.buffer[..0];
+	return new_off;
+};
+
 // Fills up the scanner buffer with data from the underlying I/O handle. If no
 // space remains in the read buffer, it is expanded by BUFSZ (up to maxread).
 // Then, one read from the underlying I/O handle is performed and scan.pending
@@ -151,7 +179,7 @@ fn scan_readahead(scan: *scanner) (size | io::EOF | io::error) = {
 			if (pending >= readahead) {
 				return errors::overflow;
 			};
-			append(scan.buffer, [0...], readahead);
+			append(scan.buffer, [0...], readahead)?;
 		};
 	};
 
@@ -325,6 +353,8 @@ export fn read_byte(h: io::handle) (u8 | io::EOF | io::error) = {
 // it is read from the handle. The return value must be freed by the caller.
 export fn read_tok(h: io::handle, delim: u8...) ([]u8 | io::EOF | io::error) = {
 	let buf: []u8 = [];
+	let ok = false;
+	defer if (!ok) free(buf);
 
 	for (true) {
 		match (read_byte(h)?) {
@@ -332,7 +362,7 @@ export fn read_tok(h: io::handle, delim: u8...) ([]u8 | io::EOF | io::error) = {
 			if (bytes::contains(delim, res)) {
 				break;
 			};
-			append(buf, res);
+			append(buf, res)?;
 		case io::EOF =>
 			if (len(buf) == 0) {
 				return io::EOF;
@@ -341,6 +371,7 @@ export fn read_tok(h: io::handle, delim: u8...) ([]u8 | io::EOF | io::error) = {
 		};
 	};
 
+	ok = true;
 	return buf;
 };
 

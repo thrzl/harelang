@@ -30,7 +30,7 @@ export fn termios_query(file: io::file) (termios | errors::error) = {
 
 // Restores original serial port settings.
 export fn termios_restore(termios: *const termios) void = {
-	rt::ioctl(termios.file, rt::TIOCSETA, &termios.saved): void;
+	_ = rt::ioctl(termios.file, rt::TIOCSETA, &termios.saved);
 };
 
 // Sets serial port settings.

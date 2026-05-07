@@ -22,9 +22,9 @@ let args_static: [32]str = [""...];
 			args[i] = c::tostr(rt::argv[i]: *const c::char)!;
 		};
 	} else {
-		args = alloc([], rt::argc);
+		args = alloc([], rt::argc)!;
 		for (let i = 0z; i < rt::argc; i += 1) {
-			append(args, c::tostr(rt::argv[i]: *const c::char)!);
+			append(args, c::tostr(rt::argv[i]: *const c::char)!)!;
 		};
 	};
 
@@ -43,7 +43,7 @@ export fn getenvs() []str = {
 	};
 	for (let i = 0z; rt::envp[i] != null; i += 1) {
 		let s = c::tostr(rt::envp[i]: *const c::char)!;
-		append(envp, strings::dup(s));
+		append(envp, strings::dup(s)!)!;
 	};
 	return envp;
 };
@@ -51,7 +51,7 @@ export fn getenvs() []str = {
 let uts: rt::utsname = rt::utsname { ... };
 let uts_valid: bool = false;
 
-// Returns the host kernel name
+// Returns the host kernel name.
 export fn sysname() const str = {
 	if (!uts_valid) {
 		rt::uname(&uts) as void;
@@ -60,7 +60,7 @@ export fn sysname() const str = {
 	return c::tostr(&uts.sysname: *const c::char)!;
 };
 
-// Returns the host system hostname
+// Returns the host system hostname.
 export fn hostname() const str = {
 	if (!uts_valid) {
 		rt::uname(&uts) as void;
@@ -69,7 +69,7 @@ export fn hostname() const str = {
 	return c::tostr(&uts.nodename: *const c::char)!;
 };
 
-// Returns the host kernel version
+// Returns the host kernel version.
 export fn release() const str = {
 	if (!uts_valid) {
 		rt::uname(&uts) as void;
@@ -78,7 +78,7 @@ export fn release() const str = {
 	return c::tostr(&uts.release: *const c::char)!;
 };
 
-// Returns the host operating system version
+// Returns the host operating system version.
 export fn version() const str = {
 	if (!uts_valid) {
 		rt::uname(&uts) as void;

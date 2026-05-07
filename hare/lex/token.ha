@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 // (c) Hare authors <https://harelang.org>
 
+use io;
+
 // A lexical token class.
 export type ltok = enum uint {
 	// Keep ordered with bmap
@@ -8,11 +10,11 @@ export type ltok = enum uint {
 
 	ATTR_FINI,
 	ATTR_INIT,
-	ATTR_OFFSET,
 	ATTR_PACKED,
 	ATTR_SYMBOL,
 	ATTR_TEST,
 	ATTR_THREADLOCAL,
+	ATTR_UNDEFINED,
 	UNDERSCORE,
 	ABORT,
 	ALIGN,
@@ -50,6 +52,7 @@ export type ltok = enum uint {
 	LET,
 	MATCH,
 	NEVER,
+	NOMEM,
 	NULL,
 	NULLABLE,
 	OFFSET,
@@ -160,11 +163,11 @@ const bmap: [_]str = [
 	// Keep ordered with tok
 	"@fini",
 	"@init",
-	"@offset",
 	"@packed",
 	"@symbol",
 	"@test",
 	"@threadlocal",
+	"@undefined",
 	"_",
 	"abort",
 	"align",
@@ -202,6 +205,7 @@ const bmap: [_]str = [
 	"let",
 	"match",
 	"never",
+	"nomem",
 	"null",
 	"nullable",
 	"offset",
@@ -286,15 +290,24 @@ static assert(len(bmap) == ltok::LAST_BTOK: size + 1);
 // A token value, used for tokens such as '1337' (an integer).
 export type value = (str | rune | u64 | f64 | void);
 
-// A location within a source file.
-// The path is borrowed from the file name given to the lexer.
+// A location within a source file. The path is borrowed from the file name
+// given to the lexer.
 export type location = struct {
 	path: str,
 	line: uint,
-	col: uint
+	col: uint,
+	off: io::off,
 };
 
 // A single lexical token.
+//
+// When ltok is:
+//      a literal integer -> value is u64
+//      a literal float -> value is f64
+//      a literal rune -> value is rune
+//      a literal str -> value is str
+//      a name -> value is str
+//      a keyword, operator, symbol, or EOF -> value is void
 export type token = (ltok, value, location);
 
 // Converts a token to its string representation.

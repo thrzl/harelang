@@ -20,10 +20,10 @@ export fn add_key(
 	name: str,
 	payload: []u8,
 	keyring: serial,
-) (serial | error) = {
-	const keytype = c::fromstr(keytype);
+) (serial | error | nomem) = {
+	const keytype = c::fromstr(keytype)?;
 	defer free(keytype);
-	const name = c::fromstr(name);
+	const name = c::fromstr(name)?;
 	defer free(name);
 	match (rt::add_key(keytype: *const u8, name: *const u8,
 			payload: *[*]u8: *opaque, len(payload), keyring)) {
@@ -59,11 +59,11 @@ export fn get_keyring_id(key: serial, create: bool) (serial | error) = {
 
 // Replace the session keyring this process subscribes to with a new session
 // keyring using the given name, or, given an empty string, "_ses".
-export fn join_session_keyring(name: str) (serial | error) = {
+export fn join_session_keyring(name: str) (serial | error | nomem) = {
 	let name = if (name == "") {
 		yield null;
 	} else {
-		yield c::fromstr(name);
+		yield c::fromstr(name)?;
 	};
 	defer free(name);
 	return keyctl(command::JOIN_SESSION_KEYRING,
@@ -103,4 +103,43 @@ export fn chown(id: serial, uid: uint, gid: uint) (void | error) = {
 // Changes the permissions mask of the key.
 export fn setperm(id: serial, perm: perm) (void | error) = {
 	keyctl(command::SETPERM, id: u64, perm, 0, 0)?;
+};
+
+// Moves a secret key from one keyring to another.
+export fn move(
+	id: serial,
+	from_ring_id: serial,
+	to_ring_id: serial,
+	flags: uint,
+) (void | error) = {
+	keyctl(command::MOVE,
+		id: u64,
+		from_ring_id: u64,
+		to_ring_id: u64,
+		flags: u64)?;
+};
+
+// Adds a secret key to a keyring.
+export fn link(
+	keyring: serial,
+	key: serial,
+) (void | error) = {
+	keyctl(command::LINK, keyring: u64, key: u64, 0, 0)?;
+};
+
+// Removes a secret key from a keyring.
+export fn unlink(
+	keyring: serial,
+	key: serial,
+) (void | error) = {
+	keyctl(command::UNLINK, keyring: u64, key: u64, 0, 0)?;
+};
+
+// Sets the timeout on a secret key, such that it will be removed from the
+// keyring once expired. Setting the timeout to zero cancels the expiration.
+export fn set_timeout(
+	key: serial,
+	seconds: uint,
+) (void | error) = {
+	keyctl(command::SET_TIMEOUT, key: u64, seconds: u64, 0, 0)?;
 };

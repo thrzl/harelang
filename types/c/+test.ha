@@ -29,7 +29,7 @@ static assert(align(intptr) == align(uintptr));
 static assert(align(ssize) == align(size));
 
 @test fn strings() void = {
-	let s = fromstr("hello!");
+	let s = fromstr("hello!")!;
 	defer free(s);
 	assert(tostr(s)! == "hello!");
 	let s = nulstr("hello!\0");
@@ -48,4 +48,31 @@ static assert(align(ssize) == align(size));
 	assert(strnlen(nulstr("hello!\0"), 0) == 0);
 	assert(strnlen(nulstr("\0"), 1) == 0);
 	assert(strnlen(null: *const char, 0) == 0);
+};
+
+@test fn strcmp() void = {
+	assert(strcmp(nulstr("ABC\0"), nulstr("ABC\0")) == 0);
+	assert(strcmp(nulstr("ABC\0"), nulstr("AB\0")) > 0);
+	assert(strcmp(nulstr("AB\0"), nulstr("ABC\0")) < 0);
+	assert(strcmp(nulstr("BCD\0"), nulstr("ABC\0")) > 0);
+	assert(strcmp(nulstr("ABC\0"), nulstr("こんにちは\0")) < 0);
+	assert(strcmp(nulstr("ABC\0"), nulstr("abc\0")) < 0);
+	assert(strcmp(nulstr("\0"), nulstr("\0")) == 0);
+};
+
+@test fn strncmp() void = {
+	assert(strncmp(nulstr("ABC\0"), nulstr("ABC\0"), 2) == 0);
+	assert(strncmp(nulstr("ABC\0"), nulstr("ABC\0"), 3) == 0);
+	assert(strncmp(nulstr("ABC\0"), nulstr("ABC\0"), 4) == 0);
+	assert(strncmp(nulstr("ABC\0"), nulstr("ABC\0"), 5) == 0);
+	assert(strncmp(nulstr("ABC\0"), nulstr("AB\0"), 2) == 0);
+	assert(strncmp(nulstr("ABC\0"), nulstr("AB\0"), 3) > 0);
+	assert(strncmp(nulstr("AB\0"), nulstr("ABC\0"), 2) == 0);
+	assert(strncmp(nulstr("AB\0"), nulstr("ABC\0"), 3) < 0);
+	assert(strncmp(nulstr("BCD\0"), nulstr("ABC\0"), 2) > 0);
+	assert(strncmp(nulstr("ABC\0"), nulstr("abc\0"), 0) == 0);
+	assert(strncmp(nulstr("ABC\0"), nulstr("abc\0"), 1) < 0);
+	assert(strncmp(nulstr("\0"), nulstr("\0"), 1) == 0);
+	assert(strncmp(unterminatedstr("ABC"), unterminatedstr("ABC"), 3) == 0);
+	assert(strncmp(null: *const char, null: *const char, 0) == 0);
 };

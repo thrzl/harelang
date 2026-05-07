@@ -1,3 +1,5 @@
+log: general-purpose logging system
+
 The log module provides a simple interface for application logging. The
 [[logger]] interface provides an abstraction that users may implement for custom
 logging logic. We provide a simple logger implementation that prefixes each line

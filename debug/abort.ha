@@ -3,10 +3,14 @@
 
 use debug::image;
 use fmt;
+use fs;
+use os;
 use rt;
 
+let default_abort: *rt::abort_handler = @undefined;
+
 @init fn init_abort() void = {
-	rt::onabort(&debug_abort);
+	default_abort = rt::onabort(&debug_abort);
 };
 
 // Note: take care not to get into an abort loop when working on this code
@@ -16,14 +20,26 @@ fn debug_abort(
 	col: u64,
 	msg: str,
 ) never = {
-	fmt::errorfln("Abort: {}:{}:{}: {}", *path, line, col, msg): void;
+	begin_fatal();
 
 	const self = match (image::self()) {
 	case let img: image::image =>
 		yield img;
-	case => halt();
+	case =>
+		_ = fmt::errorfln("Abort: {}:{}:{}: {}", *path, line, col, msg);
+		halt();
 	};
 	defer image::close(&self);
+
+	const st = match (os::fstat(self.fd)) {
+	case let st: fs::filestat =>
+		yield st;
+	case fs::error =>
+		yield fs::filestat { mask = 0, ... };
+	};
+
+	_ = fmt::errorfln("Abort: {}:{}:{}: {}", *path, line, col, msg);
+	print_context(*path, line, col, st.mtime);
 
 	let frame = walk();
 	// Skip rt::abort and debug::debug_abort
@@ -40,6 +56,6 @@ fn debug_abort(
 };
 
 fn halt() never = {
-	rt::kill(rt::getpid(), rt::SIGABRT): void;
+	_ = rt::kill(rt::getpid(), rt::SIGABRT);
 	for (true) void;
 };
