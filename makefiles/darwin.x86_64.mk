@@ -9,7 +9,7 @@ $(HARECACHE)/std/rt.ssa: $(rt_ha)
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/rt.td.tmp -N rt $(rt_ha)
 
-rt_s = $(HARECACHE)/std/rt.s rt/+darwin/@func-libc.s rt/+darwin/start+x86_64-libc.s rt/+darwin/syscall+x86_64.s rt/+x86_64/cpuid.s rt/+x86_64/fenv.s rt/+x86_64/longjmp.s rt/+x86_64/setjmp.s
+rt_s = $(HARECACHE)/std/rt.s rt/+darwin/@func-libc.s rt/+darwin/sigtramp+x86_64.s rt/+darwin/start+x86_64-libc.s rt/+darwin/syscall+x86_64.s rt/+x86_64/cpuid.s rt/+x86_64/fenv.s rt/+x86_64/longjmp.s rt/+x86_64/setjmp.s
 $(HARECACHE)/std/rt.o: $(rt_s)
 	@$(AS) $(ASFLAGS) -o $@ $(rt_s)
 
@@ -48,7 +48,7 @@ $(HARECACHE)/std/errors.ssa: $(errors_ha) $(HARECACHE)/std/rt.td
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/errors.td.tmp -N errors $(errors_ha)
 
-io_ha = io/+darwin/dup.ha io/+darwin/mmap.ha io/+darwin/platform_file.ha io/+darwin/sync.ha io/+darwin/vector.ha io/arch+x86_64.ha io/copy.ha io/drain.ha io/empty.ha io/file.ha io/handle.ha io/limit.ha io/stream.ha io/tee.ha io/types.ha io/util.ha io/zero.ha
+io_ha = io/+darwin/dup.ha io/+darwin/mmap.ha io/+darwin/platform_file.ha io/+darwin/sync.ha io/+darwin/vector.ha io/arch+x86_64.ha io/copy.ha io/drain.ha io/empty.ha io/file.ha io/handle.ha io/limit.ha io/stream.ha io/tee.ha io/types.ha io/unread.ha io/util.ha io/zero.ha
 $(HARECACHE)/std/io.ssa: $(io_ha) $(HARECACHE)/std/bytes.td $(HARECACHE)/std/errors.td $(HARECACHE)/std/rt.td $(HARECACHE)/std/types.td
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/io.td.tmp -N io $(io_ha)

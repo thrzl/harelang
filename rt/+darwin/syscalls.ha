@@ -544,14 +544,32 @@ export fn sigprocmask(
 };
 // int sigprocmask(int how, const sigset_t *restrict set, sigset_t *restrict oset);
 
+// macOS's SYS_sigaction takes a `struct __sigaction` for the new action.
+// That struct has a sa_tramp field (between the handler union and sa_mask)
+// holding the address of a userspace signal trampoline. Without a valid
+// trampoline the kernel has no path back to the pre-signal context after
+// a handler, and the process hangs. The trampoline is defined in
+// rt/+darwin/sigtramp+x86_64.s.
+//
+// The OLD action is returned in a `struct sigaction` (no sa_tramp); the
+// shapes differ, so we marshal between the public `sigact` (kernel's
+// `sigaction` layout) and the internal `__sigact` (kernel's `__sigaction`
+// layout) at this boundary.
+@symbol("hare_sigtramp") fn hare_sigtramp() void;
+
 export fn sigaction(
 	signum: int,
 	act: *const sigact,
 	old: nullable *sigact
 ) (int | errno) = {
-	let real_act = *act;
+	let new = __sigact {
+		sa_sigaction = act.sa_sigaction,
+		sa_tramp = &hare_sigtramp: *opaque,
+		sa_mask = act.sa_mask,
+		sa_flags = act.sa_flags,
+	};
 	return wrap_return(syscall3(SYS_sigaction,
-		signum: u64, &real_act: uintptr: u64, old: uintptr: u64))?: int;
+		signum: u64, &new: uintptr: u64, old: uintptr: u64))?: int;
 };
 // int sigaction(int sig, const struct sigaction *restrict act, struct sigaction *restrict oact);
 

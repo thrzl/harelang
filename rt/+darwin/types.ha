@@ -50,8 +50,12 @@ export def SIG_BLOCK  : int = 1; // block specified signal set
 export def SIG_UNBLOCK: int = 2; // unblock specified signal set
 export def SIG_SETMASK: int = 3; // set specified signal set
 
+// macOS's sigset_t is a single 32-bit word (see <sys/_types/_sigset_t.h>:
+// `typedef __uint32_t __darwin_sigset_t`). Sized as a 1-element array so
+// the existing `__bits[signum >> 5]` helpers in signal.ha keep working
+// without modification.
 export type sigset = struct {
-    __bits: [4]u32,
+    __bits: [1]u32,
 };
 
 // <sys/signal.h>
@@ -61,11 +65,29 @@ export def SIG_DFL : uintptr = 0;
 export def SIG_IGN : uintptr = 1;
 export def SIG_HOLD: uintptr = 5;
 
+// User-facing sigact — matches macOS's `struct sigaction` (no sa_tramp).
+// This is the shape of the OLD action returned by sigaction(2). The NEW
+// action uses an internal `__sigact` with a sa_tramp field; see
+// rt::sigaction in syscalls.ha for the reason and the marshaling.
 export type sigact = struct {
     union {
         sa_handler: nullable *fn (_: int) void,
         sa_sigaction: nullable *fn (_: int, _: *siginfo, _: *opaque) void,
     },
+    sa_mask: sigset,
+    sa_flags: int,
+};
+
+// Internal sigact — matches macOS's `struct __sigaction`, which the
+// SYS_sigaction(2) syscall expects for the new-action argument. The
+// sa_tramp field carries the userspace signal trampoline that the kernel
+// jumps to on signal delivery (see rt/+darwin/sigtramp+x86_64.s).
+export type __sigact = struct {
+    union {
+        sa_handler: nullable *fn (_: int) void,
+        sa_sigaction: nullable *fn (_: int, _: *siginfo, _: *opaque) void,
+    },
+    sa_tramp: nullable *opaque,
     sa_mask: sigset,
     sa_flags: int,
 };
