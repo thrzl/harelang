@@ -94,8 +94,34 @@ export fn ftruncate(fd: int, ln: off_t) (void | errno) = {
 };
 
 export fn pipe2(pipefd: *[2]int, flags: int) (void | errno) = {
-	// wrap_return(syscall2(SYS_pipe2, pipefd: uintptr: u64, flags: u64))?;
+	// macOS has no pipe2(2) syscall; apply flags via fcntl. Not atomic
+	// with respect to a concurrent fork(2) in another thread.
+	if (flags & ~(O_CLOEXEC | O_NONBLOCK) != 0) return EINVAL;
 	wrap_return(sys_pipe(SYS_pipe, pipefd: uintptr: u64))?;
+	match (pipe2_apply(pipefd[0], flags)) {
+	case void => void;
+	case let e: errno =>
+		close(pipefd[0])!;
+		close(pipefd[1])!;
+		return e;
+	};
+	match (pipe2_apply(pipefd[1], flags)) {
+	case void => void;
+	case let e: errno =>
+		close(pipefd[0])!;
+		close(pipefd[1])!;
+		return e;
+	};
+};
+
+fn pipe2_apply(fd: int, flags: int) (void | errno) = {
+	if (flags & O_CLOEXEC != 0) {
+		fcntl(fd, F_SETFD, FD_CLOEXEC)?;
+	};
+	if (flags & O_NONBLOCK != 0) {
+		const cur = fcntl(fd, F_GETFL, void)?;
+		fcntl(fd, F_SETFL, cur | O_NONBLOCK)?;
+	};
 };
 
 export type ioctl_arg = (nullable *opaque | u64);
