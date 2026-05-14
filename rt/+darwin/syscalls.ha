@@ -575,7 +575,7 @@ export fn sigprocmask(
 // holding the address of a userspace signal trampoline. Without a valid
 // trampoline the kernel has no path back to the pre-signal context after
 // a handler, and the process hangs. The trampoline is defined in
-// rt/+darwin/sigtramp+x86_64.s.
+// rt/+darwin/sigtramp+ARCH.s.
 //
 // The OLD action is returned in a `struct sigaction` (no sa_tramp); the
 // shapes differ, so we marshal between the public `sigact` (kernel's

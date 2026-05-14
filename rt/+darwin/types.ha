@@ -81,7 +81,7 @@ export type sigact = struct {
 // Internal sigact — matches macOS's `struct __sigaction`, which the
 // SYS_sigaction(2) syscall expects for the new-action argument. The
 // sa_tramp field carries the userspace signal trampoline that the kernel
-// jumps to on signal delivery (see rt/+darwin/sigtramp+x86_64.s).
+// jumps to on signal delivery (see rt/+darwin/sigtramp+ARCH.s).
 export type __sigact = struct {
     union {
         sa_handler: nullable *fn (_: int) void,

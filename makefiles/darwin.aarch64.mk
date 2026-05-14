@@ -9,7 +9,7 @@ $(HARECACHE)/std/rt.ssa: $(rt_ha)
 	@mkdir -p -- "$(HARECACHE)/std"
 	@$(TDENV) $(HAREC) $(HARECFLAGS) -o $@ -t $(HARECACHE)/std/rt.td.tmp -N rt $(rt_ha)
 
-rt_s = $(HARECACHE)/std/rt.s rt/+aarch64/cpuid.s rt/+aarch64/fenv.s rt/+aarch64/longjmp.s rt/+aarch64/setjmp.s rt/+darwin/@func-libc.s rt/+darwin/start+aarch64-libc.s rt/+darwin/syscall+aarch64.s
+rt_s = $(HARECACHE)/std/rt.s rt/+aarch64/cpuid.s rt/+aarch64/fenv.s rt/+aarch64/longjmp.s rt/+aarch64/setjmp.s rt/+darwin/@func-libc.s rt/+darwin/sigtramp+aarch64.s rt/+darwin/start+aarch64-libc.s rt/+darwin/syscall+aarch64.s
 $(HARECACHE)/std/rt.o: $(rt_s)
 	@$(AS) $(ASFLAGS) -o $@ $(rt_s)
 
